@@ -1,62 +1,58 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'dart:async';
 import '../../services/auth_service.dart';
-import '../../services/supabase_service.dart';
-import '../auth/screens/login_screen.dart';
-import '../home/home_screen.dart';
-import '../../utils/environment.dart';
+import '../../providers/onboarding_provider.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _checkAuthAndNavigate();
+    _initializeApp();
   }
 
-  Future<void> _checkAuthAndNavigate() async {
-    // Show splash for minimum 2 seconds
+  Future<void> _initializeApp() async {
+    // Show splash for minimum 2 seconds for better UX
     await Future.delayed(const Duration(seconds: 2));
 
-    try {
-      // Get AuthService instance and check if user is authenticated
-      final authService = AuthService(SupabaseService.client);
-      final isAuthenticated = authService.isAuthenticated;
+    if (!mounted) return;
 
-      if (!mounted) return;
+    // Check authentication and onboarding status
+    final authState = ref.read(authStateProvider);
+    final hasSeenOnboarding = ref.read(onboardingProvider);
 
-      if (isAuthenticated) {
-        // User is logged in, go to home
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
-      } else {
-        // User is not logged in, go to login
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-        );
-      }
-    } catch (e) {
-      // If there's an error checking auth, go to login screen
-      if (Environment.debugMode) {
-        if (kDebugMode) {
-          print('Auth check error: $e');
+    authState.when(
+      data: (auth) {
+        final isAuthenticated = auth.session != null;
+
+        if (!hasSeenOnboarding) {
+          // First time user - go to onboarding
+          context.go('/onboarding');
+        } else if (!isAuthenticated) {
+          // Returning user but not authenticated - go to login
+          context.go('/login');
+        } else {
+          // Authenticated user - go to home
+          context.go('/home');
         }
-      }
-
-      if (!mounted) return;
-
-      Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
-    }
+      },
+      loading: () {
+        // Still loading auth state, stay on splash
+        // GoRouter redirect will handle this
+      },
+      error: (_, _) {
+        // Error loading auth state - go to login
+        context.go('/login');
+      },
+    );
   }
 
   @override
