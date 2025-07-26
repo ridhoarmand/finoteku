@@ -1,8 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'features/auth/auth_wrapper.dart';
-import 'features/splash/splash_screen.dart';
+import 'routes/app_routes.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_provider.dart';
 import 'services/supabase_service.dart';
@@ -51,16 +50,14 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
-    return MaterialApp(
+    final router = ref.watch(routerProvider);
+
+    return MaterialApp.router(
       title: Environment.appName,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
-      home: const SplashScreen(),
-      routes: {
-        '/login': (context) => const AuthWrapper(),
-        '/home': (context) => const AuthWrapper(),
-      },
+      routerConfig: router,
     );
   }
 }

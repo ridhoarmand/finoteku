@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../services/auth_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -38,55 +39,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
 
       if (mounted) {
-        // Navigate to home screen
-        Navigator.of(context).pushReplacementNamed('/home');
+        // Navigate to home screen will be handled by GoRouter redirect
+        context.go('/home');
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Login failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _handleSignUp() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final authService = ref.read(authServiceProvider);
-      await authService.signUp(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-        fullName: 'User', // Simplified for now
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Sign up successful! Please check your email.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Sign up failed: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -213,14 +173,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   children: [
                     TextButton(
                       onPressed: () {
-                        Navigator.of(context).pushNamed('/forgot-password');
+                        context.go('/forgot-password');
                       },
                       child: const Text('Forgot Password?'),
                     ),
 
                     // Sign Up Link
                     TextButton(
-                      onPressed: _isLoading ? null : _handleSignUp,
+                      onPressed: _isLoading
+                          ? null
+                          : () => context.go('/register'),
                       child: const Text('Create New Account'),
                     ),
                   ],
