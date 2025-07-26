@@ -82,7 +82,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         title: const Text('Create Account'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/login'),
+          onPressed: () => context.pop(),
         ),
       ),
       body: SafeArea(
@@ -232,7 +232,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   children: [
                     const Text('Already have an account? '),
                     TextButton(
-                      onPressed: _isLoading ? null : () => context.go('/login'),
+                      onPressed: _isLoading ? null : () => context.pop(),
                       child: const Text('Sign In'),
                     ),
                   ],

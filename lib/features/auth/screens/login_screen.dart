@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/services.dart';
 import '../../../services/auth_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -38,7 +39,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         password: _passwordController.text,
       );
 
+      // Save credentials to password manager after successful login
       if (mounted) {
+        // Commit autofill context to save credentials
+        TextInput.finishAutofillContext();
         // Navigate to home screen will be handled by GoRouter redirect
         context.go('/home');
       }
@@ -69,11 +73,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: AutofillGroup(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // App Logo/Title
                 SizedBox(
@@ -109,6 +114,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.email],
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
@@ -144,6 +150,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     border: const OutlineInputBorder(),
                   ),
                   obscureText: _obscurePassword,
+                  autofillHints: const [AutofillHints.password],
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your password';
@@ -173,7 +180,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   children: [
                     TextButton(
                       onPressed: () {
-                        context.go('/forgot-password');
+                        context.go('/login/forgot-password');
                       },
                       child: const Text('Forgot Password?'),
                     ),
@@ -182,7 +189,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     TextButton(
                       onPressed: _isLoading
                           ? null
-                          : () => context.go('/register'),
+                          : () => context.go('/login/register'),
                       child: const Text('Create New Account'),
                     ),
                   ],
@@ -204,6 +211,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
               ],
+            ),
             ),
           ),
         ),

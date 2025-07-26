@@ -36,8 +36,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           // Public routes (accessible when not authenticated)
           final publicRoutes = [
             '/login',
-            '/register',
-            '/forgot-password',
+            '/login/register',
+            '/login/forgot-password',
             '/onboarding',
           ];
           final isPublicRoute = publicRoutes.contains(location);
@@ -65,14 +65,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/onboarding',
         builder: (context, state) => const OnboardingScreen(),
       ),
-      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      // Login route dengan sub-routes untuk register dan forgot password
       GoRoute(
-        path: '/register',
-        builder: (context, state) => const RegisterScreen(),
-      ),
-      GoRoute(
-        path: '/forgot-password',
-        builder: (context, state) => const ForgotPasswordScreen(),
+        path: '/login',
+        builder: (context, state) => const LoginScreen(),
+        routes: [
+          // Register sebagai child route dari login
+          GoRoute(
+            path: 'register',
+            builder: (context, state) => const RegisterScreen(),
+          ),
+          // Forgot password sebagai child route dari login
+          GoRoute(
+            path: 'forgot-password',
+            builder: (context, state) => const ForgotPasswordScreen(),
+          ),
+        ],
       ),
       GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
     ],
@@ -109,7 +117,7 @@ class AppRoutes {
   static const String splash = '/';
   static const String onboarding = '/onboarding';
   static const String login = '/login';
-  static const String register = '/register';
-  static const String forgotPassword = '/forgot-password';
+  static const String register = '/login/register';
+  static const String forgotPassword = '/login/forgot-password';
   static const String home = '/home';
 }
