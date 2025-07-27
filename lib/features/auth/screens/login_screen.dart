@@ -120,7 +120,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (didPop) return;
         final shouldPop = await _onWillPop();
         if (shouldPop && context.mounted) {
-          Navigator.of(context).pop();
+          // Use SystemNavigator.pop() to properly exit the app
+          SystemNavigator.pop();
         }
       },
       child: Scaffold(
