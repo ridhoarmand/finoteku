@@ -1,217 +1,148 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../services/auth_service.dart';
-import '../../services/supabase_service.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final authService = ref.read(authServiceProvider);
-    final currentUser = ref.watch(currentUserProvider);
-    final theme = Theme.of(context);
-
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Finoteku'),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (value) async {
-              if (value == 'logout') {
-                try {
-                  await authService.signOut();
-                  if (context.mounted) {
-                    Navigator.of(context).pushReplacementNamed('/login');
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Logout failed: ${e.toString()}'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout),
-                    SizedBox(width: 8),
-                    Text('Logout'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: currentUser.when(
-        data: (user) => Padding(
+      body: SafeArea(
+        child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Welcome Section
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: theme.colorScheme.primary,
-                            child: Text(
-                              (user?.userMetadata?['full_name'] as String?)
-                                      ?.substring(0, 1)
-                                      .toUpperCase() ??
-                                  'U',
-                              style: TextStyle(
-                                color: theme.colorScheme.onPrimary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Welcome back!',
-                                  style: theme.textTheme.titleLarge,
-                                ),
-                                if (user?.userMetadata?['full_name'] != null)
-                                  Text(
-                                    user!.userMetadata!['full_name'],
-                                    style: theme.textTheme.bodyLarge?.copyWith(
-                                      color: theme.colorScheme.primary,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                Text(
-                                  user?.email ?? 'Unknown user',
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                      Text(
+                        'Good Morning',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      Text(
+                        'Welcome back!',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
+                  CircleAvatar(
+                    backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    child: Icon(
+                      Icons.person,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              
+              // Balance Card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Total Balance',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Rp 2,500,000',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 24),
-
-              // Quick Stats (Placeholder)
+              
+              // Quick Actions
               Text(
-                'Quick Overview',
-                style: theme.textTheme.headlineSmall,
+                'Quick Actions',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 16),
               
               Row(
                 children: [
                   Expanded(
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.account_balance_wallet,
-                              size: 32,
-                              color: theme.colorScheme.primary,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Total Balance',
-                              style: theme.textTheme.bodyMedium,
-                            ),
-                            Text(
-                              'Rp 0',
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    child: _buildQuickActionCard(
+                      context,
+                      'Income',
+                      Icons.trending_up,
+                      Colors.green,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.receipt_long,
-                              size: 32,
-                              color: theme.colorScheme.secondary,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Transactions',
-                              style: theme.textTheme.bodyMedium,
-                            ),
-                            Text(
-                              '0',
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                color: theme.colorScheme.secondary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    child: _buildQuickActionCard(
+                      context,
+                      'Expense',
+                      Icons.trending_down,
+                      Colors.red,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
-
-              // Features Coming Soon
+              
+              // Recent Transactions
               Text(
-                'Coming Soon',
-                style: theme.textTheme.headlineSmall,
+                'Recent Transactions',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 16),
               
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+              Expanded(
+                child: Center(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        Icons.construction,
-                        size: 48,
-                        color: theme.colorScheme.outline,
+                        Icons.receipt_long_outlined,
+                        size: 64,
+                        color: Colors.grey[400],
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                       Text(
-                        'Features Under Development',
-                        style: theme.textTheme.titleMedium,
+                        'No transactions yet',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Colors.grey[600],
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '• Wallet Management\n• Transaction Recording\n• Financial Analytics\n• And much more!',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+                        'Start by adding your first transaction',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[500],
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
@@ -220,37 +151,37 @@ class HomeScreen extends ConsumerWidget {
             ],
           ),
         ),
-        loading: () => const Center(
-          child: CircularProgressIndicator(),
-        ),
-        error: (error, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: theme.colorScheme.error,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Error loading user data',
-                style: theme.textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                error.toString(),
-                style: theme.textTheme.bodyMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () => ref.refresh(currentUserProvider),
-                child: const Text('Retry'),
-              ),
-            ],
+      ),
+    );
+  }
+  
+  Widget _buildQuickActionCard(
+    BuildContext context,
+    String title,
+    IconData icon,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            color: color,
+            size: 32,
           ),
-        ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
