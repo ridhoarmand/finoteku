@@ -5,10 +5,14 @@ import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
 import '../features/home/home_screen.dart';
+import '../features/transaction/transaction_screen.dart';
+import '../features/chart/chart_screen.dart';
+import '../features/account/account_screen.dart';
 import '../features/onboarding/screens/onboarding_screen.dart';
 import '../features/splash/splash_screen.dart';
 import '../services/auth_service.dart';
 import '../providers/onboarding_provider.dart';
+import '../widgets/main_shell.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
@@ -82,7 +86,30 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
-      GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+      // Shell route untuk main app dengan bottom navigation
+      ShellRoute(
+        builder: (context, state, child) {
+          return MainShell(child: child);
+        },
+        routes: [
+          GoRoute(
+            path: '/home',
+            builder: (context, state) => const HomeScreen(),
+          ),
+          GoRoute(
+            path: '/transaction',
+            builder: (context, state) => const TransactionScreen(),
+          ),
+          GoRoute(
+            path: '/chart',
+            builder: (context, state) => const ChartScreen(),
+          ),
+          GoRoute(
+            path: '/account',
+            builder: (context, state) => const AccountScreen(),
+          ),
+        ],
+      ),
     ],
     errorBuilder: (context, state) => Scaffold(
       body: Center(
@@ -102,7 +129,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
             const SizedBox(height: 16),
             FilledButton(
-              onPressed: () => context.go('/'),
+              onPressed: () => context.go('/home'),
               child: const Text('Go Home'),
             ),
           ],
@@ -120,4 +147,7 @@ class AppRoutes {
   static const String register = '/login/register';
   static const String forgotPassword = '/login/forgot-password';
   static const String home = '/home';
+  static const String transaction = '/transaction';
+  static const String chart = '/chart';
+  static const String account = '/account';
 }
