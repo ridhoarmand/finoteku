@@ -67,7 +67,11 @@ class AccountScreen extends ConsumerWidget {
                               onPressed: () {
                                 // TODO: Edit profile
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Edit profile feature coming soon')),
+                                  const SnackBar(
+                                    content: Text(
+                                      'Edit profile feature coming soon',
+                                    ),
+                                  ),
                                 );
                               },
                               child: const Text('Edit Profile'),
@@ -82,116 +86,106 @@ class AccountScreen extends ConsumerWidget {
               const SizedBox(height: 24),
 
               // Settings Section
-              _buildSettingsSection(
-                context,
-                theme,
-                'Preferences',
-                [
-                  _buildSettingsTile(
-                    context,
-                    Icons.notifications_outlined,
-                    'Notifications',
-                    'Manage your notification preferences',
-                    () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Notifications settings coming soon')),
-                      );
-                    },
-                  ),
-                  _buildSettingsTile(
-                    context,
-                    Icons.dark_mode_outlined,
-                    'Dark Mode',
-                    'Toggle app theme',
-                    () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Theme settings coming soon')),
-                      );
-                    },
-                  ),
-                  _buildSettingsTile(
-                    context,
-                    Icons.language_outlined,
-                    'Language',
-                    'Change app language',
-                    () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Language settings coming soon')),
-                      );
-                    },
-                  ),
-                ],
-              ),
+              _buildSettingsSection(context, theme, 'Preferences', [
+                _buildSettingsTile(
+                  context,
+                  Icons.notifications_outlined,
+                  'Notifications',
+                  'Manage your notification preferences',
+                  () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Notifications settings coming soon'),
+                      ),
+                    );
+                  },
+                ),
+                _buildSettingsTile(
+                  context,
+                  Icons.dark_mode_outlined,
+                  'Dark Mode',
+                  'Toggle app theme',
+                  () {
+                    context.push('/account/theme-settings');
+                  },
+                ),
+                _buildSettingsTile(
+                  context,
+                  Icons.language_outlined,
+                  'Language',
+                  'Change app language',
+                  () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Language settings coming soon'),
+                      ),
+                    );
+                  },
+                ),
+              ]),
               const SizedBox(height: 16),
 
               // Data Section
-              _buildSettingsSection(
-                context,
-                theme,
-                'Data & Privacy',
-                [
-                  _buildSettingsTile(
-                    context,
-                    Icons.backup_outlined,
-                    'Backup & Sync',
-                    'Manage your data backup',
-                    () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Backup settings coming soon')),
-                      );
-                    },
-                  ),
-                  _buildSettingsTile(
-                    context,
-                    Icons.security_outlined,
-                    'Privacy & Security',
-                    'Manage privacy settings',
-                    () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Privacy settings coming soon')),
-                      );
-                    },
-                  ),
-                ],
-              ),
+              _buildSettingsSection(context, theme, 'Data & Privacy', [
+                _buildSettingsTile(
+                  context,
+                  Icons.backup_outlined,
+                  'Backup & Sync',
+                  'Manage your data backup',
+                  () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Backup settings coming soon'),
+                      ),
+                    );
+                  },
+                ),
+                _buildSettingsTile(
+                  context,
+                  Icons.security_outlined,
+                  'Privacy & Security',
+                  'Manage privacy settings',
+                  () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Privacy settings coming soon'),
+                      ),
+                    );
+                  },
+                ),
+              ]),
               const SizedBox(height: 16),
 
               // Support Section
-              _buildSettingsSection(
-                context,
-                theme,
-                'Support',
-                [
-                  _buildSettingsTile(
-                    context,
-                    Icons.help_outline,
-                    'Help & FAQ',
-                    'Get help and support',
-                    () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Help section coming soon')),
-                      );
-                    },
-                  ),
-                  _buildSettingsTile(
-                    context,
-                    Icons.info_outline,
-                    'About',
-                    'App version and information',
-                    () {
-                      showAboutDialog(
-                        context: context,
-                        applicationName: 'Finoteku',
-                        applicationVersion: '1.0.0',
-                        applicationLegalese: '© 2025 Finoteku. All rights reserved.',
-                        children: [
-                          const Text('Personal Finance Manager'),
-                        ],
-                      );
-                    },
-                  ),
-                ],
-              ),
+              _buildSettingsSection(context, theme, 'Support', [
+                _buildSettingsTile(
+                  context,
+                  Icons.help_outline,
+                  'Help & FAQ',
+                  'Get help and support',
+                  () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Help section coming soon')),
+                    );
+                  },
+                ),
+                _buildSettingsTile(
+                  context,
+                  Icons.info_outline,
+                  'About',
+                  'App version and information',
+                  () {
+                    showAboutDialog(
+                      context: context,
+                      applicationName: 'Finoteku',
+                      applicationVersion: '1.0.0',
+                      applicationLegalese:
+                          '© 2025 Finoteku. All rights reserved.',
+                      children: [const Text('Personal Finance Manager')],
+                    );
+                  },
+                ),
+              ]),
               const SizedBox(height: 24),
 
               // Logout Button
@@ -293,7 +287,10 @@ class AccountScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8.0,
+                vertical: 8.0,
+              ),
               child: Text(
                 title,
                 style: theme.textTheme.titleMedium?.copyWith(

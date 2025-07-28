@@ -8,6 +8,7 @@ import '../features/home/home_screen.dart';
 import '../features/transaction/transaction_screen.dart';
 import '../features/chart/chart_screen.dart';
 import '../features/account/account_screen.dart';
+import '../features/settings/theme_settings_screen.dart';
 import '../features/onboarding/screens/onboarding_screen.dart';
 import '../features/splash/splash_screen.dart';
 import '../services/auth_service.dart';
@@ -107,6 +108,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/account',
             builder: (context, state) => const AccountScreen(),
+            routes: [
+              GoRoute(
+                path: 'theme-settings',
+                builder: (context, state) => const ThemeSettingsScreen(),
+              ),
+            ],
           ),
         ],
       ),
@@ -150,4 +157,5 @@ class AppRoutes {
   static const String transaction = '/transaction';
   static const String chart = '/chart';
   static const String account = '/account';
+  static const String themeSettings = '/account/theme-settings';
 }
