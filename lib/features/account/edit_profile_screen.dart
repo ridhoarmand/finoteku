@@ -24,13 +24,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUserData();
-  }
-
-  void _loadUserData() {
-    final user = ref.read(editProfileProvider.notifier);
-    user.loadUserData();
-    _populateControllers();
+    // Just populate the controllers, don't update provider state yet
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _populateControllers();
+    });
   }
 
   void _populateControllers() {
@@ -42,7 +39,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         _phoneController.text = user.userMetadata?['phone'] ?? '';
       }
     } catch (e) {
-      // Handle error silently
+      // Handle error silently or show a snackbar
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading user data: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -57,6 +62,24 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final profileState = ref.watch(editProfileProvider);
+
+    // Show error if any
+    if (profileState.error != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(profileState.error!),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Dismiss',
+              onPressed: () {
+                ref.read(editProfileProvider.notifier).clearError();
+              },
+            ),
+          ),
+        );
+      });
+    }
 
     return PopScope(
       canPop: !profileState.hasChanges,

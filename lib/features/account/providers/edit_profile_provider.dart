@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:io';
 import '../../../services/supabase_service.dart';
 
@@ -37,7 +38,10 @@ class EditProfileState {
 }
 
 class EditProfileNotifier extends StateNotifier<EditProfileState> {
-  EditProfileNotifier() : super(const EditProfileState());
+  EditProfileNotifier() : super(const EditProfileState()) {
+    // Initialize data after constructor
+    Future.microtask(() => loadUserData());
+  }
 
   final _imagePicker = ImagePicker();
 
@@ -54,10 +58,17 @@ class EditProfileNotifier extends StateNotifier<EditProfileState> {
   }
 
   void loadUserData() {
-    final user = SupabaseService.client.auth.currentUser;
-    if (user != null) {
+    try {
+      final user = SupabaseService.client.auth.currentUser;
+      if (user != null) {
+        state = state.copyWith(
+          avatarUrl: user.userMetadata?['avatar_url'],
+          error: null, // Clear any previous errors
+        );
+      }
+    } catch (e) {
       state = state.copyWith(
-        avatarUrl: user.userMetadata?['avatar_url'],
+        error: 'Failed to load user data: ${e.toString()}',
       );
     }
   }
@@ -97,7 +108,27 @@ class EditProfileNotifier extends StateNotifier<EditProfileState> {
       final user = SupabaseService.client.auth.currentUser;
       if (user == null) return null;
 
-      final fileName = 'avatar_${user.id}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      // Delete old avatar if exists
+      if (state.avatarUrl != null) {
+        try {
+          // Extract filename from URL to delete old avatar
+          final uri = Uri.parse(state.avatarUrl!);
+          final pathSegments = uri.pathSegments;
+          if (pathSegments.length >= 3) {
+            // URL format: .../storage/v1/object/public/avatars/{user_id}/filename
+            final oldFileName = '${pathSegments[pathSegments.length - 2]}/${pathSegments.last}';
+            await SupabaseService.client.storage
+                .from('avatars')
+                .remove([oldFileName]);
+          }
+        } catch (e) {
+          // Continue if deletion fails - not critical
+          debugPrint('Failed to delete old avatar: $e');
+        }
+      }
+
+      // Use folder structure: {user_id}/avatar_{timestamp}.jpg
+      final fileName = '${user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
       
       await SupabaseService.client.storage
           .from('avatars')
@@ -109,7 +140,20 @@ class EditProfileNotifier extends StateNotifier<EditProfileState> {
 
       return publicUrl;
     } catch (e) {
-      state = state.copyWith(error: 'Failed to upload image: ${e.toString()}');
+      String errorMessage = 'Failed to upload image: ${e.toString()}';
+      
+      // Provide more specific error messages
+      if (e.toString().contains('StorageException')) {
+        if (e.toString().contains('403') || e.toString().contains('Unauthorized')) {
+          errorMessage = 'Upload failed: Please check if the avatars bucket exists and has correct permissions in Supabase Dashboard';
+        } else if (e.toString().contains('404')) {
+          errorMessage = 'Upload failed: The avatars bucket does not exist. Please create it in Supabase Dashboard';
+        } else if (e.toString().contains('413')) {
+          errorMessage = 'Upload failed: Image file is too large. Please choose a smaller image';
+        }
+      }
+      
+      state = state.copyWith(error: errorMessage);
       return null;
     }
   }

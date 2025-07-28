@@ -1,10 +1,15 @@
 -- Storage configuration for Finoteku
 -- Execute this in Supabase SQL Editor after creating the buckets manually
 
--- Create storage buckets (do this in Supabase Dashboard first):
+-- STEP 1: Create storage buckets in Supabase Dashboard:
 -- 1. Go to Storage in Supabase Dashboard
--- 2. Create bucket named 'transaction-images' (private)
--- 3. Create bucket named 'avatars' (public)
+-- 2. Create bucket named 'transaction-images' (private, File size limit: 5MB)
+-- 3. Create bucket named 'avatars' (public, File size limit: 2MB)
+
+-- STEP 2: Enable RLS on storage.objects (usually enabled by default)
+-- ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
+-- STEP 3: Create storage policies
 
 -- Storage policies for transaction-images bucket
 CREATE POLICY "Users can upload their own transaction images" ON storage.objects
