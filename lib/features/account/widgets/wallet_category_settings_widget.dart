@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../routes/app_routes.dart';
 import 'settings_section_widget.dart';
 
 class WalletCategorySettingsWidget extends StatelessWidget {
@@ -16,7 +17,7 @@ class WalletCategorySettingsWidget extends StatelessWidget {
           subtitle: 'Add, edit, or delete your wallets',
           iconColor: Colors.green,
           onTap: () {
-            context.push('/wallets/manage');
+            context.push(AppRoutes.manageWallets);
           },
         ),
         SettingsTileWidget(
@@ -25,7 +26,7 @@ class WalletCategorySettingsWidget extends StatelessWidget {
           subtitle: 'Organize your transaction categories',
           iconColor: Colors.blue,
           onTap: () {
-            context.push('/categories/manage');
+            context.push(AppRoutes.manageCategories);
           },
         ),
         SettingsTileWidget(

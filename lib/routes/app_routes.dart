@@ -12,6 +12,8 @@ import '../features/account/edit_profile_screen.dart';
 import '../features/settings/theme_settings_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/splash/splash_screen.dart';
+import '../features/wallet/screens/manage_wallets_screen.dart';
+import '../features/category/screens/manage_categories_screen.dart';
 import '../services/auth_service.dart';
 import '../features/onboarding/providers/onboarding_provider.dart';
 import '../widgets/main_shell.dart';
@@ -122,6 +124,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
+      // Wallet management route
+      GoRoute(
+        path: '/wallets/manage',
+        builder: (context, state) => const ManageWalletsScreen(),
+      ),
+      // Category management route
+      GoRoute(
+        path: '/categories/manage',
+        builder: (context, state) => const ManageCategoriesScreen(),
+      ),
     ],
     errorBuilder: (context, state) => Scaffold(
       body: Center(
@@ -164,4 +176,6 @@ class AppRoutes {
   static const String account = '/account';
   static const String editProfile = '/account/edit-profile';
   static const String themeSettings = '/account/theme-settings';
+  static const String manageWallets = '/wallets/manage';
+  static const String manageCategories = '/categories/manage';
 }
