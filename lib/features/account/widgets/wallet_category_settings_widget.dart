@@ -29,32 +29,6 @@ class WalletCategorySettingsWidget extends StatelessWidget {
             context.push(AppRoutes.manageCategories);
           },
         ),
-        SettingsTileWidget(
-          icon: Icons.swap_horiz_outlined,
-          title: 'Default Settings',
-          subtitle: 'Set default wallet and categories',
-          iconColor: Colors.orange,
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Default settings coming soon'),
-              ),
-            );
-          },
-        ),
-        SettingsTileWidget(
-          icon: Icons.import_export_outlined,
-          title: 'Import/Export',
-          subtitle: 'Import or export wallets and categories',
-          iconColor: Colors.purple,
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Import/Export feature coming soon'),
-              ),
-            );
-          },
-        ),
       ],
     );
   }

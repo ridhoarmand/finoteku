@@ -1,6 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../services/supabase_service.dart';
+import '../../../services/supabase_service.dart';
 
 /// Authentication service for handling user auth operations
 class AuthService {

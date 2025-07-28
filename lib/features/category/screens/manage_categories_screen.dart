@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/category_service.dart';
+import '../../../services/supabase_service.dart';
+import '../../../models/category.dart';
+import '../widgets/category_form_dialog.dart';
 
-class ManageCategoriesScreen extends StatefulWidget {
+class ManageCategoriesScreen extends ConsumerStatefulWidget {
   const ManageCategoriesScreen({super.key});
 
   @override
-  State<ManageCategoriesScreen> createState() => _ManageCategoriesScreenState();
+  ConsumerState<ManageCategoriesScreen> createState() => _ManageCategoriesScreenState();
 }
 
-class _ManageCategoriesScreenState extends State<ManageCategoriesScreen>
+class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
@@ -50,9 +55,9 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen>
       ),
       body: TabBarView(
         controller: _tabController,
-        children: const [
-          CategoryListTab(categoryType: 'expense'),
-          CategoryListTab(categoryType: 'income'),
+        children: [
+          CategoryListTab(categoryType: CategoryType.expense),
+          CategoryListTab(categoryType: CategoryType.income),
         ],
       ),
     );
@@ -61,7 +66,7 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen>
   void _showAddCategoryDialog(BuildContext context) {
     // Get current tab index to determine category type
     final isExpense = _tabController.index == 0;
-    final categoryType = isExpense ? 'expense' : 'income';
+    final categoryType = isExpense ? CategoryType.expense : CategoryType.income;
     
     showDialog(
       context: context,
@@ -75,15 +80,28 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen>
     );
   }
 
-  void _handleAddCategory(String type, String name, int color) async {
+  void _handleAddCategory(CategoryType type, String name, Color color) async {
     try {
-      // TODO: Implement category creation when CategoryService is ready
-      print('Adding $type category: $name with color: $color');
+      final userId = SupabaseService.currentUserId;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final categoryService = ref.read(categoryServiceProvider);
+      final request = CreateCategoryRequest(
+        name: name,
+        type: type,
+      );
+      
+      await categoryService.createCategory(userId, request);
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('$name category added successfully')),
         );
+        
+        // Refresh the categories list
+        ref.invalidate(categoriesByTypeProvider);
       }
     } catch (e) {
       if (mounted) {
@@ -98,8 +116,8 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen>
   }
 }
 
-class CategoryListTab extends StatelessWidget {
-  final String categoryType;
+class CategoryListTab extends ConsumerWidget {
+  final CategoryType categoryType;
 
   const CategoryListTab({
     super.key,
@@ -107,450 +125,183 @@ class CategoryListTab extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    // TODO: Replace with actual category provider when ready
-    return _buildMockCategoryList(context);
-  }
-
-  Widget _buildMockCategoryList(BuildContext context) {
-    final isExpense = categoryType == 'expense';
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userId = SupabaseService.currentUserId;
     
-    // Mock data for now
-    final mockCategories = isExpense
-        ? [
-            {'name': 'Food & Dining', 'color': Colors.red.value, 'icon': Icons.restaurant},
-            {'name': 'Transportation', 'color': Colors.blue.value, 'icon': Icons.directions_car},
-            {'name': 'Shopping', 'color': Colors.purple.value, 'icon': Icons.shopping_bag},
-            {'name': 'Entertainment', 'color': Colors.orange.value, 'icon': Icons.movie},
-            {'name': 'Healthcare', 'color': Colors.green.value, 'icon': Icons.local_hospital},
-            {'name': 'Utilities', 'color': Colors.brown.value, 'icon': Icons.electrical_services},
-          ]
-        : [
-            {'name': 'Salary', 'color': Colors.green.value, 'icon': Icons.work},
-            {'name': 'Freelance', 'color': Colors.blue.value, 'icon': Icons.computer},
-            {'name': 'Investment', 'color': Colors.teal.value, 'icon': Icons.trending_up},
-            {'name': 'Gift', 'color': Colors.pink.value, 'icon': Icons.card_giftcard},
-            {'name': 'Other Income', 'color': Colors.indigo.value, 'icon': Icons.attach_money},
-          ];
-
-    if (mockCategories.isEmpty) {
-      return _buildEmptyState(context, isExpense);
+    if (userId == null) {
+      return const Center(
+        child: Text('Please login to see categories'),
+      );
     }
 
+    final categoriesAsync = ref.watch(categoriesByTypeProvider(
+      (userId: userId, type: categoryType),
+    ));
+
+    return categoriesAsync.when(
+      data: (categories) => _buildCategoryList(context, ref, categories),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stackTrace) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            Text('Error: ${error.toString()}'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => ref.refresh(categoriesByTypeProvider(
+                (userId: userId, type: categoryType),
+              )),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryList(BuildContext context, WidgetRef ref, List<Category> categories) {
+    if (categories.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              categoryType == CategoryType.expense 
+                ? Icons.trending_down 
+                : Icons.trending_up,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No ${categoryType.name} categories yet',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Categories will be created automatically when you first use the app',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.grey[500],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+    
     return RefreshIndicator(
       onRefresh: () async {
-        // TODO: Implement refresh when CategoryService is ready
-        print('Refreshing ${categoryType} categories');
+        ref.invalidate(categoriesByTypeProvider);
       },
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: mockCategories.length,
+        itemCount: categories.length,
         itemBuilder: (context, index) {
-          final category = mockCategories[index];
-          return _buildCategoryCard(context, category);
+          final category = categories[index];
+          return _buildCategoryItem(context, ref, category);
         },
       ),
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, bool isExpense) {
-    final theme = Theme.of(context);
-    
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            isExpense ? Icons.trending_down : Icons.trending_up,
-            size: 80,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'No ${isExpense ? 'Expense' : 'Income'} Categories',
-            style: theme.textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Create your first ${isExpense ? 'expense' : 'income'} category\nto start organizing your transactions',
-            style: theme.textTheme.bodyLarge,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          FilledButton.icon(
-            onPressed: () => _showAddCategoryDialog(context, isExpense),
-            icon: const Icon(Icons.add),
-            label: Text('Add ${isExpense ? 'Expense' : 'Income'} Category'),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildCategoryItem(BuildContext context, WidgetRef ref, Category category) {
+    // Generate icon based on category name
+    IconData icon = _getCategoryIcon(category.name);
+    Color color = _getCategoryColor(category.name);
 
-  Widget _buildCategoryCard(BuildContext context, Map<String, dynamic> category) {
-    final theme = Theme.of(context);
-    final color = Color(category['color'] as int);
-    
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.2),
-          child: Icon(
-            category['icon'] as IconData,
-            color: color,
-          ),
+          backgroundColor: color.withValues(alpha: 0.2),
+          child: Icon(icon, color: color),
         ),
         title: Text(
-          category['name'] as String,
-          style: theme.textTheme.titleMedium,
+          category.name,
+          style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         subtitle: Text(
-          '${categoryType.toUpperCase()} Category',
-          style: theme.textTheme.bodySmall,
+          '${category.type.name.toUpperCase()} Category',
+          style: TextStyle(
+            color: Colors.grey[600],
+            fontSize: 12,
+          ),
         ),
         trailing: PopupMenuButton<String>(
-          onSelected: (value) => _handleMenuAction(context, category, value),
+          onSelected: (value) {
+            switch (value) {
+              case 'edit':
+                _showEditCategoryDialog(context, ref, category);
+                break;
+              case 'delete':
+                _showDeleteConfirmation(context, ref, category);
+                break;
+            }
+          },
           itemBuilder: (context) => [
             const PopupMenuItem(
               value: 'edit',
-              child: Row(
-                children: [
-                  Icon(Icons.edit),
-                  SizedBox(width: 8),
-                  Text('Edit'),
-                ],
+              child: ListTile(
+                leading: Icon(Icons.edit),
+                title: Text('Edit'),
+                contentPadding: EdgeInsets.zero,
               ),
             ),
             const PopupMenuItem(
               value: 'delete',
-              child: Row(
-                children: [
-                  Icon(Icons.delete, color: Colors.red),
-                  SizedBox(width: 8),
-                  Text('Delete', style: TextStyle(color: Colors.red)),
-                ],
+              child: ListTile(
+                leading: Icon(Icons.delete, color: Colors.red),
+                title: Text('Delete', style: TextStyle(color: Colors.red)),
+                contentPadding: EdgeInsets.zero,
               ),
             ),
           ],
         ),
-        onTap: () => _showCategoryDetails(context, category),
       ),
     );
   }
 
-  void _handleMenuAction(BuildContext context, Map<String, dynamic> category, String action) {
-    switch (action) {
-      case 'edit':
-        _showEditCategoryDialog(context, category);
-        break;
-      case 'delete':
-        _showDeleteConfirmation(context, category);
-        break;
-    }
-  }
-
-  void _showAddCategoryDialog(BuildContext context, bool isExpense) {
+  void _showEditCategoryDialog(BuildContext context, WidgetRef ref, Category category) {
     showDialog(
       context: context,
       builder: (context) => CategoryFormDialog(
-        title: 'Add ${isExpense ? 'Expense' : 'Income'} Category',
-        categoryType: isExpense ? 'expense' : 'income',
+        title: 'Edit ${category.type.name} Category',
+        categoryType: category.type,
+        initialName: category.name,
         onSave: (name, color) {
-          // TODO: Implement when CategoryService is ready
-          print('Adding category: $name with color: $color');
+          _handleEditCategory(context, ref, category, name, color);
         },
       ),
     );
   }
 
-  void _showEditCategoryDialog(BuildContext context, Map<String, dynamic> category) {
-    showDialog(
-      context: context,
-      builder: (context) => CategoryFormDialog(
-        title: 'Edit Category',
-        categoryType: categoryType,
-        initialName: category['name'] as String,
-        initialColor: category['color'] as int,
-        onSave: (name, color) {
-          // TODO: Implement when CategoryService is ready
-          print('Editing category: $name with color: $color');
-        },
-      ),
-    );
-  }
-
-  void _showDeleteConfirmation(BuildContext context, Map<String, dynamic> category) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Category'),
-        content: Text('Are you sure you want to delete "${category['name']}"? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _deleteCategory(context, category);
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _deleteCategory(BuildContext context, Map<String, dynamic> category) {
-    // TODO: Implement when CategoryService is ready
-    print('Deleting category: ${category['name']}');
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${category['name']} deleted')),
-    );
-  }
-
-  void _showCategoryDetails(BuildContext context, Map<String, dynamic> category) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(category['name'] as String),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Text('Type: '),
-                Text(
-                  categoryType.toUpperCase(),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Text('Color: '),
-                Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: Color(category['color'] as int),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Text('Usage: 0 transactions'), // TODO: Get real usage count
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class CategoryFormDialog extends StatefulWidget {
-  final String title;
-  final String categoryType;
-  final String? initialName;
-  final int? initialColor;
-  final Function(String name, int color) onSave;
-
-  const CategoryFormDialog({
-    super.key,
-    required this.title,
-    required this.categoryType,
-    this.initialName,
-    this.initialColor,
-    required this.onSave,
-  });
-
-  @override
-  State<CategoryFormDialog> createState() => _CategoryFormDialogState();
-}
-
-class _CategoryFormDialogState extends State<CategoryFormDialog> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  int _selectedColor = Colors.blue.value;
-  bool _isLoading = false;
-
-  final List<Color> _availableColors = [
-    Colors.red,
-    Colors.pink,
-    Colors.purple,
-    Colors.deepPurple,
-    Colors.indigo,
-    Colors.blue,
-    Colors.lightBlue,
-    Colors.cyan,
-    Colors.teal,
-    Colors.green,
-    Colors.lightGreen,
-    Colors.lime,
-    Colors.yellow,
-    Colors.amber,
-    Colors.orange,
-    Colors.deepOrange,
-    Colors.brown,
-    Colors.grey,
-    Colors.blueGrey,
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.initialName != null) {
-      _nameController.text = widget.initialName!;
-    }
-    if (widget.initialColor != null) {
-      _selectedColor = widget.initialColor!;
-    }
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.title),
-      content: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Category Name',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter category name';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Color',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 120,
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 6,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
-                ),
-                itemCount: _availableColors.length,
-                itemBuilder: (context, index) {
-                  final color = _availableColors[index];
-                  final isSelected = _selectedColor == color.value;
-                  
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedColor = color.value;
-                      });
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                        border: isSelected
-                            ? Border.all(color: Colors.white, width: 3)
-                            : null,
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.3),
-                                  blurRadius: 4,
-                                  spreadRadius: 1,
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: isSelected
-                          ? const Icon(
-                              Icons.check,
-                              color: Colors.white,
-                              size: 16,
-                            )
-                          : null,
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: _isLoading ? null : _handleSave,
-          child: _isLoading 
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Save'),
-        ),
-      ],
-    );
-  }
-
-  void _handleSave() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() {
-      _isLoading = true;
-    });
-
+  void _handleEditCategory(BuildContext context, WidgetRef ref, Category category, String name, Color color) async {
     try {
-      widget.onSave(_nameController.text.trim(), _selectedColor);
+      final userId = SupabaseService.currentUserId;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final categoryService = ref.read(categoryServiceProvider);
+      final request = UpdateCategoryRequest(name: name);
       
-      if (mounted) {
-        Navigator.of(context).pop();
+      await categoryService.updateCategory(category.id, userId, request);
+      
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              widget.initialName != null 
-                  ? 'Category updated successfully' 
-                  : 'Category created successfully',
-            ),
-          ),
+          SnackBar(content: Text('${category.name} updated successfully')),
         );
+        
+        // Refresh the categories list
+        ref.invalidate(categoriesByTypeProvider);
       }
     } catch (e) {
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: ${e.toString()}'),
@@ -558,12 +309,95 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
           ),
         );
       }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+    }
+  }
+
+  void _showDeleteConfirmation(BuildContext context, WidgetRef ref, Category category) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Category'),
+        content: Text(
+          'Are you sure you want to delete "${category.name}"?\n\n'
+          'This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _handleDeleteCategory(context, ref, category);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleDeleteCategory(BuildContext context, WidgetRef ref, Category category) async {
+    try {
+      final userId = SupabaseService.currentUserId;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final categoryService = ref.read(categoryServiceProvider);
+      await categoryService.deleteCategory(category.id, userId);
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${category.name} deleted successfully')),
+        );
+        
+        // Refresh the categories list
+        ref.invalidate(categoriesByTypeProvider);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
+  }
+
+  IconData _getCategoryIcon(String categoryName) {
+    final name = categoryName.toLowerCase();
+    if (name.contains('food') || name.contains('dining')) return Icons.restaurant;
+    if (name.contains('transport')) return Icons.directions_car;
+    if (name.contains('shopping')) return Icons.shopping_bag;
+    if (name.contains('entertainment')) return Icons.movie;
+    if (name.contains('health')) return Icons.local_hospital;
+    if (name.contains('bill') || name.contains('utilities')) return Icons.electrical_services;
+    if (name.contains('salary') || name.contains('work')) return Icons.work;
+    if (name.contains('freelance') || name.contains('computer')) return Icons.computer;
+    if (name.contains('investment')) return Icons.trending_up;
+    if (name.contains('gift')) return Icons.card_giftcard;
+    if (name.contains('education')) return Icons.school;
+    return Icons.category;
+  }
+
+  Color _getCategoryColor(String categoryName) {
+    final name = categoryName.toLowerCase();
+    if (name.contains('food')) return Colors.red;
+    if (name.contains('transport')) return Colors.blue;
+    if (name.contains('shopping')) return Colors.purple;
+    if (name.contains('entertainment')) return Colors.orange;
+    if (name.contains('health')) return Colors.green;
+    if (name.contains('bill') || name.contains('utilities')) return Colors.brown;
+    if (name.contains('salary')) return Colors.green;
+    if (name.contains('freelance')) return Colors.blue;
+    if (name.contains('investment')) return Colors.teal;
+    if (name.contains('gift')) return Colors.pink;
+    if (name.contains('education')) return Colors.indigo;
+    return Colors.grey;
   }
 }

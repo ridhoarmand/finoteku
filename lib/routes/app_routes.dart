@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/auth/forgot_password_screen.dart';
+import '../features/auth/services/auth_service.dart';
 import '../features/home/home_screen.dart';
 import '../features/transaction/transaction_screen.dart';
 import '../features/chart/chart_screen.dart';
@@ -14,7 +15,6 @@ import '../features/onboarding/onboarding_screen.dart';
 import '../features/splash/splash_screen.dart';
 import '../features/wallet/screens/manage_wallets_screen.dart';
 import '../features/category/screens/manage_categories_screen.dart';
-import '../services/auth_service.dart';
 import '../features/onboarding/providers/onboarding_provider.dart';
 import '../widgets/main_shell.dart';
 

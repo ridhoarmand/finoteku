@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/wallet.dart';
-import '../../../services/wallet_service.dart';
+import '../services/wallet_service.dart';
 import '../../../services/supabase_service.dart';
 import '../../../utils/currency_formatter.dart';
 
