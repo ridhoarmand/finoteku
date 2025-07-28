@@ -8,11 +8,12 @@ import '../features/home/home_screen.dart';
 import '../features/transaction/transaction_screen.dart';
 import '../features/chart/chart_screen.dart';
 import '../features/account/account_screen.dart';
+import '../features/account/edit_profile_screen.dart';
 import '../features/settings/theme_settings_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/splash/splash_screen.dart';
 import '../services/auth_service.dart';
-import '../providers/onboarding_provider.dart';
+import '../features/onboarding/providers/onboarding_provider.dart';
 import '../widgets/main_shell.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -110,6 +111,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const AccountScreen(),
             routes: [
               GoRoute(
+                path: 'edit-profile',
+                builder: (context, state) => const EditProfileScreen(),
+              ),
+              GoRoute(
                 path: 'theme-settings',
                 builder: (context, state) => const ThemeSettingsScreen(),
               ),
@@ -157,5 +162,6 @@ class AppRoutes {
   static const String transaction = '/transaction';
   static const String chart = '/chart';
   static const String account = '/account';
+  static const String editProfile = '/account/edit-profile';
   static const String themeSettings = '/account/theme-settings';
 }

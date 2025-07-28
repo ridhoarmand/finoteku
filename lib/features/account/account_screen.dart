@@ -32,17 +32,22 @@ class AccountScreen extends ConsumerWidget {
                       CircleAvatar(
                         radius: 30,
                         backgroundColor: theme.colorScheme.primary,
-                        child: Text(
-                          (user?.userMetadata?['full_name'] as String?)
-                                  ?.substring(0, 1)
-                                  .toUpperCase() ??
-                              'U',
-                          style: TextStyle(
-                            color: theme.colorScheme.onPrimary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 24,
-                          ),
-                        ),
+                        backgroundImage: user?.userMetadata?['avatar_url'] != null
+                            ? NetworkImage(user!.userMetadata!['avatar_url'])
+                            : null,
+                        child: (user?.userMetadata?['avatar_url'] == null)
+                            ? Text(
+                                (user?.userMetadata?['full_name'] as String?)
+                                        ?.substring(0, 1)
+                                        .toUpperCase() ??
+                                    'U',
+                                style: TextStyle(
+                                  color: theme.colorScheme.onPrimary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 24,
+                                ),
+                              )
+                            : null,
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -65,14 +70,7 @@ class AccountScreen extends ConsumerWidget {
                             const SizedBox(height: 8),
                             OutlinedButton(
                               onPressed: () {
-                                // TODO: Edit profile
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Edit profile feature coming soon',
-                                    ),
-                                  ),
-                                );
+                                context.push('/account/edit-profile');
                               },
                               child: const Text('Edit Profile'),
                             ),
