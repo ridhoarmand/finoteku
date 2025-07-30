@@ -5,9 +5,14 @@ import '../services/wallet_service.dart';
 import '../../../services/supabase_service.dart';
 import '../../../utils/currency_formatter.dart';
 import '../../../utils/wallet_icon_helper.dart';
+import '../widgets/wallet_sync_status_widget.dart';
 
 class ManageWalletsScreen extends ConsumerWidget {
   const ManageWalletsScreen({super.key});
+
+  Widget _buildSyncStatusIndicator() {
+    return const WalletSyncStatusWidget();
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -18,6 +23,9 @@ class ManageWalletsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Manage Wallets'),
         actions: [
+          // Wallet Sync Status Widget
+          _buildSyncStatusIndicator(),
+          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => _showAddWalletDialog(context, ref),

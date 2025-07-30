@@ -159,6 +159,42 @@ class WalletService {
     }
   }
 
+  // Public method untuk sync semua unsynced wallets
+  Future<void> syncUnsyncedWallets(String userId) async {
+    try {
+      if (kDebugMode) {
+        print('🔄 Starting auto sync for unsynced wallets...');
+      }
+
+      final unsyncedWallets = await _localDb.getUnsyncedWallets(userId);
+      if (unsyncedWallets.isEmpty) {
+        if (kDebugMode) {
+          print('✅ No wallets need sync');
+        }
+        return;
+      }
+
+      if (kDebugMode) {
+        print('📝 Found ${unsyncedWallets.length} wallets to sync');
+      }
+
+      for (final wallet in unsyncedWallets) {
+        await _trySyncWallet(wallet);
+      }
+
+      // Fetch and merge dari server
+      await _fetchAndMergeFromServer(userId);
+
+      if (kDebugMode) {
+        print('✅ Auto sync completed for wallets');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Auto sync failed for wallets: $e');
+      }
+    }
+  }
+
   // Update balance wallet
   Future<Wallet> updateWalletBalance(String walletId, String userId, double newBalance) async {
     return updateWallet(walletId, userId, UpdateWalletRequest(balance: newBalance));

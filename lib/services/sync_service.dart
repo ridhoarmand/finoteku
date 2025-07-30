@@ -3,7 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'local_database_service.dart';
 import '../features/wallet/services/supabase_wallet_service.dart';
+import '../features/wallet/services/wallet_service.dart';
 import '../features/category/services/supabase_category_service.dart';
+import '../features/category/services/category_service.dart';
 import 'supabase_service.dart';
 import 'connectivity_service.dart';
 
@@ -12,8 +14,17 @@ final syncServiceProvider = Provider<SyncService>((ref) {
   final localDb = ref.watch(localDatabaseServiceProvider);
   final supabaseWalletService = ref.watch(supabaseWalletServiceProvider);
   final supabaseCategoryService = ref.watch(supabaseCategoryServiceProvider);
+  final walletService = ref.watch(walletServiceProvider);
+  final categoryService = ref.watch(categoryServiceProvider);
   final connectivityService = ref.watch(connectivityServiceProvider);
-  return SyncService(localDb, supabaseWalletService, supabaseCategoryService, connectivityService);
+  return SyncService(
+    localDb, 
+    supabaseWalletService, 
+    supabaseCategoryService,
+    walletService,
+    categoryService,
+    connectivityService,
+  );
 });
 
 // Provider untuk sync status
@@ -30,6 +41,8 @@ class SyncService {
   final LocalDatabaseService _localDb;
   final SupabaseWalletService _supabaseWalletService;
   final SupabaseCategoryService _supabaseCategoryService;
+  final WalletService _walletService;
+  final CategoryService _categoryService;
   final ConnectivityService _connectivityService;
 
   Timer? _syncTimer;
@@ -40,6 +53,8 @@ class SyncService {
     this._localDb, 
     this._supabaseWalletService, 
     this._supabaseCategoryService,
+    this._walletService,
+    this._categoryService,
     this._connectivityService,
   ) {
     _initConnectivityListener();
@@ -328,7 +343,8 @@ class SyncService {
           print('🔄 Starting auto sync for user: $userId');
         }
         
-        await syncUserData(userId);
+        // Use the simpler auto sync methods for better efficiency
+        await _performSimpleAutoSync(userId);
         
         if (kDebugMode) {
           print('✅ Auto sync completed for user: $userId');
@@ -337,6 +353,21 @@ class SyncService {
         if (kDebugMode) {
           print('❌ Auto sync failed: $e');
         }
+      }
+    }
+  }
+
+  // Private method untuk simple auto sync (hanya sync unsynced items)
+  Future<void> _performSimpleAutoSync(String userId) async {
+    try {
+      // Auto sync unsynced wallets
+      await _walletService.syncUnsyncedWallets(userId);
+      
+      // Auto sync unsynced categories  
+      await _categoryService.syncUnsyncedCategories(userId);
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Simple auto sync failed: $e');
       }
     }
   }
