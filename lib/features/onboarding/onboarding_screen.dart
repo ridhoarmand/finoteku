@@ -19,19 +19,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       title: 'Kelola Keuanganmu dengan Mudah Bersama Finoteku!',
       description:
           'Finoteku membantu Anda mencatat pengeluaran, memantau anggaran, dan mencapai tujuan finansial Anda dengan cara yang sederhana dan menyenangkan.',
-      image: 'assets/onboarding_1.png',
+      image: 'assets/onboardings/image1.png',
     ),
     OnboardingPageData(
       title: 'Pantau Keuanganmu Secara Real-Time',
       description:
           'Catat setiap transaksi dengan cepat dan mudah, atur anggaran bulanan untuk berbagai kategori pengeluaran, dan dapatkan notifikasi cerdas agar Anda tetap pada jalur yang benar.',
-      image: 'assets/onboarding_2.png',
+      image: 'assets/onboardings/image2.png',
     ),
     OnboardingPageData(
       title: 'Raih Impianmu Bersama Finoteku',
       description:
           'Tetapkan target keuangan untuk hal-hal yang Anda impikan, lacak progres Anda secara berkala, dan dapatkan tips cerdas untuk mempercepat pencapaian tujuan Anda.',
-      image: 'assets/onboarding_3.png',
+      image: 'assets/onboardings/image3.png',
     ),
   ];
 
