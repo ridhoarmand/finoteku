@@ -48,8 +48,8 @@ CREATE TABLE public.categories (
     name TEXT NOT NULL,
     type category_type NOT NULL,
     parent_id UUID REFERENCES public.categories(id) ON DELETE CASCADE,
-    icon_code_point INTEGER, -- Store Material Icons codePoint for custom icons
-    color INTEGER, -- Store color as ARGB integer (e.g. 0xFF2196F3 for blue)
+    icon_code_point BIGINT, -- Store Material Icons codePoint for custom icons (changed to BIGINT)
+    color BIGINT, -- Store color as ARGB integer - changed to BIGINT to support unsigned 32-bit values
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL

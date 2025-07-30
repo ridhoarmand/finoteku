@@ -30,6 +30,76 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
     super.dispose();
   }
 
+  Widget _buildSyncStatusIndicator() {
+    final userId = SupabaseService.currentUserId;
+    if (userId == null) return const SizedBox.shrink();
+
+    return Consumer(
+      builder: (context, ref, child) {
+        final expenseAsync = ref.watch(
+          categoriesByTypeProvider((userId: userId, type: CategoryType.expense)),
+        );
+        final incomeAsync = ref.watch(
+          categoriesByTypeProvider((userId: userId, type: CategoryType.income)),
+        );
+
+        return expenseAsync.when(
+          data: (expenseCategories) => incomeAsync.when(
+            data: (incomeCategories) {
+              final allCategories = [...expenseCategories, ...incomeCategories];
+              final unsyncedCount = allCategories.where((cat) => cat.needsSync).length;
+              
+              if (unsyncedCount == 0) {
+                return Tooltip(
+                  message: 'All categories synced',
+                  child: Icon(
+                    Icons.cloud_done,
+                    color: Colors.green[600],
+                    size: 20,
+                  ),
+                );
+              } else {
+                return Tooltip(
+                  message: '$unsyncedCount categories need sync',
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.orange,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.sync_problem,
+                          color: Colors.white,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$unsyncedCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+            },
+            loading: () => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
+          ),
+          loading: () => const SizedBox.shrink(),
+          error: (_, _) => const SizedBox.shrink(),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -43,6 +113,8 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
           ],
         ),
         actions: [
+          _buildSyncStatusIndicator(),
+          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => _showAddCategoryDialog(context),
@@ -97,7 +169,7 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
         iconCodePoint: icon != null
             ? CategoryIconHelper.getCodePointFromIcon(icon)
             : null,
-        color: color.value,
+        color: color.value, // ignore: deprecated_member_use
       );
 
       await categoryService.createCategory(userId, request);
@@ -210,7 +282,9 @@ class CategoryListTab extends ConsumerWidget {
     // Create hierarchical structure
     final hierarchicalItems = <Widget>[];
 
-    for (final parent in parentCategories) {
+    for (int i = 0; i < parentCategories.length; i++) {
+      final parent = parentCategories[i];
+      
       // Add parent category
       hierarchicalItems.add(
         _buildCategoryItem(context, ref, parent, isParent: true),
@@ -220,9 +294,17 @@ class CategoryListTab extends ConsumerWidget {
       final children = childCategories
           .where((child) => child.parentId == parent.id)
           .toList();
-      for (final child in children) {
+      for (int j = 0; j < children.length; j++) {
+        final child = children[j];
+        final isLastChild = j == children.length - 1;
         hierarchicalItems.add(
-          _buildCategoryItem(context, ref, child, isChild: true),
+          _buildCategoryItem(
+            context, 
+            ref, 
+            child, 
+            isChild: true, 
+            isLastChild: isLastChild,
+          ),
         );
       }
     }
@@ -256,6 +338,7 @@ class CategoryListTab extends ConsumerWidget {
     bool isParent = false,
     bool isChild = false,
     bool isOrphan = false,
+    bool isLastChild = false, // Add parameter to identify last child
   }) {
     // Get icon from category model or use default
     IconData icon = category.iconCodePoint != null
@@ -291,7 +374,12 @@ class CategoryListTab extends ConsumerWidget {
           ),
         ],
       );
-      cardMargin = const EdgeInsets.only(bottom: 4, left: 20);
+      // Close spacing for children, but add extra bottom margin for last child to separate from next parent
+      cardMargin = EdgeInsets.only(
+        bottom: isLastChild ? 8 : 2, 
+        left: 20, 
+        top: 2,
+      );
     } else if (isOrphan) {
       // Orphaned child styling - simple warning
       leadingWidget = Row(
@@ -313,7 +401,7 @@ class CategoryListTab extends ConsumerWidget {
         backgroundColor: color.withValues(alpha: 0.15),
         child: Icon(icon, color: color, size: 20),
       );
-      cardMargin = const EdgeInsets.only(bottom: 8);
+      cardMargin = const EdgeInsets.only(bottom: 2, top: 4); // Close to children, normal spacing above
     }
 
     return Card(
@@ -331,12 +419,62 @@ class CategoryListTab extends ConsumerWidget {
           vertical: isChild ? 2 : 6,
         ),
         leading: leadingWidget,
-        title: Text(
-          category.name,
-          style: TextStyle(
-            fontWeight: isParent ? FontWeight.w600 : FontWeight.w500,
-            fontSize: isChild ? 14 : 15,
-          ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                category.name,
+                style: TextStyle(
+                  fontWeight: isParent ? FontWeight.w600 : FontWeight.w500,
+                  fontSize: isChild ? 14 : 15,
+                ),
+              ),
+            ),
+            // Sync status indicator
+            if (category.needsSync) ...[
+              const SizedBox(width: 8),
+              Tooltip(
+                message: 'Waiting to sync with server',
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.sync_problem,
+                        size: 12,
+                        color: Colors.orange[700],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Sync',
+                        style: TextStyle(
+                          color: Colors.orange[700],
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ] else ...[
+              const SizedBox(width: 8),
+              Tooltip(
+                message: 'Synced with server',
+                child: Icon(
+                  Icons.cloud_done,
+                  size: 16,
+                  color: Colors.green[600],
+                ),
+              ),
+            ],
+          ],
         ),
         trailing: PopupMenuButton<String>(
           icon: Icon(Icons.more_vert, size: 20, color: Colors.grey[600]),
@@ -347,6 +485,9 @@ class CategoryListTab extends ConsumerWidget {
                 break;
               case 'delete':
                 _showDeleteConfirmation(context, ref, category);
+                break;
+              case 'sync':
+                _forceSyncCategory(context, ref, category);
                 break;
             }
           },
@@ -362,6 +503,22 @@ class CategoryListTab extends ConsumerWidget {
                 ],
               ),
             ),
+            // Show sync option only if category needs sync
+            if (category.needsSync)
+              PopupMenuItem(
+                value: 'sync',
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.sync, size: 18, color: Colors.orange[700]),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Force Sync',
+                      style: TextStyle(color: Colors.orange[700]),
+                    ),
+                  ],
+                ),
+              ),
             const PopupMenuItem(
               value: 'delete',
               child: Row(
@@ -448,7 +605,7 @@ class CategoryListTab extends ConsumerWidget {
         iconCodePoint: icon != null
             ? CategoryIconHelper.getCodePointFromIcon(icon)
             : null,
-        color: color.value,
+        color: color.value, // ignore: deprecated_member_use
       );
 
       await categoryService.updateCategory(category.id, userId, request);
@@ -528,6 +685,64 @@ class CategoryListTab extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _forceSyncCategory(
+    BuildContext context,
+    WidgetRef ref,
+    Category category,
+  ) async {
+    try {
+      final userId = SupabaseService.currentUserId;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text('Syncing ${category.name}...'),
+            ],
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+
+      final categoryService = ref.read(categoryServiceProvider);
+      await categoryService.forceSyncCategory(category.id, userId);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${category.name} synced successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Refresh the categories list
+        ref.invalidate(categoriesByTypeProvider);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Sync failed: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );

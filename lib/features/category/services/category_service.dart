@@ -263,6 +263,16 @@ class CategoryService {
     }
   }
 
+  // Public method untuk force sync category
+  Future<void> forceSyncCategory(String categoryId, String userId) async {
+    final category = await _localDb.getCategory(categoryId, userId);
+    if (category != null) {
+      await _trySyncCategory(category);
+    } else {
+      throw Exception('Category not found: $categoryId');
+    }
+  }
+
   Future<void> _trySyncCategory(Category category) async {
     try {
       if (kDebugMode) {

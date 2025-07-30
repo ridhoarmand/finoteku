@@ -101,127 +101,140 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    final maxDialogHeight = screenHeight * 0.9; // 90% of screen height
+    final screenWidth = MediaQuery.of(context).size.width;
+    final maxDialogHeight = screenHeight * 0.90; // 90% of screen height
+    final maxDialogWidth = screenWidth * 0.98; // 98% of screen width
 
     return Dialog(
+      insetPadding: const EdgeInsets.all(8), // Reduce default padding
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        width: double.maxFinite,
-        constraints: BoxConstraints(
-          maxHeight: maxDialogHeight,
-          maxWidth: 500, // Max width for better UX on tablets
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    widget.categoryType == CategoryType.expense
-                        ? Icons.trending_down
-                        : Icons.trending_up,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      widget.title,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          // Dismiss keyboard when tapping outside text fields
+          FocusScope.of(context).unfocus();
+        },
+        child: Container(
+          width: double.maxFinite,
+          constraints: BoxConstraints(
+            maxHeight: maxDialogHeight,
+            maxWidth: maxDialogWidth.clamp(
+              450.0, // Increased minimum width
+              double.infinity, // Remove max width limit
             ),
-
-            // Scrollable Content
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.9),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
                   children: [
-                    // Category Name Input
-                    TextField(
-                      controller: _nameController,
-                      decoration: InputDecoration(
-                        labelText: 'Category Name',
-                        border: const OutlineInputBorder(),
-                      ),
-                      textCapitalization: TextCapitalization.words,
-                      maxLength: 50,
+                    Icon(
+                      widget.categoryType == CategoryType.expense
+                          ? Icons.trending_down
+                          : Icons.trending_up,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
-                    // Parent Category Selection
-                    _buildParentSelectionSection(context),
-                    const SizedBox(height: 20),
-
-                    // Icon Selection Section
-                    _buildIconSection(context),
-                    const SizedBox(height: 20),
-
-                    // Color Selection Section
-                    _buildColorSection(context),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        widget.title,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
 
-            // Action Buttons
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(16),
-                ),
-                border: Border(
-                  top: BorderSide(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.outline.withValues(alpha: 0.2),
+              // Scrollable Content
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Category Name Input
+                      TextField(
+                        controller: _nameController,
+                        decoration: InputDecoration(
+                          labelText: 'Category Name',
+                          border: const OutlineInputBorder(),
+                        ),
+                        textCapitalization: TextCapitalization.words,
+                        maxLength: 50,
+                      ),
+                      // Parent Category Selection
+                      _buildParentSelectionSection(context),
+                      const SizedBox(height: 20),
+
+                      // Icon Selection Section
+                      _buildIconSection(context),
+                      const SizedBox(height: 20),
+
+                      // Color Selection Section
+                      _buildColorSection(context),
+                    ],
                   ),
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
+
+              // Action Buttons
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: const BorderRadius.vertical(
+                    bottom: Radius.circular(16),
                   ),
-                  const SizedBox(width: 12),
-                  FilledButton(
-                    onPressed: _nameController.text.trim().isEmpty
-                        ? null
-                        : () {
-                            widget.onSave(
-                              _nameController.text.trim(),
-                              _selectedColor,
-                              _selectedIcon ??
-                                  Icons
-                                      .category, // Use default if none selected
-                              _selectedParentId,
-                            );
-                            Navigator.of(context).pop();
-                          },
-                    child: const Text('Save'),
+                  border: Border(
+                    top: BorderSide(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outline.withValues(alpha: 0.2),
+                    ),
                   ),
-                ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 12),
+                    FilledButton(
+                      onPressed: _nameController.text.trim().isEmpty
+                          ? null
+                          : () {
+                              widget.onSave(
+                                _nameController.text.trim(),
+                                _selectedColor,
+                                _selectedIcon ??
+                                    Icons
+                                        .category, // Use default if none selected
+                                _selectedParentId,
+                              );
+                              Navigator.of(context).pop();
+                            },
+                      child: const Text('Save'),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -360,7 +373,7 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
         ),
         const SizedBox(height: 12),
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Theme.of(
               context,
@@ -373,7 +386,7 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
             ),
           ),
           child: SizedBox(
-            height: 60, // Fixed height for horizontal scroll
+            height: 40, // Fixed height for horizontal scroll
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -408,7 +421,7 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
-                                    color: color.withValues(alpha: 0.4),
+                                    color: color.withValues(alpha: 0.5),
                                     blurRadius: 8,
                                     spreadRadius: 2,
                                   ),
@@ -465,7 +478,9 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
               constraints: BoxConstraints(minWidth: 24, minHeight: 24),
               tooltip:
                   'Select a parent to create a sub-category, or leave empty for main category',
-              onPressed: () {},
+              onPressed: () {
+                _showParentCategoryInfo(context);
+              },
             ),
           ],
         ),
@@ -497,8 +512,9 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
 
                   // Cannot be a child of the category being edited
                   if (widget.editingCategoryId != null &&
-                      cat.parentId == widget.editingCategoryId)
+                      cat.parentId == widget.editingCategoryId) {
                     return false;
+                  }
 
                   return true;
                 }).toList();
@@ -576,5 +592,89 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
     // Calculate contrast color (white or black) based on background
     final luminance = backgroundColor.computeLuminance();
     return luminance > 0.5 ? Colors.black : Colors.white;
+  }
+
+  void _showParentCategoryInfo(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              Icons.account_tree_outlined,
+              color: Theme.of(context).colorScheme.primary,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            const Text('Parent Category'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Parent categories help organize your finances hierarchically:',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 12),
+            _buildInfoItem(
+              '🏠 Main Category',
+              'Select "None" to create a main category that can have sub-categories',
+            ),
+            const SizedBox(height: 8),
+            _buildInfoItem(
+              '📁 Sub-category',
+              'Select a parent to create a sub-category under it',
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Example:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blue[700],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text('🍽️ Food (Main Category)'),
+                  const Text('  └── 🍕 Fast Food (Sub-category)'),
+                  const Text('  └── 🥗 Groceries (Sub-category)'),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Got it!'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoItem(String title, String description) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 2),
+        Text(
+          description,
+          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+        ),
+      ],
+    );
   }
 }
