@@ -10,7 +10,8 @@ class ManageCategoriesScreen extends ConsumerStatefulWidget {
   const ManageCategoriesScreen({super.key});
 
   @override
-  ConsumerState<ManageCategoriesScreen> createState() => _ManageCategoriesScreenState();
+  ConsumerState<ManageCategoriesScreen> createState() =>
+      _ManageCategoriesScreenState();
 }
 
 class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
@@ -37,14 +38,8 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(
-              icon: Icon(Icons.trending_down),
-              text: 'Expense',
-            ),
-            Tab(
-              icon: Icon(Icons.trending_up),
-              text: 'Income',
-            ),
+            Tab(icon: Icon(Icons.trending_down), text: 'Expense'),
+            Tab(icon: Icon(Icons.trending_up), text: 'Income'),
           ],
         ),
         actions: [
@@ -68,20 +63,26 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
     // Get current tab index to determine category type
     final isExpense = _tabController.index == 0;
     final categoryType = isExpense ? CategoryType.expense : CategoryType.income;
-    
+
     showDialog(
       context: context,
       builder: (context) => CategoryFormDialog(
         title: 'Add ${isExpense ? 'Expense' : 'Income'} Category',
         categoryType: categoryType,
-        onSave: (name, color, icon) {
-          _handleAddCategory(categoryType, name, color, icon);
+        onSave: (name, color, icon, parentId) {
+          _handleAddCategory(categoryType, name, color, icon, parentId);
         },
       ),
     );
   }
 
-  void _handleAddCategory(CategoryType type, String name, Color color, IconData? icon) async {
+  void _handleAddCategory(
+    CategoryType type,
+    String name,
+    Color color,
+    IconData? icon,
+    String? parentId,
+  ) async {
     try {
       final userId = SupabaseService.currentUserId;
       if (userId == null) {
@@ -92,16 +93,19 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
       final request = CreateCategoryRequest(
         name: name,
         type: type,
-        iconCodePoint: icon != null ? CategoryIconHelper.getCodePointFromIcon(icon) : null,
+        parentId: parentId,
+        iconCodePoint: icon != null
+            ? CategoryIconHelper.getCodePointFromIcon(icon)
+            : null,
       );
-      
+
       await categoryService.createCategory(userId, request);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('$name category added successfully')),
         );
-        
+
         // Refresh the categories list
         ref.invalidate(categoriesByTypeProvider);
       }
@@ -121,24 +125,19 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
 class CategoryListTab extends ConsumerWidget {
   final CategoryType categoryType;
 
-  const CategoryListTab({
-    super.key,
-    required this.categoryType,
-  });
+  const CategoryListTab({super.key, required this.categoryType});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userId = SupabaseService.currentUserId;
-    
+
     if (userId == null) {
-      return const Center(
-        child: Text('Please login to see categories'),
-      );
+      return const Center(child: Text('Please login to see categories'));
     }
 
-    final categoriesAsync = ref.watch(categoriesByTypeProvider(
-      (userId: userId, type: categoryType),
-    ));
+    final categoriesAsync = ref.watch(
+      categoriesByTypeProvider((userId: userId, type: categoryType)),
+    );
 
     return categoriesAsync.when(
       data: (categories) => _buildCategoryList(context, ref, categories),
@@ -152,9 +151,9 @@ class CategoryListTab extends ConsumerWidget {
             Text('Error: ${error.toString()}'),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => ref.refresh(categoriesByTypeProvider(
-                (userId: userId, type: categoryType),
-              )),
+              onPressed: () => ref.refresh(
+                categoriesByTypeProvider((userId: userId, type: categoryType)),
+              ),
               child: const Text('Retry'),
             ),
           ],
@@ -163,80 +162,179 @@ class CategoryListTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildCategoryList(BuildContext context, WidgetRef ref, List<Category> categories) {
+  Widget _buildCategoryList(
+    BuildContext context,
+    WidgetRef ref,
+    List<Category> categories,
+  ) {
     if (categories.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              categoryType == CategoryType.expense 
-                ? Icons.trending_down 
-                : Icons.trending_up,
+              categoryType == CategoryType.expense
+                  ? Icons.trending_down
+                  : Icons.trending_up,
               size: 64,
               color: Colors.grey[400],
             ),
             const SizedBox(height: 16),
             Text(
-              'No ${categoryType.name} categories yet',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
+              'No categories yet',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
             ),
             const SizedBox(height: 8),
             Text(
-              'Categories will be created automatically when you first use the app',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[500],
-              ),
-              textAlign: TextAlign.center,
+              'Tap + to add your first category',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
             ),
           ],
         ),
       );
     }
-    
+
+    // Separate parent and child categories
+    final parentCategories = categories
+        .where((cat) => cat.parentId == null)
+        .toList();
+    final childCategories = categories
+        .where((cat) => cat.parentId != null)
+        .toList();
+
+    // Create hierarchical structure
+    final hierarchicalItems = <Widget>[];
+
+    for (final parent in parentCategories) {
+      // Add parent category
+      hierarchicalItems.add(
+        _buildCategoryItem(context, ref, parent, isParent: true),
+      );
+
+      // Add children of this parent
+      final children = childCategories
+          .where((child) => child.parentId == parent.id)
+          .toList();
+      for (final child in children) {
+        hierarchicalItems.add(
+          _buildCategoryItem(context, ref, child, isChild: true),
+        );
+      }
+    }
+
+    // Add orphaned child categories (children whose parents don't exist in current list)
+    final parentIds = parentCategories.map((p) => p.id).toSet();
+    final orphanedChildren = childCategories
+        .where((child) => !parentIds.contains(child.parentId))
+        .toList();
+    for (final orphan in orphanedChildren) {
+      hierarchicalItems.add(
+        _buildCategoryItem(context, ref, orphan, isOrphan: true),
+      );
+    }
+
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(categoriesByTypeProvider);
       },
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: categories.length,
-        itemBuilder: (context, index) {
-          final category = categories[index];
-          return _buildCategoryItem(context, ref, category);
-        },
+      child: ListView(
+        padding: const EdgeInsets.all(12),
+        children: hierarchicalItems,
       ),
     );
   }
 
-  Widget _buildCategoryItem(BuildContext context, WidgetRef ref, Category category) {
+  Widget _buildCategoryItem(
+    BuildContext context,
+    WidgetRef ref,
+    Category category, {
+    bool isParent = false,
+    bool isChild = false,
+    bool isOrphan = false,
+  }) {
     // Get icon from category model or auto-detect based on name
-    IconData icon = category.iconCodePoint != null 
-      ? CategoryIconHelper.getIconFromCodePoint(category.iconCodePoint)
-      : CategoryIconHelper.getIconForCategory(category.name);
+    IconData icon = category.iconCodePoint != null
+        ? CategoryIconHelper.getIconFromCodePoint(category.iconCodePoint)
+        : CategoryIconHelper.getIconForCategory(category.name);
     Color color = _getCategoryColor(category.name);
 
+    // Different styling based on hierarchy level
+    Widget leadingWidget;
+    EdgeInsets cardMargin;
+
+    if (isChild) {
+      // Child category styling - minimalist approach
+      leadingWidget = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 20,
+            child: Icon(
+              Icons.subdirectory_arrow_right,
+              size: 16,
+              color: Colors.grey[400],
+            ),
+          ),
+          CircleAvatar(
+            radius: 14,
+            backgroundColor: color.withValues(alpha: 0.15),
+            child: Icon(icon, color: color, size: 12),
+          ),
+        ],
+      );
+      cardMargin = const EdgeInsets.only(bottom: 4, left: 20);
+    } else if (isOrphan) {
+      // Orphaned child styling - simple warning
+      leadingWidget = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.warning_amber_rounded, size: 18, color: Colors.orange),
+          const SizedBox(width: 8),
+          CircleAvatar(
+            radius: 14,
+            backgroundColor: color.withValues(alpha: 0.15),
+            child: Icon(icon, color: color, size: 12),
+          ),
+        ],
+      );
+      cardMargin = const EdgeInsets.only(bottom: 4);
+    } else {
+      // Parent category styling
+      leadingWidget = CircleAvatar(
+        backgroundColor: color.withValues(alpha: 0.15),
+        child: Icon(icon, color: color, size: 20),
+      );
+      cardMargin = const EdgeInsets.only(bottom: 8);
+    }
+
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: cardMargin,
+      elevation: isChild ? 0.3 : 0.5,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: isChild
+            ? BorderSide(color: Colors.grey[200]!, width: 0.5)
+            : BorderSide.none,
+      ),
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: color.withValues(alpha: 0.2),
-          child: Icon(icon, color: color),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: isChild ? 12 : 16,
+          vertical: isChild ? 2 : 6,
         ),
+        leading: leadingWidget,
         title: Text(
           category.name,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Text(
-          '${category.type.name.toUpperCase()} Category',
           style: TextStyle(
-            color: Colors.grey[600],
-            fontSize: 12,
+            fontWeight: isParent ? FontWeight.w600 : FontWeight.w500,
+            fontSize: isChild ? 14 : 15,
           ),
         ),
         trailing: PopupMenuButton<String>(
+          icon: Icon(Icons.more_vert, size: 20, color: Colors.grey[600]),
           onSelected: (value) {
             switch (value) {
               case 'edit':
@@ -250,18 +348,24 @@ class CategoryListTab extends ConsumerWidget {
           itemBuilder: (context) => [
             const PopupMenuItem(
               value: 'edit',
-              child: ListTile(
-                leading: Icon(Icons.edit),
-                title: Text('Edit'),
-                contentPadding: EdgeInsets.zero,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.edit, size: 18),
+                  SizedBox(width: 12),
+                  Text('Edit'),
+                ],
               ),
             ),
             const PopupMenuItem(
               value: 'delete',
-              child: ListTile(
-                leading: Icon(Icons.delete, color: Colors.red),
-                title: Text('Delete', style: TextStyle(color: Colors.red)),
-                contentPadding: EdgeInsets.zero,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.delete, size: 18, color: Colors.red),
+                  SizedBox(width: 12),
+                  Text('Delete', style: TextStyle(color: Colors.red)),
+                ],
               ),
             ),
           ],
@@ -270,24 +374,60 @@ class CategoryListTab extends ConsumerWidget {
     );
   }
 
-  void _showEditCategoryDialog(BuildContext context, WidgetRef ref, Category category) {
+  bool hasChildren(String parentId, WidgetRef ref) {
+    final userId = SupabaseService.currentUserId;
+    if (userId == null) return false;
+
+    final categoriesAsync = ref.watch(
+      categoriesByTypeProvider((userId: userId, type: categoryType)),
+    );
+
+    return categoriesAsync.when(
+      data: (categories) => categories.any((cat) => cat.parentId == parentId),
+      loading: () => false,
+      error: (_, _) => false,
+    );
+  }
+
+  void _showEditCategoryDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Category category,
+  ) {
     showDialog(
       context: context,
       builder: (context) => CategoryFormDialog(
         title: 'Edit ${category.type.name} Category',
         categoryType: category.type,
         initialName: category.name,
-        initialIcon: category.iconCodePoint != null 
-          ? CategoryIconHelper.getIconFromCodePoint(category.iconCodePoint)
-          : null,
-        onSave: (name, color, icon) {
-          _handleEditCategory(context, ref, category, name, color, icon);
+        initialParentId: category.parentId,
+        initialIcon: category.iconCodePoint != null
+            ? CategoryIconHelper.getIconFromCodePoint(category.iconCodePoint)
+            : null,
+        onSave: (name, color, icon, parentId) {
+          _handleEditCategory(
+            context,
+            ref,
+            category,
+            name,
+            color,
+            icon,
+            parentId,
+          );
         },
       ),
     );
   }
 
-  void _handleEditCategory(BuildContext context, WidgetRef ref, Category category, String name, Color color, IconData? icon) async {
+  void _handleEditCategory(
+    BuildContext context,
+    WidgetRef ref,
+    Category category,
+    String name,
+    Color color,
+    IconData? icon,
+    String? parentId,
+  ) async {
     try {
       final userId = SupabaseService.currentUserId;
       if (userId == null) {
@@ -297,16 +437,19 @@ class CategoryListTab extends ConsumerWidget {
       final categoryService = ref.read(categoryServiceProvider);
       final request = UpdateCategoryRequest(
         name: name,
-        iconCodePoint: icon != null ? CategoryIconHelper.getCodePointFromIcon(icon) : null,
+        parentId: parentId,
+        iconCodePoint: icon != null
+            ? CategoryIconHelper.getCodePointFromIcon(icon)
+            : null,
       );
-      
+
       await categoryService.updateCategory(category.id, userId, request);
-      
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${category.name} updated successfully')),
         );
-        
+
         // Refresh the categories list
         ref.invalidate(categoriesByTypeProvider);
       }
@@ -322,15 +465,16 @@ class CategoryListTab extends ConsumerWidget {
     }
   }
 
-  void _showDeleteConfirmation(BuildContext context, WidgetRef ref, Category category) {
+  void _showDeleteConfirmation(
+    BuildContext context,
+    WidgetRef ref,
+    Category category,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Category'),
-        content: Text(
-          'Are you sure you want to delete "${category.name}"?\n\n'
-          'This action cannot be undone.',
-        ),
+        content: Text('Delete "${category.name}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -349,7 +493,11 @@ class CategoryListTab extends ConsumerWidget {
     );
   }
 
-  void _handleDeleteCategory(BuildContext context, WidgetRef ref, Category category) async {
+  void _handleDeleteCategory(
+    BuildContext context,
+    WidgetRef ref,
+    Category category,
+  ) async {
     try {
       final userId = SupabaseService.currentUserId;
       if (userId == null) {
@@ -358,12 +506,12 @@ class CategoryListTab extends ConsumerWidget {
 
       final categoryService = ref.read(categoryServiceProvider);
       await categoryService.deleteCategory(category.id, userId);
-      
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${category.name} deleted successfully')),
         );
-        
+
         // Refresh the categories list
         ref.invalidate(categoriesByTypeProvider);
       }
@@ -386,7 +534,8 @@ class CategoryListTab extends ConsumerWidget {
     if (name.contains('shopping')) return Colors.purple;
     if (name.contains('entertainment')) return Colors.orange;
     if (name.contains('health')) return Colors.green;
-    if (name.contains('bill') || name.contains('utilities')) return Colors.brown;
+    if (name.contains('bill') || name.contains('utilities'))
+      return Colors.brown;
     if (name.contains('salary')) return Colors.green;
     if (name.contains('freelance')) return Colors.blue;
     if (name.contains('investment')) return Colors.teal;

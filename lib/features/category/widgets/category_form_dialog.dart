@@ -1,31 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/category.dart';
 import '../../../utils/category_icon_helper.dart';
+import '../services/category_service.dart';
+import '../../../services/supabase_service.dart';
 
-class CategoryFormDialog extends StatefulWidget {
+class CategoryFormDialog extends ConsumerStatefulWidget {
   final String title;
   final CategoryType categoryType;
   final String? initialName;
+  final String? initialParentId;
   final IconData? initialIcon;
-  final Function(String name, Color color, IconData? icon) onSave;
+  final Function(String name, Color color, IconData? icon, String? parentId) onSave;
 
   const CategoryFormDialog({
     super.key,
     required this.title,
     required this.categoryType,
     this.initialName,
+    this.initialParentId,
     this.initialIcon,
     required this.onSave,
   });
 
   @override
-  State<CategoryFormDialog> createState() => _CategoryFormDialogState();
+  ConsumerState<CategoryFormDialog> createState() => _CategoryFormDialogState();
 }
 
-class _CategoryFormDialogState extends State<CategoryFormDialog> {
+class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
   late TextEditingController _nameController;
   Color _selectedColor = Colors.blue;
   IconData? _selectedIcon;
+  String? _selectedParentId;
   
   final List<Color> _availableColors = [
     Colors.red,
@@ -45,6 +51,7 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
     super.initState();
     _nameController = TextEditingController(text: widget.initialName ?? '');
     _selectedIcon = widget.initialIcon;
+    _selectedParentId = widget.initialParentId;
   }
 
   @override
@@ -128,6 +135,10 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
                     ),
                     const SizedBox(height: 20),
                     
+                    // Parent Category Selection
+                    _buildParentSelectionSection(context),
+                    const SizedBox(height: 20),
+                    
                     // Icon Selection Section
                     _buildIconSection(context),
                     const SizedBox(height: 20),
@@ -167,6 +178,7 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
                                   _nameController.text.trim(), 
                                   _selectedColor,
                                   _selectedIcon,
+                                  _selectedParentId,
                                 );
                                 Navigator.of(context).pop();
                               },
@@ -377,6 +389,127 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
                 ),
               );
             }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildParentSelectionSection(BuildContext context) {
+    final currentUser = ref.watch(currentUserProvider);
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.account_tree_outlined,
+              size: 16,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Parent Category',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Select a parent category to create a sub-category, or leave empty for a main category.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 12),
+              
+              // Parent Category Dropdown
+              currentUser.when(
+                data: (user) {
+                  if (user == null) return const SizedBox.shrink();
+                  
+                  final parentCategoriesAsync = ref.watch(
+                    categoriesByTypeProvider((userId: user.id, type: widget.categoryType))
+                  );
+                  
+                  return parentCategoriesAsync.when(
+                    data: (categories) {
+                      // Filter only parent categories (those with parentId == null)
+                      final parentCategories = categories
+                          .where((cat) => cat.parentId == null)
+                          .toList();
+                      
+                      return DropdownButtonFormField<String?>(
+                        value: _selectedParentId,
+                        decoration: InputDecoration(
+                          labelText: 'Parent Category (Optional)',
+                          border: const OutlineInputBorder(),
+                          prefixIcon: Icon(
+                            Icons.category_outlined,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                        items: [
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('None (Main Category)'),
+                          ),
+                          ...parentCategories.map((category) {
+                            return DropdownMenuItem<String?>(
+                              value: category.id,
+                              child: Row(
+                                children: [
+                                  CategoryIconHelper.buildCategoryIcon(
+                                    category.iconCodePoint != null 
+                                        ? IconData(category.iconCodePoint!, fontFamily: 'MaterialIcons')
+                                        : CategoryIconHelper.getIconForCategory(category.name),
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(category.name),
+                                ],
+                              ),
+                            );
+                          }),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedParentId = value;
+                          });
+                        },
+                      );
+                    },
+                    loading: () => const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: CircularProgressIndicator(),
+                      ),
+                    ),
+                    error: (error, stack) => Text(
+                      'Error loading parent categories: ${error.toString()}',
+                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    ),
+                  );
+                },
+                loading: () => const CircularProgressIndicator(),
+                error: (error, stack) => Text('Error: $error'),
+              ),
+            ],
           ),
         ),
       ],
