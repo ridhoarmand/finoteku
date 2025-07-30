@@ -35,6 +35,7 @@ CREATE TABLE public.wallets (
     name TEXT NOT NULL,
     balance DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     currency TEXT NOT NULL DEFAULT 'IDR',
+    icon TEXT, -- Icon path from assets (banks/*.svg or ewallets/*.svg)
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
@@ -47,6 +48,7 @@ CREATE TABLE public.categories (
     name TEXT NOT NULL,
     type category_type NOT NULL,
     parent_id UUID REFERENCES public.categories(id) ON DELETE CASCADE,
+    icon_code_point INTEGER, -- Store Material Icons codePoint for custom icons
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL

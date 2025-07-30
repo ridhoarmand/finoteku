@@ -1,0 +1,237 @@
+import 'package:flutter/material.dart';
+
+class CategoryIconHelper {
+  // Predefined category icons mapping
+  static const Map<String, IconData> _categoryIcons = {
+    // Income Categories
+    'salary': Icons.work,
+    'freelance': Icons.computer,
+    'investment': Icons.trending_up,
+    'business': Icons.business,
+    'gift': Icons.card_giftcard,
+    'bonus': Icons.star,
+    'dividend': Icons.account_balance,
+    'rental': Icons.home,
+    'side_hustle': Icons.handyman,
+    
+    // Expense Categories
+    'food': Icons.restaurant,
+    'dining': Icons.restaurant,
+    'transportation': Icons.directions_car,
+    'car': Icons.directions_car,
+    'shopping': Icons.shopping_bag,
+    'groceries': Icons.shopping_cart,
+    'entertainment': Icons.movie,
+    'health': Icons.local_hospital,
+    'medical': Icons.local_hospital,
+    'education': Icons.school,
+    'bills': Icons.receipt,
+    'utilities': Icons.electrical_services,
+    'rent': Icons.home,
+    'insurance': Icons.security,
+    'fuel': Icons.local_gas_station,
+    'phone': Icons.phone,
+    'internet': Icons.wifi,
+    'clothing': Icons.checkroom,
+    'beauty': Icons.face,
+    'fitness': Icons.fitness_center,
+    'travel': Icons.flight,
+    'subscription': Icons.subscriptions,
+    'charity': Icons.volunteer_activism,
+    'pets': Icons.pets,
+    'repairs': Icons.build,
+    'tax': Icons.gavel,
+    'others': Icons.more_horiz,
+  };
+
+  // Available icons for selection (combination of Material + additional icons)
+  static const List<IconData> availableIcons = [
+    // Common category icons
+    Icons.restaurant,
+    Icons.directions_car,
+    Icons.shopping_bag,
+    Icons.shopping_cart,
+    Icons.movie,
+    Icons.local_hospital,
+    Icons.school,
+    Icons.work,
+    Icons.computer,
+    Icons.trending_up,
+    Icons.business,
+    Icons.card_giftcard,
+    Icons.home,
+    Icons.receipt,
+    Icons.electrical_services,
+    Icons.security,
+    Icons.local_gas_station,
+    Icons.phone,
+    Icons.wifi,
+    Icons.checkroom,
+    Icons.face,
+    Icons.fitness_center,
+    Icons.flight,
+    Icons.subscriptions,
+    Icons.volunteer_activism,
+    Icons.pets,
+    Icons.build,
+    Icons.gavel,
+    Icons.star,
+    Icons.account_balance,
+    Icons.handyman,
+    
+    // Additional useful icons
+    Icons.coffee,
+    Icons.fastfood,
+    Icons.local_pizza,
+    Icons.cake,
+    Icons.directions_bus,
+    Icons.train,
+    Icons.two_wheeler,
+    Icons.local_taxi,
+    Icons.store,
+    Icons.local_mall,
+    Icons.sports_esports,
+    Icons.music_note,
+    Icons.book,
+    Icons.laptop,
+    Icons.smartphone,
+    Icons.tv,
+    Icons.sports,
+    Icons.beach_access,
+    Icons.camera_alt,
+    Icons.palette,
+    Icons.brush,
+    Icons.cut,
+    Icons.spa,
+    Icons.child_care,
+    Icons.elderly,
+    Icons.medical_services,
+    Icons.local_pharmacy,
+    Icons.more_horiz,
+    Icons.category,
+  ];
+
+  // Get icon for category name (auto-detection)
+  static IconData getIconForCategory(String categoryName) {
+    final lowerName = categoryName.toLowerCase();
+    
+    // Direct match first
+    if (_categoryIcons.containsKey(lowerName)) {
+      return _categoryIcons[lowerName]!;
+    }
+    
+    // Partial match
+    for (final entry in _categoryIcons.entries) {
+      if (lowerName.contains(entry.key)) {
+        return entry.value;
+      }
+    }
+    
+    // Default icon
+    return Icons.category;
+  }
+
+  // Get icon from stored icon data (from database)
+  static IconData getIconFromCodePoint(int? codePoint) {
+    if (codePoint == null) return Icons.category;
+    return IconData(codePoint, fontFamily: 'MaterialIcons');
+  }
+
+  // Convert IconData to codePoint for storage
+  static int getCodePointFromIcon(IconData icon) {
+    return icon.codePoint;
+  }
+
+  // Get icon display name for UI
+  static String getIconName(IconData icon) {
+    // You can create a reverse mapping or use a more sophisticated approach
+    for (final entry in _categoryIcons.entries) {
+      if (entry.value.codePoint == icon.codePoint) {
+        return entry.key.replaceAll('_', ' ').toUpperCase();
+      }
+    }
+    return 'CUSTOM';
+  }
+
+  // Build icon selection grid widget
+  static Widget buildIconSelectionGrid({
+    required IconData? selectedIcon,
+    required Function(IconData) onIconSelected,
+    double iconSize = 32.0,
+  }) {
+    return Builder(
+      builder: (context) {
+        return SizedBox(
+          height: 180, // Reduced height to prevent overflow
+          child: GridView.builder(
+            padding: const EdgeInsets.all(8),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 6,
+              crossAxisSpacing: 6,
+              mainAxisSpacing: 6,
+              childAspectRatio: 1,
+            ),
+            itemCount: availableIcons.length,
+            itemBuilder: (context, index) {
+              final icon = availableIcons[index];
+              final isSelected = selectedIcon?.codePoint == icon.codePoint;
+              
+              return GestureDetector(
+                onTap: () => onIconSelected(icon),
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: isSelected
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.grey.shade300,
+                      width: isSelected ? 2 : 1,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+                        : null,
+                  ),
+                  child: Icon(
+                    icon,
+                    size: iconSize,
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  // Build icon widget with proper styling
+  static Widget buildCategoryIcon(
+    IconData? icon, {
+    double size = 24.0,
+    Color? color,
+    Color? backgroundColor,
+  }) {
+    final displayIcon = icon ?? Icons.category;
+    
+    if (backgroundColor != null) {
+      return CircleAvatar(
+        backgroundColor: backgroundColor,
+        radius: size,
+        child: Icon(
+          displayIcon,
+          size: size * 0.6,
+          color: color,
+        ),
+      );
+    }
+    
+    return Icon(
+      displayIcon,
+      size: size,
+      color: color,
+    );
+  }
+}

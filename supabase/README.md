@@ -109,7 +109,7 @@ supabase/
 
 ### Tables:
 1. **user_profiles** - Extended user information
-2. **wallets** - User's financial accounts (Cash, Bank, etc.)
+2. **wallets** - User's financial accounts (Cash, Bank, E-wallet, etc.) with custom icons
 3. **categories** - Income/Expense categories (customizable)
 4. **transactions** - Financial transactions
 5. **transaction_images** - Receipt/proof images

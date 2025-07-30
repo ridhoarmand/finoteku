@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'local_database_service.dart';
 import '../features/wallet/services/supabase_wallet_service.dart';
@@ -91,7 +92,9 @@ class SyncService {
           await _localDb.markWalletSynced(wallet.id, userId);
           pushedCount++;
         } catch (e) {
-          print('Failed to sync wallet ${wallet.id}: $e');
+          if (kDebugMode) {
+            print('Failed to sync wallet ${wallet.id}: $e');
+          }
         }
       }
 
@@ -143,7 +146,9 @@ class SyncService {
           await _localDb.markCategorySynced(category.id, userId);
           pushedCount++;
         } catch (e) {
-          print('Failed to sync category ${category.id}: $e');
+          if (kDebugMode) {
+            print('Failed to sync category ${category.id}: $e');
+          }
         }
       }
 
@@ -198,7 +203,9 @@ class SyncService {
           await _localDb.markWalletSynced(wallet.id, userId);
           walletCount++;
         } catch (e) {
-          print('Failed to backup wallet ${wallet.id}: $e');
+          if (kDebugMode) {
+            print('Failed to backup wallet ${wallet.id}: $e');
+          }
         }
       }
 
@@ -212,7 +219,9 @@ class SyncService {
           await _localDb.markCategorySynced(category.id, userId);
           categoryCount++;
         } catch (e) {
-          print('Failed to backup category ${category.id}: $e');
+          if (kDebugMode) {
+            print('Failed to backup category ${category.id}: $e');
+          }
         }
       }
 
@@ -234,9 +243,13 @@ class SyncService {
     if (userId != null) {
       try {
         await syncUserData(userId);
-        print('Auto sync completed for user: $userId');
+        if (kDebugMode) {
+          print('Auto sync completed for user: $userId');
+        }
       } catch (e) {
-        print('Auto sync failed: $e');
+        if (kDebugMode) {
+          print('Auto sync failed: $e');
+        }
       }
     }
   }
