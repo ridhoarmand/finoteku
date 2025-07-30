@@ -2,6 +2,8 @@
 
 **Finoteku** adalah aplikasi manajemen keuangan pribadi yang dirancang dengan focus pada kesederhanaan dan kemudahan penggunaan. Aplikasi ini dibangun menggunakan Flutter dengan backend Supabase untuk memberikan pengalaman yang modern dan reliable.
 
+*Developed by Ridho Armansyah*
+
 ## ✨ Features
 
 - 💰 **Multi-Wallet Management** - Kelola berbagai jenis dompet (cash, bank, e-wallet, credit card)
@@ -38,57 +40,49 @@ cd finoteku
 # Install dependencies
 flutter pub get
 
-# Setup Supabase (see detailed guide below)
-# Follow instructions in supabase/SETUP_GUIDE.md
+# Setup Supabase 
+# Follow instructions in supabase/README.md
 
 # Run the app
 flutter run
 ```
 
 ### Supabase Setup
-Ikuti panduan lengkap di **[supabase/SETUP_GUIDE.md](./supabase/SETUP_GUIDE.md)** untuk setup database backend.
-
-## 📚 Documentation
-
-Dokumentasi lengkap tersedia di folder **[docs/](./docs/)**:
-
-- **[Business Requirements](./docs/1.%20Business%20Requirements%20Document.md)** - Requirements dan user stories
-- **[Technical Design](./docs/2.%20Technical%20Design%20Document.md)** - System architecture dan design
-- **[Development Roadmap](./docs/3.%20Roadmap.md)** - Milestone dan timeline
-- **[Development Tasks](./docs/4.%20Development%20Tasks%20Checklist.md)** - Task breakdown dan checklist
-- **[Testing Guide](./docs/5.%20Testing%20Documentation%20&%20Checklist.md)** - Testing strategy dan checklist
-- **[Technical Architecture](./docs/Technical-Architecture-Documentation.md)** - Detailed technical architecture
-- **[Quick Developer Guide](./docs/Quick-Developer-Guide.md)** - Developer reference
-- **[Project Structure Guide](./docs/Project-Structure-Guide.md)** - Project organization
+Ikuti panduan setup di **[supabase/README.md](./supabase/README.md)** untuk konfigurasi database backend.
 
 ## 🏗️ Project Structure
 
 ```
 finoteku/
-├── docs/                    # Project documentation
 ├── supabase/               # Database schema & configuration
 │   ├── schema.sql          # Database schema
 │   ├── policies.sql        # Row Level Security
 │   ├── storage.sql         # Storage configuration
-│   ├── seed.sql            # Sample data
-│   └── SETUP_GUIDE.md      # Setup instructions
+│   └── README.md           # Setup instructions
 ├── lib/                    # Flutter source code
 │   ├── features/           # Feature modules
 │   ├── theme/              # Theme configuration
 │   ├── services/           # External services
 │   ├── models/             # Data models
+│   ├── routes/             # App routing
+│   ├── utils/              # Utility functions
 │   └── widgets/            # Reusable UI components
 └── assets/                 # Static assets
+    ├── banks/              # Bank icons
+    ├── ewallets/           # E-wallet icons
+    └── onboardings/        # Onboarding images
 ```
 
 ## 🎯 Current Status
 
-**Phase 1: Core Foundation** ✅
-- ✅ Documentation complete
-- ✅ Database schema designed and simplified
-- ✅ Supabase configuration ready
-- ⏳ Flutter project setup (next)
-- ⏳ Core implementation (next)
+**Development Status: Active** ✅
+- ✅ Core foundation implemented
+- ✅ Multi-wallet management
+- ✅ Hierarchical category system
+- ✅ Transaction management
+- ✅ Real-time sync with Supabase
+- ✅ Material Design 3 theming
+- 🔄 Ongoing improvements and refinements
 
 ## 🤝 Contributing
 
@@ -104,8 +98,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-Untuk pertanyaan atau dukungan, silakan buka issue di GitHub atau hubungi tim development.
+Untuk pertanyaan atau dukungan, silakan buka issue di GitHub repository ini.
 
 ---
 
-*Built with ❤️ using Flutter and Supabase*
+*Built with ❤️ by Ridho Armansyah using Flutter and Supabase*
