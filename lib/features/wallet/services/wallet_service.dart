@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../../models/wallet.dart';
@@ -55,6 +56,7 @@ class WalletService {
       name: request.name,
       balance: request.initialBalance,
       currency: request.currency,
+      icon: request.icon,
       isActive: true,
       needsSync: true,
       createdAt: DateTime.now(),
@@ -85,6 +87,7 @@ class WalletService {
       name: request.name ?? existingWallet.name,
       balance: request.balance ?? existingWallet.balance,
       currency: request.currency ?? existingWallet.currency,
+      icon: request.icon ?? existingWallet.icon,
       isActive: request.isActive ?? existingWallet.isActive,
       needsSync: true,
       updatedAt: DateTime.now(),
@@ -149,7 +152,9 @@ class WalletService {
       // Ambil data terbaru dari server
       await _fetchAndMergeFromServer(userId);
     } catch (e) {
-      print('Sync error: $e');
+      if (kDebugMode) {
+        print('Sync error: $e');
+      }
       // Jangan throw error, biarkan app tetap berfungsi offline
     }
   }
@@ -198,7 +203,9 @@ class WalletService {
       final syncedWallet = wallet.copyWith(needsSync: false);
       await _localDb.saveWallet(syncedWallet);
     } catch (e) {
-      print('Sync wallet error: $e');
+      if (kDebugMode) {
+        print('Sync wallet error: $e');
+      }
       // Jangan throw error, biarkan tetap tersimpan local dengan needsSync = true
     }
   }
@@ -208,7 +215,9 @@ class WalletService {
       // Coba sync penghapusan ke Supabase
       await _supabaseWalletService.syncWalletDeletion(walletId, userId);
     } catch (e) {
-      print('Sync wallet deletion error: $e');
+      if (kDebugMode) {
+        print('Sync wallet deletion error: $e');
+      }
       // Jangan throw error
     }
   }
@@ -230,7 +239,9 @@ class WalletService {
         }
       }
     } catch (e) {
-      print('Fetch from server error: $e');
+      if (kDebugMode) {
+        print('Fetch from server error: $e');
+      }
     }
   }
 }

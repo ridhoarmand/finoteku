@@ -4,6 +4,7 @@ class Wallet {
   final String name;
   final double balance;
   final String currency;
+  final String? icon; // Icon path from assets (banks/*.svg or ewallets/*.svg)
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -16,6 +17,7 @@ class Wallet {
     required this.name,
     required this.balance,
     this.currency = 'IDR',
+    this.icon,
     this.isActive = true,
     required this.createdAt,
     required this.updatedAt,
@@ -30,6 +32,7 @@ class Wallet {
       'name': name,
       'balance': balance,
       'currency': currency,
+      'icon': icon,
       'is_active': isActive,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -45,6 +48,7 @@ class Wallet {
       name: json['name'] as String,
       balance: (json['balance'] as num).toDouble(),
       currency: json['currency'] as String? ?? 'IDR',
+      icon: json['icon'] as String?,
       isActive: json['is_active'] as bool? ?? true,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
@@ -59,6 +63,7 @@ class Wallet {
     String? name,
     double? balance,
     String? currency,
+    String? icon,
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -71,6 +76,7 @@ class Wallet {
       name: name ?? this.name,
       balance: balance ?? this.balance,
       currency: currency ?? this.currency,
+      icon: icon ?? this.icon,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -98,11 +104,13 @@ class CreateWalletRequest {
   final String name;
   final double initialBalance;
   final String currency;
+  final String? icon;
 
   const CreateWalletRequest({
     required this.name,
     required this.initialBalance,
     this.currency = 'IDR',
+    this.icon,
   });
 
   Map<String, dynamic> toJson() {
@@ -110,6 +118,7 @@ class CreateWalletRequest {
       'name': name,
       'initial_balance': initialBalance,
       'currency': currency,
+      'icon': icon,
     };
   }
 }
@@ -118,12 +127,14 @@ class UpdateWalletRequest {
   final String? name;
   final double? balance;
   final String? currency;
+  final String? icon;
   final bool? isActive;
 
   const UpdateWalletRequest({
     this.name,
     this.balance,
     this.currency,
+    this.icon,
     this.isActive,
   });
 
@@ -132,6 +143,7 @@ class UpdateWalletRequest {
     if (name != null) result['name'] = name;
     if (balance != null) result['balance'] = balance;
     if (currency != null) result['currency'] = currency;
+    if (icon != null) result['icon'] = icon;
     if (isActive != null) result['is_active'] = isActive;
     return result;
   }

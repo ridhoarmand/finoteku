@@ -4,6 +4,7 @@ import '../../../models/wallet.dart';
 import '../services/wallet_service.dart';
 import '../../../services/supabase_service.dart';
 import '../../../utils/currency_formatter.dart';
+import '../../../utils/wallet_icon_helper.dart';
 
 class ManageWalletsScreen extends ConsumerWidget {
   const ManageWalletsScreen({super.key});
@@ -136,8 +137,9 @@ class ManageWalletsScreen extends ConsumerWidget {
           backgroundColor: wallet.isActive 
               ? theme.colorScheme.primary 
               : theme.colorScheme.outline,
-          child: Icon(
-            Icons.account_balance_wallet,
+          child: WalletIconHelper.buildIcon(
+            wallet.icon,
+            size: 24,
             color: wallet.isActive 
                 ? theme.colorScheme.onPrimary 
                 : theme.colorScheme.onSurfaceVariant,
@@ -269,6 +271,7 @@ class ManageWalletsScreen extends ConsumerWidget {
           name: wallet.name,
           balance: wallet.balance,
           currency: wallet.currency,
+          icon: wallet.icon,
           isActive: wallet.isActive,
         ),
         onSave: (request) async {
@@ -374,6 +377,7 @@ class ManageWalletsScreen extends ConsumerWidget {
           children: [
             _buildDetailRow('Balance', CurrencyFormatter.format(wallet.balance, wallet.currency)),
             _buildDetailRow('Currency', wallet.currency),
+            _buildDetailRow('Icon', wallet.icon != null ? WalletIconHelper.getIconDisplayName(wallet.icon!) : 'Default'),
             _buildDetailRow('Status', wallet.isActive ? 'Active' : 'Inactive'),
             _buildDetailRow('Created', '${wallet.createdAt.day}/${wallet.createdAt.month}/${wallet.createdAt.year}'),
             _buildDetailRow('Last Updated', '${wallet.updatedAt.day}/${wallet.updatedAt.month}/${wallet.updatedAt.year}'),
@@ -432,6 +436,7 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
   final _nameController = TextEditingController();
   final _balanceController = TextEditingController();
   String _selectedCurrency = 'IDR';
+  String? _selectedIcon;
   bool _isActive = true;
   bool _isLoading = false;
 
@@ -444,6 +449,7 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
       _nameController.text = widget.initialData!.name ?? '';
       _balanceController.text = widget.initialData!.balance?.toString() ?? '';
       _selectedCurrency = widget.initialData!.currency ?? 'IDR';
+      _selectedIcon = widget.initialData!.icon;
       _isActive = widget.initialData!.isActive ?? true;
     }
   }
@@ -459,79 +465,107 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(widget.title),
-      content: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Wallet Name',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter wallet name';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _balanceController,
-              decoration: const InputDecoration(
-                labelText: 'Initial Balance',
-                border: OutlineInputBorder(),
-                prefixText: '\$ ',
-              ),
-              keyboardType: TextInputType.number,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter initial balance';
-                }
-                if (double.tryParse(value) == null) {
-                  return 'Please enter a valid number';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: _selectedCurrency,
-              decoration: const InputDecoration(
-                labelText: 'Currency',
-                border: OutlineInputBorder(),
-              ),
-              items: _currencies.map((currency) {
-                return DropdownMenuItem(
-                  value: currency,
-                  child: Text(currency),
-                );
-              }).toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _selectedCurrency = value;
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Checkbox(
-                  value: _isActive,
-                  onChanged: (value) {
-                    setState(() {
-                      _isActive = value ?? true;
-                    });
-                  },
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Wallet Name',
+                  border: OutlineInputBorder(),
                 ),
-                const Text('Active'),
-              ],
-            ),
-          ],
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter wallet name';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _balanceController,
+                decoration: const InputDecoration(
+                  labelText: 'Initial Balance',
+                  border: OutlineInputBorder(),
+                  prefixText: '\$ ',
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter initial balance';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Please enter a valid number';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _selectedCurrency,
+                decoration: const InputDecoration(
+                  labelText: 'Currency',
+                  border: OutlineInputBorder(),
+                ),
+                items: _currencies.map((currency) {
+                  return DropdownMenuItem(
+                    value: currency,
+                    child: Text(currency),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _selectedCurrency = value;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              // Icon Selection
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Selected Icon: ',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: WalletIconHelper.buildIcon(_selectedIcon, size: 24),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: _showIconSelectionDialog,
+                    child: const Text('Select Icon'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Checkbox(
+                    value: _isActive,
+                    onChanged: (value) {
+                      setState(() {
+                        _isActive = value ?? true;
+                      });
+                    },
+                  ),
+                  const Text('Active'),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
       actions: [
@@ -553,6 +587,107 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
     );
   }
 
+  void _showIconSelectionDialog() {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final maxDialogHeight = screenHeight * 0.7; // 70% of screen height
+    
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          width: double.maxFinite,
+          constraints: BoxConstraints(
+            maxHeight: maxDialogHeight,
+            maxWidth: 500, // Max width for better UX
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.account_balance_wallet_outlined,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Select Wallet Icon',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Scrollable Content
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  child: WalletIconHelper.buildIconSelectionGrid(
+                    selectedIcon: _selectedIcon,
+                    onIconSelected: (iconPath) {
+                      setState(() {
+                        _selectedIcon = iconPath;
+                      });
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ),
+              ),
+              
+              // Action Buttons
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                  border: Border(
+                    top: BorderSide(
+                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                    ),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _selectedIcon = null;
+                        });
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text('Use Default'),
+                    ),
+                    const SizedBox(width: 12),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -569,6 +704,7 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
           name: _nameController.text.trim(),
           balance: balance,
           currency: _selectedCurrency,
+          icon: _selectedIcon,
           isActive: _isActive,
         );
         await widget.onSave(request);
@@ -578,6 +714,7 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
           name: _nameController.text.trim(),
           initialBalance: balance,
           currency: _selectedCurrency,
+          icon: _selectedIcon,
         );
         await widget.onSave(request);
       }

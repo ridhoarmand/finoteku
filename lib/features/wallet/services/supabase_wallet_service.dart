@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/wallet.dart';
 import '../../../services/supabase_service.dart';
@@ -14,7 +15,7 @@ class SupabaseWalletService {
 
   SupabaseWalletService(this._supabase);
 
-    // Ambil semua wallet user dari server
+  // Ambil semua wallet user dari server
   Future<List<Wallet>> getWallets(String userId) async {
     try {
       final response = await _supabase
@@ -24,7 +25,9 @@ class SupabaseWalletService {
 
       // Handle empty result
       if (response.isEmpty) {
-        print('ℹ️ No wallets found in server for user: $userId');
+        if (kDebugMode) {
+          print('ℹ️ No wallets found in server for user: $userId');
+        }
         return [];
       }
 
@@ -32,7 +35,9 @@ class SupabaseWalletService {
           .map((item) => Wallet.fromJson(_convertFromSupabase(item)))
           .toList();
     } catch (e) {
-      print('❌ Error fetching wallets from server: $e');
+      if (kDebugMode) {
+        print('❌ Error fetching wallets from server: $e');
+      }
       throw Exception('Failed to fetch wallets: $e');
     }
   }
@@ -49,25 +54,33 @@ class SupabaseWalletService {
 
       return Wallet.fromJson(_convertFromSupabase(response));
     } catch (e) {
-      if (e.toString().contains('No rows found') || 
+      if (e.toString().contains('No rows found') ||
           e.toString().contains('multiple (or no) rows returned') ||
           e.toString().contains('0 rows')) {
-        print('ℹ️ Wallet not found in server: $walletId');
+        if (kDebugMode) {
+          print('ℹ️ Wallet not found in server: $walletId');
+        }
         return null;
       }
-      print('❌ Error fetching wallet from server: $e');
+      if (kDebugMode) {
+        print('❌ Error fetching wallet from server: $e');
+      }
       throw Exception('Failed to fetch wallet: $e');
     }
   }
 
   // Buat wallet baru di server
-  Future<Wallet> createWallet(String userId, CreateWalletRequest request) async {
+  Future<Wallet> createWallet(
+    String userId,
+    CreateWalletRequest request,
+  ) async {
     try {
       final data = {
         'user_id': userId,
         'name': request.name,
         'balance': request.initialBalance,
         'currency': request.currency,
+        'icon': request.icon,
         'is_active': true,
       };
 
@@ -84,12 +97,17 @@ class SupabaseWalletService {
   }
 
   // Update wallet di server
-  Future<Wallet> updateWallet(String walletId, String userId, UpdateWalletRequest request) async {
+  Future<Wallet> updateWallet(
+    String walletId,
+    String userId,
+    UpdateWalletRequest request,
+  ) async {
     try {
       final data = <String, dynamic>{};
       if (request.name != null) data['name'] = request.name;
       if (request.balance != null) data['balance'] = request.balance;
       if (request.currency != null) data['currency'] = request.currency;
+      if (request.icon != null) data['icon'] = request.icon;
       if (request.isActive != null) data['is_active'] = request.isActive;
 
       if (data.isEmpty) {
@@ -126,8 +144,10 @@ class SupabaseWalletService {
   // Sync wallet ke server
   Future<Wallet> syncWallet(Wallet wallet) async {
     try {
-      print('🔄 Syncing wallet: ${wallet.id} for user: ${wallet.userId}');
-      
+      if (kDebugMode) {
+        print('🔄 Syncing wallet: ${wallet.id} for user: ${wallet.userId}');
+      }
+
       // Cek apakah wallet sudah ada di server (tanpa menggunakan .single())
       final checkResponse = await _supabase
           .from('wallets')
@@ -137,13 +157,16 @@ class SupabaseWalletService {
 
       if (checkResponse.isEmpty) {
         // Buat baru di server
-        print('📝 Creating new wallet in server: ${wallet.id}');
+        if (kDebugMode) {
+          print('📝 Creating new wallet in server: ${wallet.id}');
+        }
         final data = {
           'id': wallet.id, // Gunakan ID yang sama dari local
           'user_id': wallet.userId,
           'name': wallet.name,
           'balance': wallet.balance,
           'currency': wallet.currency,
+          'icon': wallet.icon,
           'is_active': wallet.isActive,
           'created_at': wallet.createdAt.toIso8601String(),
         };
@@ -154,23 +177,36 @@ class SupabaseWalletService {
             .select()
             .single();
 
-        print('✅ Wallet created successfully in server');
+        if (kDebugMode) {
+          print('✅ Wallet created successfully in server');
+        }
         return Wallet.fromJson(_convertFromSupabase(response));
       } else {
         // Update yang sudah ada
-        print('🔄 Updating existing wallet in server: ${wallet.id}');
+        if (kDebugMode) {
+          print('🔄 Updating existing wallet in server: ${wallet.id}');
+        }
         final updateRequest = UpdateWalletRequest(
           name: wallet.name,
           balance: wallet.balance,
           currency: wallet.currency,
+          icon: wallet.icon,
           isActive: wallet.isActive,
         );
-        final updatedWallet = await updateWallet(wallet.id, wallet.userId, updateRequest);
-        print('✅ Wallet updated successfully in server');
+        final updatedWallet = await updateWallet(
+          wallet.id,
+          wallet.userId,
+          updateRequest,
+        );
+        if (kDebugMode) {
+          print('✅ Wallet updated successfully in server');
+        }
         return updatedWallet;
       }
     } catch (e) {
-      print('❌ Failed to sync wallet ${wallet.id}: $e');
+      if (kDebugMode) {
+        print('❌ Failed to sync wallet ${wallet.id}: $e');
+      }
       throw Exception('Failed to sync wallet: $e');
     }
   }
@@ -195,6 +231,7 @@ class SupabaseWalletService {
       'name': data['name'],
       'balance': data['balance'],
       'currency': data['currency'],
+      'icon': data['icon'],
       'is_active': data['is_active'],
       'created_at': data['created_at'],
       'updated_at': data['updated_at'],
