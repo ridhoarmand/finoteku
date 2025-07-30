@@ -117,6 +117,8 @@ class SupabaseCategoryService {
         'name': request.name,
         'type': request.type.name,
         'parent_id': request.parentId,
+        'icon_code_point': request.iconCodePoint,
+        'color': request.color,
         'is_active': true,
       };
 
@@ -143,6 +145,8 @@ class SupabaseCategoryService {
       if (request.name != null) data['name'] = request.name;
       if (request.type != null) data['type'] = request.type!.name;
       if (request.parentId != null) data['parent_id'] = request.parentId;
+      if (request.iconCodePoint != null) data['icon_code_point'] = request.iconCodePoint;
+      if (request.color != null) data['color'] = request.color;
       if (request.isActive != null) data['is_active'] = request.isActive;
 
       if (data.isEmpty) {
@@ -203,6 +207,8 @@ class SupabaseCategoryService {
           'name': category.name,
           'type': category.type.name,
           'parent_id': category.parentId,
+          'icon_code_point': category.iconCodePoint,
+          'color': category.color,
           'is_active': category.isActive,
           'created_at': category.createdAt.toIso8601String(),
         };
@@ -226,6 +232,8 @@ class SupabaseCategoryService {
           name: category.name,
           type: category.type,
           parentId: category.parentId,
+          iconCodePoint: category.iconCodePoint,
+          color: category.color,
           isActive: category.isActive,
         );
         final updatedCategory = await updateCategory(
@@ -266,6 +274,8 @@ class SupabaseCategoryService {
       'name': data['name'],
       'type': data['type'],
       'parent_id': data['parent_id'],
+      'icon_code_point': data['icon_code_point'],
+      'color': data['color'],
       'is_active': data['is_active'],
       'created_at': data['created_at'],
       'updated_at': data['updated_at'],

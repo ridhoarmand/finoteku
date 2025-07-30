@@ -7,6 +7,7 @@ class Category {
   final CategoryType type;
   final String? parentId;
   final int? iconCodePoint; // Store Material Icons codePoint for custom icons
+  final int? color; // Store color as ARGB integer
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -20,6 +21,7 @@ class Category {
     required this.type,
     this.parentId,
     this.iconCodePoint,
+    this.color,
     this.isActive = true,
     required this.createdAt,
     required this.updatedAt,
@@ -35,6 +37,7 @@ class Category {
       'type': type.name,
       'parent_id': parentId,
       'icon_code_point': iconCodePoint,
+      'color': color,
       'is_active': isActive,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -51,6 +54,7 @@ class Category {
       type: CategoryType.values.byName(json['type'] as String),
       parentId: json['parent_id'] as String?,
       iconCodePoint: json['icon_code_point'] as int?,
+      color: json['color'] as int?,
       isActive: json['is_active'] as bool? ?? true,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
@@ -66,6 +70,7 @@ class Category {
     CategoryType? type,
     String? parentId,
     int? iconCodePoint,
+    int? color,
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -79,6 +84,7 @@ class Category {
       type: type ?? this.type,
       parentId: parentId ?? this.parentId,
       iconCodePoint: iconCodePoint ?? this.iconCodePoint,
+      color: color ?? this.color,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -107,12 +113,14 @@ class CreateCategoryRequest {
   final CategoryType type;
   final String? parentId;
   final int? iconCodePoint;
+  final int? color;
 
   const CreateCategoryRequest({
     required this.name,
     required this.type,
     this.parentId,
     this.iconCodePoint,
+    this.color,
   });
 
   Map<String, dynamic> toJson() {
@@ -121,6 +129,7 @@ class CreateCategoryRequest {
       'type': type.name,
       'parent_id': parentId,
       'icon_code_point': iconCodePoint,
+      'color': color,
     };
   }
 }
@@ -130,6 +139,7 @@ class UpdateCategoryRequest {
   final CategoryType? type;
   final String? parentId;
   final int? iconCodePoint;
+  final int? color;
   final bool? isActive;
 
   const UpdateCategoryRequest({
@@ -137,6 +147,7 @@ class UpdateCategoryRequest {
     this.type,
     this.parentId,
     this.iconCodePoint,
+    this.color,
     this.isActive,
   });
 
@@ -146,6 +157,7 @@ class UpdateCategoryRequest {
     if (type != null) result['type'] = type!.name;
     if (parentId != null) result['parent_id'] = parentId;
     if (iconCodePoint != null) result['icon_code_point'] = iconCodePoint;
+    if (color != null) result['color'] = color;
     if (isActive != null) result['is_active'] = isActive;
     return result;
   }

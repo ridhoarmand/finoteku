@@ -97,6 +97,7 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
         iconCodePoint: icon != null
             ? CategoryIconHelper.getCodePointFromIcon(icon)
             : null,
+        color: color.value,
       );
 
       await categoryService.createCategory(userId, request);
@@ -256,11 +257,15 @@ class CategoryListTab extends ConsumerWidget {
     bool isChild = false,
     bool isOrphan = false,
   }) {
-    // Get icon from category model or auto-detect based on name
+    // Get icon from category model or use default
     IconData icon = category.iconCodePoint != null
         ? CategoryIconHelper.getIconFromCodePoint(category.iconCodePoint)
         : CategoryIconHelper.getIconForCategory(category.name);
-    Color color = _getCategoryColor(category.name);
+    
+    // Use color from database if available, otherwise use default
+    Color color = category.color != null 
+        ? Color(category.color!) 
+        : Theme.of(context).colorScheme.primary;
 
     // Different styling based on hierarchy level
     Widget leadingWidget;
@@ -401,9 +406,11 @@ class CategoryListTab extends ConsumerWidget {
         categoryType: category.type,
         initialName: category.name,
         initialParentId: category.parentId,
+        editingCategoryId: category.id, // Add this to prevent self-selection
         initialIcon: category.iconCodePoint != null
             ? CategoryIconHelper.getIconFromCodePoint(category.iconCodePoint)
             : null,
+        initialColor: category.color != null ? Color(category.color!) : null,
         onSave: (name, color, icon, parentId) {
           _handleEditCategory(
             context,
@@ -441,6 +448,7 @@ class CategoryListTab extends ConsumerWidget {
         iconCodePoint: icon != null
             ? CategoryIconHelper.getCodePointFromIcon(icon)
             : null,
+        color: color.value,
       );
 
       await categoryService.updateCategory(category.id, userId, request);
@@ -525,22 +533,5 @@ class CategoryListTab extends ConsumerWidget {
         );
       }
     }
-  }
-
-  Color _getCategoryColor(String categoryName) {
-    final name = categoryName.toLowerCase();
-    if (name.contains('food')) return Colors.red;
-    if (name.contains('transport')) return Colors.blue;
-    if (name.contains('shopping')) return Colors.purple;
-    if (name.contains('entertainment')) return Colors.orange;
-    if (name.contains('health')) return Colors.green;
-    if (name.contains('bill') || name.contains('utilities'))
-      return Colors.brown;
-    if (name.contains('salary')) return Colors.green;
-    if (name.contains('freelance')) return Colors.blue;
-    if (name.contains('investment')) return Colors.teal;
-    if (name.contains('gift')) return Colors.pink;
-    if (name.contains('education')) return Colors.indigo;
-    return Colors.grey;
   }
 }
