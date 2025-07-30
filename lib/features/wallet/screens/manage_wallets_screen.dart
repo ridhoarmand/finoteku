@@ -134,15 +134,19 @@ class ManageWalletsScreen extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         leading: CircleAvatar(
+          radius: 24, // Larger circle for 36px icon
           backgroundColor: wallet.isActive 
-              ? theme.colorScheme.primary 
-              : theme.colorScheme.outline,
+              ? theme.colorScheme.primary.withValues(alpha: 0.1)
+              : theme.colorScheme.outline.withValues(alpha: 0.1),
           child: WalletIconHelper.buildIcon(
             wallet.icon,
-            size: 24,
-            color: wallet.isActive 
-                ? theme.colorScheme.onPrimary 
-                : theme.colorScheme.onSurfaceVariant,
+            size: 36, // Full size for 1:1 SVG display
+            // Only apply color for default icon (when wallet.icon is null)
+            color: wallet.icon == null || wallet.icon!.isEmpty 
+                ? (wallet.isActive 
+                    ? theme.colorScheme.primary 
+                    : theme.colorScheme.onSurfaceVariant)
+                : null,
           ),
         ),
         title: Row(
