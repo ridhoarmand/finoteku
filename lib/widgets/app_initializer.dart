@@ -2,8 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/dev_auth_service.dart';
-import '../features/wallet/services/wallet_service.dart';
-import '../features/category/services/category_service.dart';
+import '../features/wallet/providers/wallet_providers.dart';
+import '../features/category/providers/category_providers.dart';
 import '../services/sync_service.dart';
 
 class AppInitializer extends ConsumerStatefulWidget {

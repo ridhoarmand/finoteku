@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'local_database_service.dart';
 import '../features/wallet/services/supabase_wallet_service.dart';
 import '../features/wallet/services/wallet_service.dart';
+import '../features/wallet/providers/wallet_providers.dart';
 import '../features/category/services/supabase_category_service.dart';
 import '../features/category/services/category_service.dart';
+import '../features/category/providers/category_providers.dart';
 import 'supabase_service.dart';
 import 'connectivity_service.dart';
 

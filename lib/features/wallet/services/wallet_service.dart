@@ -1,52 +1,19 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../../models/wallet.dart';
 import '../../../services/local_database_service.dart';
 import 'supabase_wallet_service.dart';
-
-// Provider untuk WalletService
-final walletServiceProvider = Provider<WalletService>((ref) {
-  final localDb = ref.watch(localDatabaseServiceProvider);
-  final supabaseWalletService = ref.watch(supabaseWalletServiceProvider);
-  return WalletService(localDb, supabaseWalletService);
-});
-
-// Provider untuk daftar wallets berdasarkan user ID
-final walletsProvider = FutureProvider.family<List<Wallet>, String>((ref, userId) async {
-  final walletService = ref.watch(walletServiceProvider);
-  return walletService.getWallets(userId);
-});
-
-// Provider untuk wallet by ID
-final walletProvider = FutureProvider.family<Wallet?, String>((ref, walletId) async {
-  final walletService = ref.watch(walletServiceProvider);
-  return walletService.getWalletById(walletId);
-});
-
-// Provider untuk active wallets saja
-final activeWalletsProvider = FutureProvider.family<List<Wallet>, String>((ref, userId) async {
-  final walletService = ref.watch(walletServiceProvider);
-  final wallets = await walletService.getWallets(userId);
-  return wallets.where((wallet) => wallet.isActive).toList();
-});
-
-// Provider untuk total balance dari semua active wallets
-final totalBalanceProvider = FutureProvider.family<double, String>((ref, userId) async {
-  final activeWallets = await ref.watch(activeWalletsProvider(userId).future);
-  double total = 0.0;
-  for (final wallet in activeWallets) {
-    total += wallet.balance;
-  }
-  return total;
-});
+import '../helpers/wallet_sync_helper.dart';
 
 class WalletService {
   final LocalDatabaseService _localDb;
   final SupabaseWalletService _supabaseWalletService;
+  late final WalletSyncHelper _syncHelper;
   final _uuid = const Uuid();
 
-  WalletService(this._localDb, this._supabaseWalletService);
+  WalletService(this._localDb, this._supabaseWalletService) {
+    _syncHelper = WalletSyncHelper(_localDb, _supabaseWalletService);
+  }
 
   // Buat wallet baru
   Future<Wallet> createWallet(String userId, CreateWalletRequest request) async {
@@ -67,7 +34,7 @@ class WalletService {
     await _localDb.saveWallet(wallet);
 
     // Coba sync ke server jika online
-    await _trySyncWallet(wallet);
+    await _syncHelper.trySyncWallet(wallet);
 
     return wallet;
   }
@@ -96,7 +63,7 @@ class WalletService {
     await _localDb.saveWallet(updatedWallet);
 
     // Coba sync ke server jika online
-    await _trySyncWallet(updatedWallet);
+    await _syncHelper.trySyncWallet(updatedWallet);
 
     return updatedWallet;
   }
@@ -116,7 +83,7 @@ class WalletService {
     await _localDb.deleteWallet(walletId, userId);
 
     // Coba sync penghapusan ke server jika online
-    await _trySyncWalletDeletion(walletId, userId);
+    await _syncHelper.trySyncWalletDeletion(walletId, userId);
   }
 
   // Ambil semua wallets user
@@ -132,11 +99,14 @@ class WalletService {
     return wallets;
   }
 
-  // Ambil wallet by ID
-  Future<Wallet?> getWalletById(String walletId) async {
-    // Karena method getWallet memerlukan userId, kita perlu cara lain
-    // Untuk saat ini, return null jika tidak bisa mengambil tanpa userId
-    return null; // TODO: Implement proper getWalletById
+  // Ambil wallet by ID (memerlukan userId untuk security)
+  Future<Wallet?> getWalletById(String walletId, {String? userId}) async {
+    if (userId != null) {
+      return await _localDb.getWallet(walletId, userId);
+    }
+    
+    // Jika tidak ada userId, tidak bisa mengambil wallet untuk security
+    return null;
   }
 
   // Sync semua wallets ke server
@@ -146,11 +116,11 @@ class WalletService {
       final walletsNeedingSync = localWallets.where((w) => w.needsSync).toList();
 
       for (final wallet in walletsNeedingSync) {
-        await _trySyncWallet(wallet);
+        await _syncHelper.trySyncWallet(wallet);
       }
 
       // Ambil data terbaru dari server
-      await _fetchAndMergeFromServer(userId);
+      await _syncHelper.fetchAndMergeFromServer(userId);
     } catch (e) {
       if (kDebugMode) {
         print('Sync error: $e');
@@ -179,11 +149,11 @@ class WalletService {
       }
 
       for (final wallet in unsyncedWallets) {
-        await _trySyncWallet(wallet);
+        await _syncHelper.trySyncWallet(wallet);
       }
 
       // Fetch and merge dari server
-      await _fetchAndMergeFromServer(userId);
+      await _syncHelper.fetchAndMergeFromServer(userId);
 
       if (kDebugMode) {
         print('✅ Auto sync completed for wallets');
@@ -220,6 +190,7 @@ class WalletService {
       name: 'Main Wallet',
       balance: 0.0,
       currency: 'IDR',
+      icon: 'wallet', // Default icon untuk wallet
       isActive: true,
       needsSync: true,
       createdAt: DateTime.now(),
@@ -227,57 +198,17 @@ class WalletService {
     );
 
     await _localDb.saveWallet(defaultWallet);
-    await _trySyncWallet(defaultWallet);
+    await _syncHelper.trySyncWallet(defaultWallet);
   }
 
-  Future<void> _trySyncWallet(Wallet wallet) async {
-    try {
-      // Coba sync ke Supabase jika online dan authenticated
-      await _supabaseWalletService.syncWallet(wallet);
-      
-      // Mark as synced jika berhasil
-      final syncedWallet = wallet.copyWith(needsSync: false);
-      await _localDb.saveWallet(syncedWallet);
-    } catch (e) {
-      if (kDebugMode) {
-        print('Sync wallet error: $e');
-      }
-      // Jangan throw error, biarkan tetap tersimpan local dengan needsSync = true
+  // Force sync single wallet
+  Future<void> forceSyncWallet(String walletId, String userId) async {
+    final wallet = await _localDb.getWallet(walletId, userId);
+    if (wallet == null) {
+      throw Exception('Wallet not found');
     }
-  }
 
-  Future<void> _trySyncWalletDeletion(String walletId, String userId) async {
-    try {
-      // Coba sync penghapusan ke Supabase
-      await _supabaseWalletService.syncWalletDeletion(walletId, userId);
-    } catch (e) {
-      if (kDebugMode) {
-        print('Sync wallet deletion error: $e');
-      }
-      // Jangan throw error
-    }
-  }
-
-  Future<void> _fetchAndMergeFromServer(String userId) async {
-    try {
-      // Ambil data wallet dari server dan merge dengan local
-      final serverWallets = await _supabaseWalletService.getWallets(userId);
-      
-      for (final serverWallet in serverWallets) {
-        final localWallet = await _localDb.getWallet(serverWallet.id, userId);
-        
-        if (localWallet == null) {
-          // Wallet baru dari server, simpan ke local
-          await _localDb.saveWallet(serverWallet);
-        } else if (serverWallet.updatedAt.isAfter(localWallet.updatedAt)) {
-          // Server lebih baru, update local
-          await _localDb.saveWallet(serverWallet);
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Fetch from server error: $e');
-      }
-    }
+    // Force sync this specific wallet
+    await _syncHelper.trySyncWallet(wallet);
   }
 }

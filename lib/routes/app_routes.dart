@@ -10,6 +10,7 @@ import '../features/transaction/transaction_screen.dart';
 import '../features/chart/chart_screen.dart';
 import '../features/account/account_screen.dart';
 import '../features/account/edit_profile_screen.dart';
+import '../features/account/change_password_screen.dart';
 import '../features/settings/theme_settings_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/splash/splash_screen.dart';
@@ -117,6 +118,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) => const EditProfileScreen(),
               ),
               GoRoute(
+                path: 'change-password',
+                builder: (context, state) => const ChangePasswordScreen(),
+              ),
+              GoRoute(
                 path: 'theme-settings',
                 builder: (context, state) => const ThemeSettingsScreen(),
               ),
@@ -175,6 +180,7 @@ class AppRoutes {
   static const String chart = '/chart';
   static const String account = '/account';
   static const String editProfile = '/account/edit-profile';
+  static const String changePassword = '/account/change-password';
   static const String themeSettings = '/account/theme-settings';
   static const String manageWallets = '/wallets/manage';
   static const String manageCategories = '/categories/manage';

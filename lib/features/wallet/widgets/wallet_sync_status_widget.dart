@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../services/connectivity_service.dart';
 import '../../../services/supabase_service.dart';
-import '../services/wallet_service.dart';
+import '../providers/wallet_providers.dart';
 
 class WalletSyncStatusWidget extends ConsumerWidget {
   const WalletSyncStatusWidget({super.key});

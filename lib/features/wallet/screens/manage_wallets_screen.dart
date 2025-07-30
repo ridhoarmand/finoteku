@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/wallet.dart';
-import '../services/wallet_service.dart';
+import '../providers/wallet_providers.dart';
 import '../../../services/supabase_service.dart';
 import '../../../utils/currency_formatter.dart';
 import '../../../utils/wallet_icon_helper.dart';
@@ -169,12 +169,40 @@ class ManageWalletsScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            if (wallet.needsSync)
-              Icon(
-                Icons.sync,
-                size: 16,
-                color: theme.colorScheme.primary,
+            // Sync status indicator - only show when needs sync
+            if (wallet.needsSync) ...[
+              const SizedBox(width: 8),
+              Tooltip(
+                message: 'Waiting to sync with server',
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.sync_problem,
+                        size: 12,
+                        color: Colors.orange[700],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Sync',
+                        style: TextStyle(
+                          color: Colors.orange[700],
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
+            ],
           ],
         ),
         subtitle: Column(
@@ -215,6 +243,22 @@ class ManageWalletsScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            // Show sync option only if wallet needs sync
+            if (wallet.needsSync)
+              PopupMenuItem(
+                value: 'sync',
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.sync, size: 18, color: Colors.orange[700]),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Force Sync',
+                      style: TextStyle(color: Colors.orange[700]),
+                    ),
+                  ],
+                ),
+              ),
             PopupMenuItem(
               value: wallet.isActive ? 'deactivate' : 'activate',
               child: Row(
@@ -246,6 +290,9 @@ class ManageWalletsScreen extends ConsumerWidget {
     switch (action) {
       case 'edit':
         _showEditWalletDialog(context, ref, wallet);
+        break;
+      case 'sync':
+        _forceSyncWallet(context, ref, wallet);
         break;
       case 'activate':
       case 'deactivate':
@@ -424,6 +471,59 @@ class ManageWalletsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  void _forceSyncWallet(
+    BuildContext context,
+    WidgetRef ref,
+    Wallet wallet,
+  ) async {
+    try {
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text('Syncing ${wallet.name}...'),
+            ],
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+
+      final walletService = ref.read(walletServiceProvider);
+      await walletService.forceSyncWallet(wallet.id, wallet.userId);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${wallet.name} synced successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Refresh the wallets list
+        ref.invalidate(walletsProvider(wallet.userId));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Sync failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
 

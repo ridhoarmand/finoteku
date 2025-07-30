@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../services/connectivity_service.dart';
 import '../../../services/supabase_service.dart';
-import '../services/category_service.dart';
+import '../providers/category_providers.dart';
 
 class CategorySyncStatusWidget extends ConsumerWidget {
   const CategorySyncStatusWidget({super.key});
@@ -10,7 +10,7 @@ class CategorySyncStatusWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userId = SupabaseService.currentUserId;
-    
+
     if (userId == null) return const SizedBox.shrink();
 
     final connectionAsync = ref.watch(connectionStatusProvider);
@@ -22,39 +22,36 @@ class CategorySyncStatusWidget extends ConsumerWidget {
         data: (expenseCategories) => incomeCategoriesAsync.when(
           data: (incomeCategories) {
             final allCategories = [...expenseCategories, ...incomeCategories];
-            final unsyncedCount = allCategories.where((cat) => cat.needsSync).length;
-            
+            final unsyncedCount = allCategories
+                .where((cat) => cat.needsSync)
+                .length;
+
             if (unsyncedCount == 0) {
               return Tooltip(
-                message: isConnected 
-                    ? 'All categories synced' 
+                message: isConnected
+                    ? 'All categories synced'
                     : 'All categories synced (offline)',
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.cloud_done,
-                      color: Colors.green[600],
-                      size: 20,
-                    ),
+                    Icon(Icons.cloud_done, color: Colors.green[600], size: 20),
                     if (!isConnected) ...[
                       const SizedBox(width: 4),
-                      Icon(
-                        Icons.wifi_off,
-                        color: Colors.grey[600],
-                        size: 16,
-                      ),
+                      Icon(Icons.wifi_off, color: Colors.grey[600], size: 16),
                     ],
                   ],
                 ),
               );
             } else {
               return Tooltip(
-                message: isConnected 
+                message: isConnected
                     ? '$unsyncedCount categories will sync automatically'
                     : '$unsyncedCount categories waiting for internet connection',
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: isConnected ? Colors.orange : Colors.grey,
                     borderRadius: BorderRadius.circular(12),

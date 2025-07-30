@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../services/category_service.dart';
+import '../providers/category_providers.dart';
 import '../../../services/supabase_service.dart';
 import '../../../models/category.dart';
 import '../../../utils/category_icon_helper.dart';

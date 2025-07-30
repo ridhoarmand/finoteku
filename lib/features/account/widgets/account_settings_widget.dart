@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class AccountSettingsWidget extends StatelessWidget {
   const AccountSettingsWidget({super.key});
@@ -27,12 +28,7 @@ class AccountSettingsWidget extends StatelessWidget {
               subtitle: const Text('Update your account password'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
-                // TODO: Navigate to change password screen
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Change password coming soon'),
-                  ),
-                );
+                context.go('/account/change-password');
               },
             ),
             const Divider(),

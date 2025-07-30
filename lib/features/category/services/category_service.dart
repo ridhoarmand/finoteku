@@ -1,78 +1,19 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../../models/category.dart';
 import '../../../services/local_database_service.dart';
 import 'supabase_category_service.dart';
-import '../../../services/supabase_service.dart';
-
-// Provider untuk CategoryService
-final categoryServiceProvider = Provider<CategoryService>((ref) {
-  final localDb = ref.watch(localDatabaseServiceProvider);
-  final supabaseCategoryService = ref.watch(supabaseCategoryServiceProvider);
-  return CategoryService(localDb, supabaseCategoryService);
-});
-
-// Provider untuk daftar categories berdasarkan user ID
-final categoriesProvider = FutureProvider.family<List<Category>, String>((
-  ref,
-  userId,
-) async {
-  final categoryService = ref.watch(categoryServiceProvider);
-  return categoryService.getCategories(userId);
-});
-
-// Provider untuk categories by type
-final categoriesByTypeProvider =
-    FutureProvider.family<List<Category>, ({String userId, CategoryType type})>(
-      (ref, params) async {
-        final categoryService = ref.watch(categoryServiceProvider);
-        return categoryService.getCategoriesByType(params.userId, params.type);
-      },
-    );
-
-// Provider untuk expense categories
-final expenseCategoriesProvider = FutureProvider.family<List<Category>, String>(
-  (ref, userId) async {
-    final categoryService = ref.watch(categoryServiceProvider);
-    return categoryService.getCategoriesByType(userId, CategoryType.expense);
-  },
-);
-
-// Provider untuk income categories
-final incomeCategoriesProvider = FutureProvider.family<List<Category>, String>((
-  ref,
-  userId,
-) async {
-  final categoryService = ref.watch(categoryServiceProvider);
-  return categoryService.getCategoriesByType(userId, CategoryType.income);
-});
-
-// Provider untuk category by ID
-final categoryProvider = FutureProvider.family<Category?, String>((
-  ref,
-  categoryId,
-) async {
-  final categoryService = ref.watch(categoryServiceProvider);
-  return categoryService.getCategoryById(categoryId);
-});
-
-// Provider untuk active categories saja
-final activeCategoriesProvider = FutureProvider.family<List<Category>, String>((
-  ref,
-  userId,
-) async {
-  final categoryService = ref.watch(categoryServiceProvider);
-  final categories = await categoryService.getCategories(userId);
-  return categories.where((category) => category.isActive).toList();
-});
+import '../helpers/category_sync_helper.dart';
 
 class CategoryService {
   final LocalDatabaseService _localDb;
   final SupabaseCategoryService _supabaseCategoryService;
+  late final CategorySyncHelper _syncHelper;
   final _uuid = const Uuid();
 
-  CategoryService(this._localDb, this._supabaseCategoryService);
+  CategoryService(this._localDb, this._supabaseCategoryService) {
+    _syncHelper = CategorySyncHelper(_localDb, _supabaseCategoryService);
+  }
 
   // Buat category baru
   Future<Category> createCategory(
@@ -97,7 +38,7 @@ class CategoryService {
     await _localDb.saveCategory(category);
 
     // Coba sync ke server jika online
-    await _trySyncCategory(category);
+    await _syncHelper.trySyncCategory(category);
 
     return category;
   }
@@ -131,7 +72,7 @@ class CategoryService {
     await _localDb.saveCategory(updatedCategory);
 
     // Coba sync ke server jika online
-    await _trySyncCategory(updatedCategory);
+    await _syncHelper.trySyncCategory(updatedCategory);
 
     return updatedCategory;
   }
@@ -151,7 +92,7 @@ class CategoryService {
     await _localDb.deleteCategory(categoryId, userId);
 
     // Coba sync penghapusan ke server jika online
-    await _trySyncCategoryDeletion(categoryId, userId);
+    await _syncHelper.trySyncCategoryDeletion(categoryId, userId);
   }
 
   // Ambil semua categories user
@@ -178,10 +119,13 @@ class CategoryService {
     return categories.where((category) => category.type == type).toList();
   }
 
-  // Ambil category by ID
-  Future<Category?> getCategoryById(String categoryId) async {
-    // TODO: Implement proper getCategoryById without userId
-    // Untuk saat ini, return null karena perlu userId
+  // Ambil category by ID (memerlukan userId untuk security)
+  Future<Category?> getCategoryById(String categoryId, {String? userId}) async {
+    if (userId != null) {
+      return await _localDb.getCategory(categoryId, userId);
+    }
+    
+    // Jika tidak ada userId, tidak bisa mengambil category untuk security
     return null;
   }
 
@@ -194,11 +138,11 @@ class CategoryService {
           .toList();
 
       for (final category in categoriesNeedingSync) {
-        await _trySyncCategory(category);
+        await _syncHelper.trySyncCategory(category);
       }
 
       // Ambil data terbaru dari server
-      await _fetchAndMergeFromServer(userId);
+      await _syncHelper.fetchAndMergeFromServer(userId);
     } catch (e) {
       if (kDebugMode) {
         print('Sync categories error: $e');
@@ -243,7 +187,7 @@ class CategoryService {
         updatedAt: DateTime.now(),
       );
       await _localDb.saveCategory(category);
-      await _trySyncCategory(category);
+      await _syncHelper.trySyncCategory(category);
     }
 
     // Create income categories
@@ -259,7 +203,7 @@ class CategoryService {
         updatedAt: DateTime.now(),
       );
       await _localDb.saveCategory(category);
-      await _trySyncCategory(category);
+      await _syncHelper.trySyncCategory(category);
     }
   }
 
@@ -267,7 +211,7 @@ class CategoryService {
   Future<void> forceSyncCategory(String categoryId, String userId) async {
     final category = await _localDb.getCategory(categoryId, userId);
     if (category != null) {
-      await _trySyncCategory(category);
+      await _syncHelper.trySyncCategory(category);
     } else {
       throw Exception('Category not found: $categoryId');
     }
@@ -293,11 +237,11 @@ class CategoryService {
       }
 
       for (final category in unsyncedCategories) {
-        await _trySyncCategory(category);
+        await _syncHelper.trySyncCategory(category);
       }
 
       // Fetch and merge dari server
-      await _fetchAndMergeFromServer(userId);
+      await _syncHelper.fetchAndMergeFromServer(userId);
 
       if (kDebugMode) {
         print('✅ Auto sync completed for categories');
@@ -305,94 +249,6 @@ class CategoryService {
     } catch (e) {
       if (kDebugMode) {
         print('❌ Auto sync failed for categories: $e');
-      }
-    }
-  }
-
-  Future<void> _trySyncCategory(Category category) async {
-    try {
-      if (kDebugMode) {
-        print(
-          '🔄 Attempting to sync category: ${category.name} (${category.id})',
-        );
-      }
-
-      // Cek authentication terlebih dahulu
-      if (!SupabaseService.isAuthenticated) {
-        if (kDebugMode) {
-          print('❌ User not authenticated, skipping sync');
-        }
-        return;
-      }
-
-      if (kDebugMode) {
-        print('✅ User authenticated, proceeding with sync');
-      }
-
-      // Coba sync ke Supabase jika online dan authenticated
-      await _supabaseCategoryService.syncCategory(category);
-
-      if (kDebugMode) {
-        print('✅ Category synced successfully to Supabase');
-      }
-
-      // Mark as synced jika berhasil
-      final syncedCategory = category.copyWith(needsSync: false);
-      await _localDb.saveCategory(syncedCategory);
-
-      if (kDebugMode) {
-        print('✅ Category marked as synced locally');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Sync category error: $e');
-        print(
-          '📝 Category will remain with needsSync=true until next sync attempt',
-        );
-      }
-      // Jangan throw error, biarkan tetap tersimpan local dengan needsSync = true
-    }
-  }
-
-  Future<void> _trySyncCategoryDeletion(
-    String categoryId,
-    String userId,
-  ) async {
-    try {
-      // Coba sync penghapusan ke Supabase
-      await _supabaseCategoryService.syncCategoryDeletion(categoryId, userId);
-    } catch (e) {
-      if (kDebugMode) {
-        print('Sync category deletion error: $e');
-      }
-      // Jangan throw error
-    }
-  }
-
-  Future<void> _fetchAndMergeFromServer(String userId) async {
-    try {
-      // Ambil data category dari server dan merge dengan local
-      final serverCategories = await _supabaseCategoryService.getCategories(
-        userId,
-      );
-
-      for (final serverCategory in serverCategories) {
-        final localCategory = await _localDb.getCategory(
-          serverCategory.id,
-          userId,
-        );
-
-        if (localCategory == null) {
-          // Category baru dari server, simpan ke local
-          await _localDb.saveCategory(serverCategory);
-        } else if (serverCategory.updatedAt.isAfter(localCategory.updatedAt)) {
-          // Server lebih baru, update local
-          await _localDb.saveCategory(serverCategory);
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Fetch categories from server error: $e');
       }
     }
   }
