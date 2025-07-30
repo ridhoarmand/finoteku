@@ -5,13 +5,15 @@ import 'local_database_service.dart';
 import '../features/wallet/services/supabase_wallet_service.dart';
 import '../features/category/services/supabase_category_service.dart';
 import 'supabase_service.dart';
+import 'connectivity_service.dart';
 
 // Provider untuk SyncService
 final syncServiceProvider = Provider<SyncService>((ref) {
   final localDb = ref.watch(localDatabaseServiceProvider);
   final supabaseWalletService = ref.watch(supabaseWalletServiceProvider);
   final supabaseCategoryService = ref.watch(supabaseCategoryServiceProvider);
-  return SyncService(localDb, supabaseWalletService, supabaseCategoryService);
+  final connectivityService = ref.watch(connectivityServiceProvider);
+  return SyncService(localDb, supabaseWalletService, supabaseCategoryService, connectivityService);
 });
 
 // Provider untuk sync status
@@ -28,16 +30,24 @@ class SyncService {
   final LocalDatabaseService _localDb;
   final SupabaseWalletService _supabaseWalletService;
   final SupabaseCategoryService _supabaseCategoryService;
-  
+  final ConnectivityService _connectivityService;
+
   Timer? _syncTimer;
+  StreamSubscription<bool>? _connectivitySubscription;
+  bool _isConnected = false;
 
-  SyncService(this._localDb, this._supabaseWalletService, this._supabaseCategoryService);
-
-  // Start auto sync (setiap 5 menit ketika online)
+  SyncService(
+    this._localDb, 
+    this._supabaseWalletService, 
+    this._supabaseCategoryService,
+    this._connectivityService,
+  ) {
+    _initConnectivityListener();
+  }  // Start auto sync (setiap 5 menit ketika online)
   void startAutoSync() {
     _syncTimer?.cancel();
     _syncTimer = Timer.periodic(const Duration(minutes: 5), (_) {
-      if (SupabaseService.isAuthenticated) {
+      if (SupabaseService.isAuthenticated && _isConnected) {
         _performAutoSync();
       }
     });
@@ -47,6 +57,78 @@ class SyncService {
   void stopAutoSync() {
     _syncTimer?.cancel();
     _syncTimer = null;
+    _connectivitySubscription?.cancel();
+    _connectivitySubscription = null;
+  }
+
+  // Initialize connectivity listener untuk auto sync ketika internet kembali
+  void _initConnectivityListener() async {
+    // Check initial connectivity
+    _isConnected = await _connectivityService.isConnected;
+    
+    // Listen to connectivity changes
+    _connectivitySubscription = _connectivityService.connectionStream.listen(
+      (bool isConnected) async {
+        final wasConnected = _isConnected;
+        _isConnected = isConnected;
+        
+        if (kDebugMode) {
+          print('🌐 Connectivity changed: ${isConnected ? "Connected" : "Disconnected"}');
+        }
+        
+        // Jika baru saja terkoneksi setelah disconnect dan ada pending sync
+        if (!wasConnected && isConnected && SupabaseService.isAuthenticated) {
+          if (kDebugMode) {
+            print('🔄 Internet reconnected, checking for pending sync...');
+          }
+          
+          // Tunggu sebentar untuk memastikan koneksi stabil
+          await Future.delayed(const Duration(seconds: 2));
+          
+          // Cek apakah ada data yang perlu di-sync
+          final hasPendingData = await _checkForPendingSync();
+          if (hasPendingData) {
+            if (kDebugMode) {
+              print('✅ Found pending data, starting auto sync...');
+            }
+            await _performAutoSync();
+          }
+        }
+      },
+    );
+  }
+
+  // Check apakah ada data yang pending sync
+  Future<bool> _checkForPendingSync() async {
+    try {
+      final userId = SupabaseService.currentUserId;
+      if (userId == null) return false;
+
+      // Check unsynced wallets
+      final unsyncedWallets = await _localDb.getUnsyncedWallets(userId);
+      if (unsyncedWallets.isNotEmpty) {
+        if (kDebugMode) {
+          print('📝 Found ${unsyncedWallets.length} unsynced wallets');
+        }
+        return true;
+      }
+
+      // Check unsynced categories
+      final unsyncedCategories = await _localDb.getUnsyncedCategories(userId);
+      if (unsyncedCategories.isNotEmpty) {
+        if (kDebugMode) {
+          print('📝 Found ${unsyncedCategories.length} unsynced categories');
+        }
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error checking pending sync: $e');
+      }
+      return false;
+    }
   }
 
   // Manual sync untuk user tertentu
@@ -240,15 +322,20 @@ class SyncService {
   // Private method untuk auto sync
   Future<void> _performAutoSync() async {
     final userId = SupabaseService.currentUserId;
-    if (userId != null) {
+    if (userId != null && _isConnected) {
       try {
-        await syncUserData(userId);
         if (kDebugMode) {
-          print('Auto sync completed for user: $userId');
+          print('🔄 Starting auto sync for user: $userId');
+        }
+        
+        await syncUserData(userId);
+        
+        if (kDebugMode) {
+          print('✅ Auto sync completed for user: $userId');
         }
       } catch (e) {
         if (kDebugMode) {
-          print('Auto sync failed: $e');
+          print('❌ Auto sync failed: $e');
         }
       }
     }

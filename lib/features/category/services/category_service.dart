@@ -273,6 +273,42 @@ class CategoryService {
     }
   }
 
+  // Public method untuk sync semua unsynced categories
+  Future<void> syncUnsyncedCategories(String userId) async {
+    try {
+      if (kDebugMode) {
+        print('🔄 Starting auto sync for unsynced categories...');
+      }
+
+      final unsyncedCategories = await _localDb.getUnsyncedCategories(userId);
+      if (unsyncedCategories.isEmpty) {
+        if (kDebugMode) {
+          print('✅ No categories need sync');
+        }
+        return;
+      }
+
+      if (kDebugMode) {
+        print('📝 Found ${unsyncedCategories.length} categories to sync');
+      }
+
+      for (final category in unsyncedCategories) {
+        await _trySyncCategory(category);
+      }
+
+      // Fetch and merge dari server
+      await _fetchAndMergeFromServer(userId);
+
+      if (kDebugMode) {
+        print('✅ Auto sync completed for categories');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Auto sync failed for categories: $e');
+      }
+    }
+  }
+
   Future<void> _trySyncCategory(Category category) async {
     try {
       if (kDebugMode) {

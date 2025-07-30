@@ -5,6 +5,7 @@ import '../../../services/supabase_service.dart';
 import '../../../models/category.dart';
 import '../../../utils/category_icon_helper.dart';
 import '../widgets/category_form_dialog.dart';
+import '../widgets/category_sync_status_widget.dart';
 
 class ManageCategoriesScreen extends ConsumerStatefulWidget {
   const ManageCategoriesScreen({super.key});
@@ -31,73 +32,7 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
   }
 
   Widget _buildSyncStatusIndicator() {
-    final userId = SupabaseService.currentUserId;
-    if (userId == null) return const SizedBox.shrink();
-
-    return Consumer(
-      builder: (context, ref, child) {
-        final expenseAsync = ref.watch(
-          categoriesByTypeProvider((userId: userId, type: CategoryType.expense)),
-        );
-        final incomeAsync = ref.watch(
-          categoriesByTypeProvider((userId: userId, type: CategoryType.income)),
-        );
-
-        return expenseAsync.when(
-          data: (expenseCategories) => incomeAsync.when(
-            data: (incomeCategories) {
-              final allCategories = [...expenseCategories, ...incomeCategories];
-              final unsyncedCount = allCategories.where((cat) => cat.needsSync).length;
-              
-              if (unsyncedCount == 0) {
-                return Tooltip(
-                  message: 'All categories synced',
-                  child: Icon(
-                    Icons.cloud_done,
-                    color: Colors.green[600],
-                    size: 20,
-                  ),
-                );
-              } else {
-                return Tooltip(
-                  message: '$unsyncedCount categories need sync',
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.orange,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.sync_problem,
-                          color: Colors.white,
-                          size: 14,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '$unsyncedCount',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-            },
-            loading: () => const SizedBox.shrink(),
-            error: (_, _) => const SizedBox.shrink(),
-          ),
-          loading: () => const SizedBox.shrink(),
-          error: (_, _) => const SizedBox.shrink(),
-        );
-      },
-    );
+    return const CategorySyncStatusWidget();
   }
 
   @override
@@ -430,7 +365,7 @@ class CategoryListTab extends ConsumerWidget {
                 ),
               ),
             ),
-            // Sync status indicator
+            // Sync status indicator - only show when needs sync
             if (category.needsSync) ...[
               const SizedBox(width: 8),
               Tooltip(
@@ -461,16 +396,6 @@ class CategoryListTab extends ConsumerWidget {
                       ),
                     ],
                   ),
-                ),
-              ),
-            ] else ...[
-              const SizedBox(width: 8),
-              Tooltip(
-                message: 'Synced with server',
-                child: Icon(
-                  Icons.cloud_done,
-                  size: 16,
-                  color: Colors.green[600],
                 ),
               ),
             ],
