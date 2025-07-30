@@ -2,7 +2,6 @@
 export 'profile_section_widget.dart';
 export 'settings_section_widget.dart';
 export 'preferences_settings_widget.dart';
-export 'data_privacy_settings_widget.dart';
 export 'wallet_category_settings_widget.dart';
 export 'support_settings_widget.dart';
 export 'logout_button_widget.dart';

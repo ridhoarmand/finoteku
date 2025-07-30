@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/supabase_service.dart';
 import 'widgets/profile_section_widget.dart';
 import 'widgets/preferences_settings_widget.dart';
-import 'widgets/data_privacy_settings_widget.dart';
 import 'widgets/wallet_category_settings_widget.dart';
 import 'widgets/support_settings_widget.dart';
 import 'widgets/logout_button_widget.dart';
@@ -34,11 +33,6 @@ class AccountScreen extends ConsumerWidget {
               const WalletCategorySettingsWidget(),
               const SizedBox(height: 16),
 
-              // Data & Privacy Section
-              const DataPrivacySettingsWidget(),
-              const SizedBox(height: 16),
-
-              // Support Section
               // Preferences Section
               const PreferencesSettingsWidget(),
               const SizedBox(height: 16),
