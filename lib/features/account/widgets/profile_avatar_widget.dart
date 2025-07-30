@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/edit_profile_provider.dart';
 
 class ProfileAvatarWidget extends ConsumerWidget {
@@ -24,23 +25,48 @@ class ProfileAvatarWidget extends ConsumerWidget {
               CircleAvatar(
                 radius: 50,
                 backgroundColor: theme.colorScheme.primary,
-                backgroundImage: profileState.imageFile != null
-                    ? FileImage(profileState.imageFile!)
-                    : (profileState.avatarUrl != null
-                        ? NetworkImage(profileState.avatarUrl!)
-                        : null),
-                child: (profileState.imageFile == null && profileState.avatarUrl == null)
-                    ? Text(
-                        fullNameController.text.isNotEmpty
-                            ? fullNameController.text.substring(0, 1).toUpperCase()
-                            : 'U',
-                        style: TextStyle(
-                          color: theme.colorScheme.onPrimary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 32,
+                child: profileState.imageFile != null
+                    ? ClipOval(
+                        child: Image.file(
+                          profileState.imageFile!,
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.cover,
                         ),
                       )
-                    : null,
+                    : (profileState.avatarUrl != null
+                        ? ClipOval(
+                            child: CachedNetworkImage(
+                              imageUrl: profileState.avatarUrl!,
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: theme.colorScheme.onPrimary,
+                              ),
+                              errorWidget: (context, url, error) => Text(
+                                fullNameController.text.isNotEmpty
+                                    ? fullNameController.text.substring(0, 1).toUpperCase()
+                                    : 'U',
+                                style: TextStyle(
+                                  color: theme.colorScheme.onPrimary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 32,
+                                ),
+                              ),
+                            ),
+                          )
+                        : Text(
+                            fullNameController.text.isNotEmpty
+                                ? fullNameController.text.substring(0, 1).toUpperCase()
+                                : 'U',
+                            style: TextStyle(
+                              color: theme.colorScheme.onPrimary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 32,
+                            ),
+                          )),
               ),
               Positioned(
                 bottom: 0,

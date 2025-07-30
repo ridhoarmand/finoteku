@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
 import '../../../services/supabase_service.dart';
+import '../../../services/image_cache_service.dart';
 
 class EditProfileState {
   final bool isLoading;
@@ -57,19 +58,44 @@ class EditProfileNotifier extends StateNotifier<EditProfileState> {
     state = state.copyWith(avatarUrl: avatarUrl);
   }
 
-  void loadUserData() {
+  void loadUserData() async {
     try {
       final user = SupabaseService.client.auth.currentUser;
       if (user != null) {
+        final avatarUrl = user.userMetadata?['avatar_url'];
+        
         state = state.copyWith(
-          avatarUrl: user.userMetadata?['avatar_url'],
+          avatarUrl: avatarUrl,
           error: null, // Clear any previous errors
         );
+
+        // Pre-cache avatar if exists and not in offline mode
+        if (avatarUrl != null && avatarUrl.isNotEmpty) {
+          _precacheAvatar(avatarUrl, user.id);
+        }
       }
     } catch (e) {
       state = state.copyWith(
         error: 'Failed to load user data: ${e.toString()}',
       );
+    }
+  }
+
+  // Pre-cache avatar image for offline use
+  Future<void> _precacheAvatar(String avatarUrl, String userId) async {
+    try {
+      // Don't await this - run in background
+      Future.microtask(() async {
+        final imageCacheService = ImageCacheService();
+        await imageCacheService.getCachedImage(avatarUrl, userId);
+        if (kDebugMode) {
+          print('✅ Avatar pre-cached for offline use');
+        }
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Failed to pre-cache avatar: $e');
+      }
     }
   }
 
@@ -101,7 +127,7 @@ class EditProfileNotifier extends StateNotifier<EditProfileState> {
     );
   }
 
-  Future<String?> uploadAvatar() async {
+  Future<String?> uploadAvatar(WidgetRef ref) async {
     if (state.imageFile == null) return state.avatarUrl;
 
     try {
@@ -137,6 +163,10 @@ class EditProfileNotifier extends StateNotifier<EditProfileState> {
       final String publicUrl = SupabaseService.client.storage
           .from('avatars')
           .getPublicUrl(fileName);
+
+      // Cache the uploaded image
+      final imageCacheService = ref.read(imageCacheServiceProvider);
+      await imageCacheService.cacheLocalImage(state.imageFile!, publicUrl, user.id);
 
       return publicUrl;
     } catch (e) {
@@ -174,7 +204,7 @@ class EditProfileNotifier extends StateNotifier<EditProfileState> {
       // Upload avatar if image is selected
       String? avatarUrl = state.avatarUrl;
       if (state.imageFile != null) {
-        avatarUrl = await uploadAvatar();
+        avatarUrl = await uploadAvatar(ref);
       }
 
       // Update user metadata

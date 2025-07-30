@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
-class ProfileSectionWidget extends StatelessWidget {
+class ProfileSectionWidget extends ConsumerWidget {
   final User? user;
 
   const ProfileSectionWidget({
@@ -11,7 +13,7 @@ class ProfileSectionWidget extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
     return Card(
@@ -22,11 +24,31 @@ class ProfileSectionWidget extends StatelessWidget {
             CircleAvatar(
               radius: 30,
               backgroundColor: theme.colorScheme.primary,
-              backgroundImage: user?.userMetadata?['avatar_url'] != null
-                  ? NetworkImage(user!.userMetadata!['avatar_url'])
-                  : null,
-              child: (user?.userMetadata?['avatar_url'] == null)
-                  ? Text(
+              child: user?.userMetadata?['avatar_url'] != null
+                  ? ClipOval(
+                      child: CachedNetworkImage(
+                        imageUrl: user!.userMetadata!['avatar_url'],
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: theme.colorScheme.onPrimary,
+                        ),
+                        errorWidget: (context, url, error) => Text(
+                          (user?.userMetadata?['full_name'] as String?)
+                                  ?.substring(0, 1)
+                                  .toUpperCase() ??
+                              'U',
+                          style: TextStyle(
+                            color: theme.colorScheme.onPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 24,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Text(
                       (user?.userMetadata?['full_name'] as String?)
                               ?.substring(0, 1)
                               .toUpperCase() ??
@@ -36,8 +58,7 @@ class ProfileSectionWidget extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         fontSize: 24,
                       ),
-                    )
-                  : null,
+                    ),
             ),
             const SizedBox(width: 16),
             Expanded(
