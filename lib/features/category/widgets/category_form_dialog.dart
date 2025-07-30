@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import '../../../models/category.dart';
+import '../../../utils/category_icon_helper.dart';
 
 class CategoryFormDialog extends StatefulWidget {
   final String title;
   final CategoryType categoryType;
   final String? initialName;
-  final Function(String name, Color color) onSave;
+  final IconData? initialIcon;
+  final Function(String name, Color color, IconData? icon) onSave;
 
   const CategoryFormDialog({
     super.key,
     required this.title,
     required this.categoryType,
     this.initialName,
+    this.initialIcon,
     required this.onSave,
   });
 
@@ -22,6 +25,7 @@ class CategoryFormDialog extends StatefulWidget {
 class _CategoryFormDialogState extends State<CategoryFormDialog> {
   late TextEditingController _nameController;
   Color _selectedColor = Colors.blue;
+  IconData? _selectedIcon;
   
   final List<Color> _availableColors = [
     Colors.red,
@@ -29,18 +33,18 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
     Colors.green,
     Colors.orange,
     Colors.purple,
-    Colors.teal,
     Colors.pink,
+    Colors.teal,
     Colors.brown,
     Colors.indigo,
-    Colors.cyan,
+    Colors.grey,
   ];
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initialName ?? '');
-    _selectedColor = _availableColors[0];
+    _selectedIcon = widget.initialIcon;
   }
 
   @override
@@ -51,30 +55,284 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.title),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Category Name',
-              border: OutlineInputBorder(),
+    final screenHeight = MediaQuery.of(context).size.height;
+    final maxDialogHeight = screenHeight * 0.8; // 80% of screen height
+    
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Container(
+        width: double.maxFinite,
+        constraints: BoxConstraints(
+          maxHeight: maxDialogHeight,
+          maxWidth: 500, // Max width for better UX on tablets
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    widget.categoryType == CategoryType.expense 
+                      ? Icons.trending_down 
+                      : Icons.trending_up,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            textCapitalization: TextCapitalization.words,
-            maxLength: 50,
+            
+            // Scrollable Content
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Category Name Input
+                    TextField(
+                      controller: _nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Category Name',
+                        border: const OutlineInputBorder(),
+                        prefixIcon: Icon(
+                          Icons.label_outline,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      textCapitalization: TextCapitalization.words,
+                      maxLength: 50,
+                      onChanged: (value) {
+                        setState(() {
+                          // Auto-suggest icon based on name if no custom icon selected
+                          _selectedIcon ??= CategoryIconHelper.getIconForCategory(value);
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // Icon Selection Section
+                    _buildIconSection(context),
+                    const SizedBox(height: 20),
+                    
+                    // Color Selection Section  
+                    _buildColorSection(context),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Action Buttons
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                border: Border(
+                  top: BorderSide(
+                    color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                  ),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 12),
+                  FilledButton(
+                    onPressed: _nameController.text.trim().isEmpty
+                            ? null
+                            : () {
+                                widget.onSave(
+                                  _nameController.text.trim(), 
+                                  _selectedColor,
+                                  _selectedIcon,
+                                );
+                                Navigator.of(context).pop();
+                              },
+                    child: const Text('Save'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildIconSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.palette_outlined,
+              size: 16,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Select Icon',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        
+        // Current Icon Display
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+            ),
           ),
-          const SizedBox(height: 16),
-          const Text(
-            'Select Color:',
-            style: TextStyle(fontWeight: FontWeight.w600),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'Current: ',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: CategoryIconHelper.buildCategoryIcon(
+                      _selectedIcon ?? CategoryIconHelper.getIconForCategory(_nameController.text),
+                      size: 24,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _selectedIcon != null ? 'Custom Icon' : 'Auto-detected',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                        if (_selectedIcon == null)
+                          Text(
+                            'Based on category name',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (_selectedIcon != null)
+                    TextButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _selectedIcon = null; // Reset to auto-detect
+                        });
+                      },
+                      icon: const Icon(Icons.refresh, size: 16),
+                      label: const Text('Reset'),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              
+              // Icon Grid
+              Container(
+                height: 180, // Fixed height to prevent overflow
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: CategoryIconHelper.buildIconSelectionGrid(
+                  selectedIcon: _selectedIcon,
+                  onIconSelected: (icon) {
+                    setState(() {
+                      _selectedIcon = icon;
+                    });
+                  },
+                  iconSize: 20,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildColorSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.color_lens_outlined,
+              size: 16,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Select Color',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 12,
             children: _availableColors.map((color) {
               final isSelected = color == _selectedColor;
               return GestureDetector(
@@ -83,44 +341,51 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
                     _selectedColor = color;
                   });
                 },
-                child: Container(
-                  width: 32,
-                  height: 32,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
                     color: color,
                     shape: BoxShape.circle,
                     border: isSelected
-                        ? Border.all(color: Colors.black, width: 2)
+                        ? Border.all(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            width: 3,
+                          )
+                        : Border.all(
+                            color: Colors.grey.shade300,
+                            width: 1,
+                          ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: color.withValues(alpha: 0.4),
+                              blurRadius: 8,
+                              spreadRadius: 2,
+                            ),
+                          ]
                         : null,
                   ),
                   child: isSelected
-                      ? const Icon(
+                      ? Icon(
                           Icons.check,
-                          color: Colors.white,
-                          size: 16,
+                          color: _getContrastColor(color),
+                          size: 20,
                         )
                       : null,
                 ),
               );
             }).toList(),
           ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: _nameController.text.trim().isEmpty
-                  ? null
-                  : () {
-                      widget.onSave(_nameController.text.trim(), _selectedColor);
-                      Navigator.of(context).pop();
-                    },
-          child: const Text('Save'),
         ),
       ],
     );
+  }
+  
+  Color _getContrastColor(Color backgroundColor) {
+    // Calculate contrast color (white or black) based on background
+    final luminance = backgroundColor.computeLuminance();
+    return luminance > 0.5 ? Colors.black : Colors.white;
   }
 }

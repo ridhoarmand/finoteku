@@ -1,10 +1,13 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/category.dart';
 import '../../../services/supabase_service.dart';
 
 // Provider untuk SupabaseCategoryService
-final supabaseCategoryServiceProvider = Provider<SupabaseCategoryService>((ref) {
+final supabaseCategoryServiceProvider = Provider<SupabaseCategoryService>((
+  ref,
+) {
   final supabase = ref.watch(supabaseProvider);
   return SupabaseCategoryService(supabase);
 });
@@ -25,7 +28,9 @@ class SupabaseCategoryService {
 
       // Handle empty result
       if (response.isEmpty) {
-        print('ℹ️ No categories found in server for user: $userId');
+        if (kDebugMode) {
+          print('ℹ️ No categories found in server for user: $userId');
+        }
         return [];
       }
 
@@ -33,13 +38,18 @@ class SupabaseCategoryService {
           .map((json) => Category.fromJson(_convertFromSupabase(json)))
           .toList();
     } catch (e) {
-      print('❌ Error fetching categories from server: $e');
+      if (kDebugMode) {
+        print('❌ Error fetching categories from server: $e');
+      }
       throw Exception('Failed to fetch categories: $e');
     }
   }
 
   // Ambil categories by type dari server
-  Future<List<Category>> getCategoriesByType(String userId, CategoryType type) async {
+  Future<List<Category>> getCategoriesByType(
+    String userId,
+    CategoryType type,
+  ) async {
     try {
       final response = await _supabase
           .from('categories')
@@ -50,7 +60,11 @@ class SupabaseCategoryService {
 
       // Handle empty result
       if (response.isEmpty) {
-        print('ℹ️ No categories of type ${type.name} found in server for user: $userId');
+        if (kDebugMode) {
+          print(
+            'ℹ️ No categories of type ${type.name} found in server for user: $userId',
+          );
+        }
         return [];
       }
 
@@ -58,7 +72,9 @@ class SupabaseCategoryService {
           .map((json) => Category.fromJson(_convertFromSupabase(json)))
           .toList();
     } catch (e) {
-      print('❌ Error fetching categories by type from server: $e');
+      if (kDebugMode) {
+        print('❌ Error fetching categories by type from server: $e');
+      }
       throw Exception('Failed to fetch categories: $e');
     }
   }
@@ -75,19 +91,26 @@ class SupabaseCategoryService {
 
       return Category.fromJson(_convertFromSupabase(response));
     } catch (e) {
-      if (e.toString().contains('No rows found') || 
+      if (e.toString().contains('No rows found') ||
           e.toString().contains('multiple (or no) rows returned') ||
           e.toString().contains('0 rows')) {
-        print('ℹ️ Category not found in server: $categoryId');
+        if (kDebugMode) {
+          print('ℹ️ Category not found in server: $categoryId');
+        }
         return null;
       }
-      print('❌ Error fetching category from server: $e');
+      if (kDebugMode) {
+        print('❌ Error fetching category from server: $e');
+      }
       throw Exception('Failed to fetch category: $e');
     }
   }
 
   // Buat category baru di server
-  Future<Category> createCategory(String userId, CreateCategoryRequest request) async {
+  Future<Category> createCategory(
+    String userId,
+    CreateCategoryRequest request,
+  ) async {
     try {
       final data = {
         'user_id': userId,
@@ -110,7 +133,11 @@ class SupabaseCategoryService {
   }
 
   // Update category di server
-  Future<Category> updateCategory(String categoryId, String userId, UpdateCategoryRequest request) async {
+  Future<Category> updateCategory(
+    String categoryId,
+    String userId,
+    UpdateCategoryRequest request,
+  ) async {
     try {
       final data = <String, dynamic>{};
       if (request.name != null) data['name'] = request.name;
@@ -152,8 +179,12 @@ class SupabaseCategoryService {
   // Sync category ke server
   Future<Category> syncCategory(Category category) async {
     try {
-      print('🔄 Syncing category: ${category.id} for user: ${category.userId}');
-      
+      if (kDebugMode) {
+        print(
+          '🔄 Syncing category: ${category.id} for user: ${category.userId}',
+        );
+      }
+
       // Cek apakah category sudah ada di server (tanpa menggunakan .single())
       final checkResponse = await _supabase
           .from('categories')
@@ -163,7 +194,9 @@ class SupabaseCategoryService {
 
       if (checkResponse.isEmpty) {
         // Buat baru di server
-        print('📝 Creating new category in server: ${category.id}');
+        if (kDebugMode) {
+          print('📝 Creating new category in server: ${category.id}');
+        }
         final data = {
           'id': category.id, // Gunakan ID yang sama dari local
           'user_id': category.userId,
@@ -180,23 +213,35 @@ class SupabaseCategoryService {
             .select()
             .single();
 
-        print('✅ Category created successfully in server');
+        if (kDebugMode) {
+          print('✅ Category created successfully in server');
+        }
         return Category.fromJson(_convertFromSupabase(response));
       } else {
         // Update yang sudah ada
-        print('🔄 Updating existing category in server: ${category.id}');
+        if (kDebugMode) {
+          print('🔄 Updating existing category in server: ${category.id}');
+        }
         final updateRequest = UpdateCategoryRequest(
           name: category.name,
           type: category.type,
           parentId: category.parentId,
           isActive: category.isActive,
         );
-        final updatedCategory = await updateCategory(category.id, category.userId, updateRequest);
-        print('✅ Category updated successfully in server');
+        final updatedCategory = await updateCategory(
+          category.id,
+          category.userId,
+          updateRequest,
+        );
+        if (kDebugMode) {
+          print('✅ Category updated successfully in server');
+        }
         return updatedCategory;
       }
     } catch (e) {
-      print('❌ Failed to sync category ${category.id}: $e');
+      if (kDebugMode) {
+        print('❌ Failed to sync category ${category.id}: $e');
+      }
       throw Exception('Failed to sync category: $e');
     }
   }

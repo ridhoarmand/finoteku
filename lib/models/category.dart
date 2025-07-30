@@ -6,6 +6,7 @@ class Category {
   final String name;
   final CategoryType type;
   final String? parentId;
+  final int? iconCodePoint; // Store Material Icons codePoint for custom icons
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -18,6 +19,7 @@ class Category {
     required this.name,
     required this.type,
     this.parentId,
+    this.iconCodePoint,
     this.isActive = true,
     required this.createdAt,
     required this.updatedAt,
@@ -32,6 +34,7 @@ class Category {
       'name': name,
       'type': type.name,
       'parent_id': parentId,
+      'icon_code_point': iconCodePoint,
       'is_active': isActive,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -47,6 +50,7 @@ class Category {
       name: json['name'] as String,
       type: CategoryType.values.byName(json['type'] as String),
       parentId: json['parent_id'] as String?,
+      iconCodePoint: json['icon_code_point'] as int?,
       isActive: json['is_active'] as bool? ?? true,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
@@ -61,6 +65,7 @@ class Category {
     String? name,
     CategoryType? type,
     String? parentId,
+    int? iconCodePoint,
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -73,6 +78,7 @@ class Category {
       name: name ?? this.name,
       type: type ?? this.type,
       parentId: parentId ?? this.parentId,
+      iconCodePoint: iconCodePoint ?? this.iconCodePoint,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -100,11 +106,13 @@ class CreateCategoryRequest {
   final String name;
   final CategoryType type;
   final String? parentId;
+  final int? iconCodePoint;
 
   const CreateCategoryRequest({
     required this.name,
     required this.type,
     this.parentId,
+    this.iconCodePoint,
   });
 
   Map<String, dynamic> toJson() {
@@ -112,6 +120,7 @@ class CreateCategoryRequest {
       'name': name,
       'type': type.name,
       'parent_id': parentId,
+      'icon_code_point': iconCodePoint,
     };
   }
 }
@@ -120,12 +129,14 @@ class UpdateCategoryRequest {
   final String? name;
   final CategoryType? type;
   final String? parentId;
+  final int? iconCodePoint;
   final bool? isActive;
 
   const UpdateCategoryRequest({
     this.name,
     this.type,
     this.parentId,
+    this.iconCodePoint,
     this.isActive,
   });
 
@@ -134,6 +145,7 @@ class UpdateCategoryRequest {
     if (name != null) result['name'] = name;
     if (type != null) result['type'] = type!.name;
     if (parentId != null) result['parent_id'] = parentId;
+    if (iconCodePoint != null) result['icon_code_point'] = iconCodePoint;
     if (isActive != null) result['is_active'] = isActive;
     return result;
   }

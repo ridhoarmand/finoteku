@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/category_service.dart';
 import '../../../services/supabase_service.dart';
 import '../../../models/category.dart';
+import '../../../utils/category_icon_helper.dart';
 import '../widgets/category_form_dialog.dart';
 
 class ManageCategoriesScreen extends ConsumerStatefulWidget {
@@ -73,14 +74,14 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
       builder: (context) => CategoryFormDialog(
         title: 'Add ${isExpense ? 'Expense' : 'Income'} Category',
         categoryType: categoryType,
-        onSave: (name, color) {
-          _handleAddCategory(categoryType, name, color);
+        onSave: (name, color, icon) {
+          _handleAddCategory(categoryType, name, color, icon);
         },
       ),
     );
   }
 
-  void _handleAddCategory(CategoryType type, String name, Color color) async {
+  void _handleAddCategory(CategoryType type, String name, Color color, IconData? icon) async {
     try {
       final userId = SupabaseService.currentUserId;
       if (userId == null) {
@@ -91,6 +92,7 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
       final request = CreateCategoryRequest(
         name: name,
         type: type,
+        iconCodePoint: icon != null ? CategoryIconHelper.getCodePointFromIcon(icon) : null,
       );
       
       await categoryService.createCategory(userId, request);
@@ -210,8 +212,10 @@ class CategoryListTab extends ConsumerWidget {
   }
 
   Widget _buildCategoryItem(BuildContext context, WidgetRef ref, Category category) {
-    // Generate icon based on category name
-    IconData icon = _getCategoryIcon(category.name);
+    // Get icon from category model or auto-detect based on name
+    IconData icon = category.iconCodePoint != null 
+      ? CategoryIconHelper.getIconFromCodePoint(category.iconCodePoint)
+      : CategoryIconHelper.getIconForCategory(category.name);
     Color color = _getCategoryColor(category.name);
 
     return Card(
@@ -273,14 +277,17 @@ class CategoryListTab extends ConsumerWidget {
         title: 'Edit ${category.type.name} Category',
         categoryType: category.type,
         initialName: category.name,
-        onSave: (name, color) {
-          _handleEditCategory(context, ref, category, name, color);
+        initialIcon: category.iconCodePoint != null 
+          ? CategoryIconHelper.getIconFromCodePoint(category.iconCodePoint)
+          : null,
+        onSave: (name, color, icon) {
+          _handleEditCategory(context, ref, category, name, color, icon);
         },
       ),
     );
   }
 
-  void _handleEditCategory(BuildContext context, WidgetRef ref, Category category, String name, Color color) async {
+  void _handleEditCategory(BuildContext context, WidgetRef ref, Category category, String name, Color color, IconData? icon) async {
     try {
       final userId = SupabaseService.currentUserId;
       if (userId == null) {
@@ -288,7 +295,10 @@ class CategoryListTab extends ConsumerWidget {
       }
 
       final categoryService = ref.read(categoryServiceProvider);
-      final request = UpdateCategoryRequest(name: name);
+      final request = UpdateCategoryRequest(
+        name: name,
+        iconCodePoint: icon != null ? CategoryIconHelper.getCodePointFromIcon(icon) : null,
+      );
       
       await categoryService.updateCategory(category.id, userId, request);
       
@@ -367,22 +377,6 @@ class CategoryListTab extends ConsumerWidget {
         );
       }
     }
-  }
-
-  IconData _getCategoryIcon(String categoryName) {
-    final name = categoryName.toLowerCase();
-    if (name.contains('food') || name.contains('dining')) return Icons.restaurant;
-    if (name.contains('transport')) return Icons.directions_car;
-    if (name.contains('shopping')) return Icons.shopping_bag;
-    if (name.contains('entertainment')) return Icons.movie;
-    if (name.contains('health')) return Icons.local_hospital;
-    if (name.contains('bill') || name.contains('utilities')) return Icons.electrical_services;
-    if (name.contains('salary') || name.contains('work')) return Icons.work;
-    if (name.contains('freelance') || name.contains('computer')) return Icons.computer;
-    if (name.contains('investment')) return Icons.trending_up;
-    if (name.contains('gift')) return Icons.card_giftcard;
-    if (name.contains('education')) return Icons.school;
-    return Icons.category;
   }
 
   Color _getCategoryColor(String categoryName) {
