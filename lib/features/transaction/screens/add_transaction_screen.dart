@@ -431,6 +431,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
       // Refresh transactions list and wallet balances
       ref.invalidate(transactionsProvider(user.id));
+      ref.invalidate(filteredTransactionsProvider); // Fix: Invalidate filtered transactions
       ref.invalidate(
         transactionsSummaryProvider((
           userId: user.id,
@@ -446,7 +447,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       }
 
       if (mounted) {
-        Navigator.pop(context);
+        Navigator.pop(context, true); // Return true to indicate success
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(

@@ -74,3 +74,15 @@ final monthlyTransactionsProvider = FutureProvider.family<List<Transaction>, ({S
     endDate: endDate,
   );
 });
+
+// Provider untuk update transaction
+final updateTransactionProvider = Provider<Future<Transaction> Function(String, String, UpdateTransactionRequest)>((ref) {
+  final transactionService = ref.watch(transactionServiceProvider);
+  return transactionService.updateTransaction;
+});
+
+// Provider untuk delete transaction
+final deleteTransactionProvider = Provider<Future<void> Function(String, String)>((ref) {
+  final transactionService = ref.watch(transactionServiceProvider);
+  return transactionService.deleteTransaction;
+});
