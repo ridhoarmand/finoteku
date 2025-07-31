@@ -21,7 +21,6 @@ CREATE TABLE public.user_profiles (
     id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
     email TEXT NOT NULL,
     full_name TEXT,
-    avatar_url TEXT,
     currency TEXT DEFAULT 'IDR',
     timezone TEXT DEFAULT 'Asia/Jakarta',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
