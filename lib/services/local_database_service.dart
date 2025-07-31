@@ -24,12 +24,99 @@ class LocalDatabaseService {
 
   // Wallet operations
   Future<List<Wallet>> getWallets(String userId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final walletsJson = prefs.getStringList('wallets_$userId') ?? [];
-    return walletsJson
-        .map((json) => Wallet.fromJson(jsonDecode(json)))
-        .where((wallet) => !wallet.isDeleted)
-        .toList();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final walletsJson = prefs.getStringList('wallets_$userId') ?? [];
+      
+      final wallets = walletsJson.map((json) {
+        try {
+          return Wallet.fromJson(jsonDecode(json));
+        } catch (e) {
+          if (kDebugMode) {
+            print('❌ Error parsing wallet JSON: $e');
+          }
+          // Skip invalid wallet data
+          return null;
+        }
+      }).whereType<Wallet>().where((wallet) => !wallet.isDeleted).toList();
+
+      // Migration: Fix wallets with invalid icons
+      bool needsSave = false;
+      final fixedWallets = <Wallet>[];
+      
+      for (final wallet in wallets) {
+        Wallet fixedWallet = wallet;
+        
+        // Fix invalid icon paths
+        if (wallet.icon == 'wallet' || (wallet.icon != null && !_isValidIcon(wallet.icon!))) {
+          if (kDebugMode) {
+            print('🔧 Migrating wallet "${wallet.name}" with invalid icon: ${wallet.icon}');
+          }
+          
+          // If it's Main Wallet, change to Cash with cash icon
+          if (wallet.name == 'Main Wallet') {
+            fixedWallet = wallet.copyWith(
+              name: 'Cash',
+              icon: 'cash',
+              needsSync: true,
+              updatedAt: DateTime.now(),
+            );
+          } else {
+            // For other wallets, set icon to null (use default)
+            fixedWallet = wallet.copyWith(
+              icon: null,
+              needsSync: true,
+              updatedAt: DateTime.now(),
+            );
+          }
+          needsSave = true;
+        }
+        
+        fixedWallets.add(fixedWallet);
+      }
+
+      // Save migrated wallets
+      if (needsSave) {
+        final fixedWalletsJson = fixedWallets.map((w) => jsonEncode(w.toJson())).toList();
+        await prefs.setStringList('wallets_$userId', fixedWalletsJson);
+        if (kDebugMode) {
+          print('✅ Migrated wallets saved successfully');
+        }
+      }
+
+      return fixedWallets;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error getting wallets for user $userId: $e');
+      }
+      // Return empty list on error to prevent crashes
+      return [];
+    }
+  }
+
+  // Helper method to check if icon is valid
+  bool _isValidIcon(String icon) {
+    // List of valid icon names/paths
+    const validIcons = [
+      'cash',
+      'assets/wallets/cash.svg',
+      'assets/banks/bca.svg',
+      'assets/banks/blu.svg',
+      'assets/banks/bni.svg',
+      'assets/banks/bri.svg',
+      'assets/banks/bsi.svg',
+      'assets/banks/btn.svg',
+      'assets/banks/mandiri.svg',
+      'assets/banks/sea.svg',
+      'assets/ewallets/dana.svg',
+      'assets/ewallets/doku.svg',
+      'assets/ewallets/gopay.svg',
+      'assets/ewallets/linkaja.svg',
+      'assets/ewallets/ovo.svg',
+      'assets/ewallets/sopay.svg',
+    ];
+    
+    return validIcons.contains(icon);
   }
 
   Future<Wallet?> getWallet(String walletId, String userId) async {
@@ -149,9 +236,19 @@ class LocalDatabaseService {
   // Utility methods
   Future<void> clearAllData(String userId) async {
     final prefs = await SharedPreferences.getInstance();
+    
+    // Clear user-specific data
     await prefs.remove('wallets_$userId');
     await prefs.remove('categories_$userId');
     await prefs.remove('transactions_$userId');
+    
+    // Also clear any cache or temporary data that might exist
+    final keys = prefs.getKeys();
+    for (final key in keys) {
+      if (key.contains(userId)) {
+        await prefs.remove(key);
+      }
+    }
   }
 
   // Transaction operations
