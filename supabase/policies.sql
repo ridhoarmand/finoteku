@@ -2,21 +2,21 @@
 -- Execute this after schema.sql
 
 -- Enable RLS on all tables
-ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.wallets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transaction_images ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transfers ENABLE ROW LEVEL SECURITY;
 
--- User Profiles Policies
-CREATE POLICY "Users can view own profile" ON public.user_profiles
+-- Users Policies
+CREATE POLICY "Users can view own profile" ON public.users
     FOR SELECT USING (auth.uid() = id);
 
-CREATE POLICY "Users can update own profile" ON public.user_profiles
+CREATE POLICY "Users can update own profile" ON public.users
     FOR UPDATE USING (auth.uid() = id);
 
-CREATE POLICY "Users can insert own profile" ON public.user_profiles
+CREATE POLICY "Users can insert own profile" ON public.users
     FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- Wallets Policies
@@ -88,7 +88,7 @@ CREATE POLICY "Users can delete own transaction images" ON public.transaction_im
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.user_profiles (id, email, full_name)
+    INSERT INTO public.users (id, email, full_name)
     VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'full_name');
     RETURN NEW;
 END;

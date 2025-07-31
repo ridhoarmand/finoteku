@@ -69,7 +69,7 @@ Run these queries in SQL Editor to verify everything is set up correctly:
 SELECT schemaname, tablename FROM pg_tables 
 WHERE schemaname = 'public';
 ```
-Should show: `user_profiles`, `wallets`, `categories`, `transactions`, `transaction_images`, `transfers`
+Should show: `users`, `wallets`, `categories`, `transactions`, `transaction_images`, `transfers`
 
 #### Check RLS Policies
 ```sql
@@ -108,7 +108,7 @@ supabase/
 ## 🗃️ Database Schema Overview
 
 ### Tables:
-1. **user_profiles** - Extended user information
+1. **users** - Extended user information
 2. **wallets** - User's financial accounts (Cash, Bank, E-wallet, etc.) with custom icons
 3. **categories** - Income/Expense categories (customizable)
 4. **transactions** - Financial transactions

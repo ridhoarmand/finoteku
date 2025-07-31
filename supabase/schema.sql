@@ -1,5 +1,5 @@
 -- =============================================
--- Finoteku Database Schema (Revised)
+-- Finoteku Database Schema (Supabase)
 -- Simple Personal Finance Tracker
 -- =============================================
 
@@ -10,14 +10,19 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- CUSTOM TYPES
 -- =============================================
 
-CREATE TYPE category_type AS ENUM ('income', 'expense');
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'category_type') THEN
+        CREATE TYPE category_type AS ENUM ('income', 'expense');
+    END IF;
+END $$;
 
 -- =============================================
 -- TABLES
 -- =============================================
 
--- User Profiles (extends Supabase auth.users)
-CREATE TABLE public.user_profiles (
+-- Users (extends Supabase auth.users)
+CREATE TABLE IF NOT EXISTS public.users (
     id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
     email TEXT NOT NULL,
     full_name TEXT,
@@ -28,9 +33,9 @@ CREATE TABLE public.user_profiles (
 );
 
 -- Wallets (simplified)
-CREATE TABLE public.wallets (
+CREATE TABLE IF NOT EXISTS public.wallets (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE NOT NULL,
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
     name TEXT NOT NULL,
     balance DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     currency TEXT NOT NULL DEFAULT 'IDR',
@@ -41,9 +46,9 @@ CREATE TABLE public.wallets (
 );
 
 -- Categories (simplified)
-CREATE TABLE public.categories (
+CREATE TABLE IF NOT EXISTS public.categories (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE NOT NULL,
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
     name TEXT NOT NULL,
     type category_type NOT NULL,
     parent_id UUID REFERENCES public.categories(id) ON DELETE CASCADE,
@@ -55,9 +60,9 @@ CREATE TABLE public.categories (
 );
 
 -- Transactions (simplified)
-CREATE TABLE public.transactions (
+CREATE TABLE IF NOT EXISTS public.transactions (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE NOT NULL,
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
     wallet_id UUID REFERENCES public.wallets(id) ON DELETE RESTRICT NOT NULL,
     category_id UUID REFERENCES public.categories(id) ON DELETE RESTRICT,
     amount DECIMAL(15,2) NOT NULL,
@@ -68,9 +73,9 @@ CREATE TABLE public.transactions (
 );
 
 -- Transaction Images (for multiple image uploads)
-CREATE TABLE public.transaction_images (
+CREATE TABLE IF NOT EXISTS public.transaction_images (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE NOT NULL,
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
     transaction_id UUID REFERENCES public.transactions(id) ON DELETE CASCADE NOT NULL,
     image_url TEXT NOT NULL,
     image_name TEXT,
@@ -78,9 +83,9 @@ CREATE TABLE public.transaction_images (
 );
 
 -- Transfers (simplified)
-CREATE TABLE public.transfers (
+CREATE TABLE IF NOT EXISTS public.transfers (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE NOT NULL,
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
     from_wallet_id UUID REFERENCES public.wallets(id) ON DELETE CASCADE NOT NULL,
     to_wallet_id UUID REFERENCES public.wallets(id) ON DELETE CASCADE NOT NULL,
     amount DECIMAL(15,2) NOT NULL,
@@ -120,7 +125,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Add updated_at triggers to all tables
-CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.user_profiles FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.wallets FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.categories FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.transactions FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
@@ -333,3 +338,84 @@ BEGIN
     RETURN transaction_count;
 END;
 $$ LANGUAGE plpgsql;
+
+-- =============================================
+-- DELETE USER ACCOUNT FUNCTIONS
+-- =============================================
+
+-- Function to clean up user storage files
+CREATE OR REPLACE FUNCTION public.cleanup_user_storage_files(user_id_param UUID)
+RETURNS void AS $$
+BEGIN
+    -- Delete avatar files for the user
+    DELETE FROM storage.objects 
+    WHERE bucket_id = 'avatars' 
+    AND (storage.foldername(name))[1] = user_id_param::text;
+    
+    -- Delete transaction image files for the user
+    DELETE FROM storage.objects 
+    WHERE bucket_id = 'transaction-images' 
+    AND (storage.foldername(name))[1] = user_id_param::text;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to delete all user data and account
+CREATE OR REPLACE FUNCTION public.delete_user_account()
+RETURNS void AS $$
+DECLARE
+    current_user_id UUID;
+BEGIN
+    -- Get current authenticated user ID
+    current_user_id := auth.uid();
+    
+    -- Check if user is authenticated
+    IF current_user_id IS NULL THEN
+        RAISE EXCEPTION 'User not authenticated';
+    END IF;
+
+    -- Delete user data in correct order (to handle foreign key constraints)
+    
+    -- 1. Delete transaction images first (references transactions)
+    DELETE FROM public.transaction_images WHERE user_id = current_user_id;
+    
+    -- 2. Delete transactions (references wallets and categories)
+    DELETE FROM public.transactions WHERE user_id = current_user_id;
+    
+    -- 3. Delete transfers (references wallets)
+    DELETE FROM public.transfers WHERE user_id = current_user_id;
+    
+    -- 4. Delete categories (may have parent-child relationships)
+    DELETE FROM public.categories WHERE user_id = current_user_id;
+    
+    -- 5. Delete wallets
+    DELETE FROM public.wallets WHERE user_id = current_user_id;
+    
+    -- 6. Delete user profile (this will cascade to auth.users due to FK relationship)
+    DELETE FROM public.users WHERE id = current_user_id;
+    
+    -- 7. Delete from auth.users (this should be done last)
+    DELETE FROM auth.users WHERE id = current_user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Comprehensive function that deletes both data and files
+CREATE OR REPLACE FUNCTION public.delete_user_account_complete()
+RETURNS void AS $$
+DECLARE
+    current_user_id UUID;
+BEGIN
+    -- Get current authenticated user ID
+    current_user_id := auth.uid();
+    
+    -- Check if user is authenticated
+    IF current_user_id IS NULL THEN
+        RAISE EXCEPTION 'User not authenticated';
+    END IF;
+
+    -- First clean up storage files
+    PERFORM public.cleanup_user_storage_files(current_user_id);
+    
+    -- Then delete all user data
+    PERFORM public.delete_user_account();
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

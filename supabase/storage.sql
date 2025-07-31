@@ -1,15 +1,31 @@
 -- Storage configuration for Finoteku
--- Execute this in Supabase SQL Editor after creating the buckets manually
+-- Execute this in Supabase SQL Editor
 
--- STEP 1: Create storage buckets in Supabase Dashboard:
--- 1. Go to Storage in Supabase Dashboard
--- 2. Create bucket named 'transaction-images' (private, File size limit: 5MB)
--- 3. Create bucket named 'avatars' (public, File size limit: 2MB)
+-- STEP 1: Create storage buckets programmatically
+-- Insert transaction-images bucket if it doesn't exist
+INSERT INTO storage.buckets (id, name, public, file_size_limit)
+VALUES ('transaction-images', 'transaction-images', false, 5242880) -- 5MB limit
+ON CONFLICT (id) DO NOTHING;
+
+-- Insert avatars bucket if it doesn't exist  
+INSERT INTO storage.buckets (id, name, public, file_size_limit)
+VALUES ('avatars', 'avatars', true, 2097152) -- 2MB limit
+ON CONFLICT (id) DO NOTHING;
 
 -- STEP 2: Enable RLS on storage.objects (usually enabled by default)
 -- ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 
 -- STEP 3: Create storage policies
+
+-- Drop existing policies first (if they exist)
+DROP POLICY IF EXISTS "Users can upload their own transaction images" ON storage.objects;
+DROP POLICY IF EXISTS "Users can view their own transaction images" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own transaction images" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own transaction images" ON storage.objects;
+DROP POLICY IF EXISTS "Users can upload their own avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Anyone can view avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own avatar" ON storage.objects;
 
 -- Storage policies for transaction-images bucket
 CREATE POLICY "Users can upload their own transaction images" ON storage.objects
