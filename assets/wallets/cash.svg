@@ -1,0 +1,25 @@
+<svg width="112" height="112" viewBox="0 0 112 112" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_wallet_cash)">
+<rect x="2" y="2" width="108" height="108" rx="8" fill="white"/>
+<!-- Main wallet body -->
+<rect x="20" y="40" width="72" height="44" rx="4" fill="#2E7D32"/>
+<rect x="20" y="40" width="72" height="44" rx="4" stroke="#1B5E20" stroke-width="1"/>
+<!-- Wallet fold -->
+<path d="M20 48 C20 44.686 22.686 42 26 42 L86 42 C89.314 42 92 44.686 92 48 L92 52 L20 52 Z" fill="#388E3C"/>
+<path d="M20 48 C20 44.686 22.686 42 26 42 L86 42 C89.314 42 92 44.686 92 48 L92 52 L20 52 Z" stroke="#2E7D32" stroke-width="1"/>
+<!-- Money bills -->
+<rect x="28" y="54" width="20" height="12" rx="1" fill="#4CAF50" opacity="0.8"/>
+<rect x="30" y="56" width="16" height="8" rx="1" fill="#81C784"/>
+<circle cx="38" cy="60" r="2" fill="#2E7D32"/>
+<!-- Credit card slot -->
+<rect x="54" y="58" width="28" height="4" rx="2" fill="#1B5E20" opacity="0.3"/>
+<!-- Wallet clasp/button -->
+<circle cx="85" cy="55" r="3" fill="#1B5E20"/>
+<circle cx="85" cy="55" r="1.5" fill="#4CAF50"/>
+</g>
+<defs>
+<clipPath id="clip0_wallet_cash">
+<rect x="2" y="2" width="108" height="108" rx="8" fill="white"/>
+</clipPath>
+</defs>
+</svg>
