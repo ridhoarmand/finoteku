@@ -24,8 +24,13 @@ class WalletIconHelper {
     'assets/ewallets/sopay.svg',
   ];
 
+  // Available wallet icons
+  static const List<String> walletIcons = [
+    'assets/wallets/cash.svg',
+  ];
+
   // All available icons combined
-  static List<String> get allIcons => [...bankIcons, ...ewalletIcons];
+  static List<String> get allIcons => [...bankIcons, ...ewalletIcons, ...walletIcons];
 
   // Get display name from icon path
   static String getIconDisplayName(String iconPath) {
@@ -53,12 +58,45 @@ class WalletIconHelper {
       );
     }
 
-    return SvgPicture.asset(
-      iconPath,
-      width: size,
-      height: size,
-      colorFilter: color != null ? ColorFilter.mode(color, BlendMode.srcIn) : null,
-    );
+    // Convert short name to full path if needed
+    String fullPath = iconPath;
+    if (!iconPath.contains('/') && !iconPath.contains('.svg')) {
+      // Check if it's a known wallet icon
+      if (iconPath == 'cash') {
+        fullPath = 'assets/wallets/cash.svg';
+      } else {
+        // Check if it exists in banks or ewallets
+        final bankPath = 'assets/banks/$iconPath.svg';
+        final ewalletPath = 'assets/ewallets/$iconPath.svg';
+        
+        if (bankIcons.contains(bankPath)) {
+          fullPath = bankPath;
+        } else if (ewalletIcons.contains(ewalletPath)) {
+          fullPath = ewalletPath;
+        }
+      }
+    }
+
+    try {
+      return SvgPicture.asset(
+        fullPath,
+        width: size,
+        height: size,
+        colorFilter: color != null ? ColorFilter.mode(color, BlendMode.srcIn) : null,
+        placeholderBuilder: (BuildContext context) => Icon(
+          Icons.account_balance_wallet,
+          size: size,
+          color: color,
+        ),
+      );
+    } catch (e) {
+      // If asset loading fails, return default icon
+      return Icon(
+        Icons.account_balance_wallet,
+        size: size,
+        color: color,
+      );
+    }
   }
 
   // Build icon selection grid

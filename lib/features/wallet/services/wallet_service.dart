@@ -145,15 +145,26 @@ class WalletService {
 
   // Ambil semua wallets user
   Future<List<Wallet>> getWallets(String userId) async {
-    final wallets = await _localDb.getWallets(userId);
-    
-    // Jika belum ada wallet, buat default wallet
-    if (wallets.isEmpty) {
-      await _createDefaultWallet(userId);
-      return _localDb.getWallets(userId);
+    try {
+      final wallets = await _localDb.getWallets(userId);
+      
+      // Jika belum ada wallet, buat default wallet
+      if (wallets.isEmpty) {
+        if (kDebugMode) {
+          print('🏦 No wallets found for user $userId, creating default wallet');
+        }
+        await _createDefaultWallet(userId);
+        return _localDb.getWallets(userId);
+      }
+      
+      return wallets;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error getting wallets for user $userId: $e');
+      }
+      // Return empty list on error to prevent crashes
+      return [];
     }
-    
-    return wallets;
   }
 
   // Ambil wallet by ID (memerlukan userId untuk security)
@@ -241,21 +252,45 @@ class WalletService {
   // Private methods
 
   Future<void> _createDefaultWallet(String userId) async {
-    final defaultWallet = Wallet(
-      id: _uuid.v4(),
-      userId: userId,
-      name: 'Main Wallet',
-      balance: 0.0,
-      currency: 'IDR',
-      icon: 'wallet', // Default icon untuk wallet
-      isActive: true,
-      needsSync: true,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
+    try {
+      if (kDebugMode) {
+        print('🏦 Creating default wallet for user: $userId');
+      }
 
-    await _localDb.saveWallet(defaultWallet);
-    await _syncHelper.trySyncWallet(defaultWallet);
+      final defaultWallet = Wallet(
+        id: _uuid.v4(),
+        userId: userId,
+        name: 'Cash',
+        balance: 0.0,
+        currency: 'IDR',
+        icon: 'cash', // Icon untuk default cash wallet
+        isActive: true,
+        needsSync: true,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      await _localDb.saveWallet(defaultWallet);
+      
+      // Try sync to server but don't fail if it doesn't work
+      try {
+        await _syncHelper.trySyncWallet(defaultWallet);
+      } catch (syncError) {
+        if (kDebugMode) {
+          print('⚠️ Failed to sync default wallet to server: $syncError');
+        }
+        // Continue anyway - wallet is saved locally
+      }
+
+      if (kDebugMode) {
+        print('✅ Default wallet created successfully');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error creating default wallet: $e');
+      }
+      throw Exception('Failed to create default wallet: $e');
+    }
   }
 
   // Force sync single wallet
