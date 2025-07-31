@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/wallet.dart';
 import '../models/category.dart';
+import '../models/transaction.dart';
 
 // Provider untuk LocalDatabaseService
 final localDatabaseServiceProvider = Provider<LocalDatabaseService>((ref) {
@@ -149,5 +150,88 @@ class LocalDatabaseService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('wallets_$userId');
     await prefs.remove('categories_$userId');
+    await prefs.remove('transactions_$userId');
+  }
+
+  // Transaction operations
+  Future<List<Transaction>> getTransactions(String userId, {
+    String? walletId,
+    String? categoryId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final transactionsJson = prefs.getStringList('transactions_$userId') ?? [];
+    var transactions = transactionsJson
+        .map((json) => Transaction.fromJson(jsonDecode(json)))
+        .where((transaction) => !transaction.isDeleted)
+        .toList();
+
+    // Apply filters
+    if (walletId != null) {
+      transactions = transactions.where((t) => t.walletId == walletId).toList();
+    }
+    if (categoryId != null) {
+      transactions = transactions.where((t) => t.categoryId == categoryId).toList();
+    }
+    if (startDate != null) {
+      transactions = transactions.where((t) => !t.date.isBefore(startDate)).toList();
+    }
+    if (endDate != null) {
+      transactions = transactions.where((t) => !t.date.isAfter(endDate)).toList();
+    }
+
+    // Sort by date descending
+    transactions.sort((a, b) => b.date.compareTo(a.date));
+    return transactions;
+  }
+
+  Future<Transaction?> getTransaction(String transactionId, String userId) async {
+    final transactions = await getTransactions(userId);
+    try {
+      return transactions.firstWhere((transaction) => transaction.id == transactionId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> saveTransaction(Transaction transaction) async {
+    final prefs = await SharedPreferences.getInstance();
+    final transactions = await getTransactions(transaction.userId);
+    
+    // Remove existing transaction with same ID
+    transactions.removeWhere((t) => t.id == transaction.id);
+    // Add updated transaction
+    transactions.add(transaction);
+
+    final transactionsJson = transactions.map((t) => jsonEncode(t.toJson())).toList();
+    await prefs.setStringList('transactions_${transaction.userId}', transactionsJson);
+  }
+
+  Future<void> deleteTransaction(String transactionId, String userId) async {
+    final transaction = await getTransaction(transactionId, userId);
+    if (transaction != null) {
+      final deletedTransaction = transaction.copyWith(
+        isDeleted: true,
+        needsSync: true,
+        updatedAt: DateTime.now(),
+      );
+      await saveTransaction(deletedTransaction);
+    }
+  }
+
+  Future<List<Transaction>> getUnsyncedTransactions(String userId) async {
+    final transactions = await getTransactions(userId);
+    return transactions.where((transaction) => transaction.needsSync).toList();
+  }
+
+  Future<void> markTransactionSynced(String transactionId, String userId) async {
+    final transaction = await getTransaction(transactionId, userId);
+    if (transaction != null) {
+      final syncedTransaction = transaction.copyWith(
+        needsSync: false,
+      );
+      await saveTransaction(syncedTransaction);
+    }
   }
 }

@@ -6,7 +6,7 @@ import '../features/auth/register_screen.dart';
 import '../features/auth/forgot_password_screen.dart';
 import '../features/auth/services/auth_service.dart';
 import '../features/home/home_screen.dart';
-import '../features/transaction/transaction_screen.dart';
+import '../features/transaction/screens/transaction_screen.dart';
 import '../features/chart/chart_screen.dart';
 import '../features/account/account_screen.dart';
 import '../features/account/edit_profile_screen.dart';
