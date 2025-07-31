@@ -106,7 +106,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             children: [
               // Profile Avatar Section
               ProfileAvatarWidget(fullNameController: _fullNameController),
-              const SizedBox(height: 32),
+              const SizedBox(height: 12),
 
               // Profile Form
               ProfileFormWidget(
@@ -115,7 +115,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 emailController: _emailController,
                 phoneController: _phoneController,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 12),
 
               // Save Button
               SaveProfileButton(
@@ -123,7 +123,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 fullNameController: _fullNameController,
                 phoneController: _phoneController,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 10),
 
               // Account Settings Section
               const AccountSettingsWidget(),

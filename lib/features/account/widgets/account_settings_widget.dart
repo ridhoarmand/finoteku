@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'delete_account_dialog.dart';
 
 class AccountSettingsWidget extends StatelessWidget {
   const AccountSettingsWidget({super.key});
@@ -49,18 +50,7 @@ class AccountSettingsWidget extends StatelessWidget {
   void _showDeleteAccountDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Account'),
-        content: const Text(
-          'This feature will be available soon. Contact support if you need to delete your account.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
+      builder: (context) => const DeleteAccountDialog(),
     );
   }
 }
