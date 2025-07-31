@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/wallet.dart';
@@ -199,6 +200,14 @@ class LocalDatabaseService {
     final prefs = await SharedPreferences.getInstance();
     final transactions = await getTransactions(transaction.userId);
     
+    // Get existing transaction to compare for wallet balance update
+    Transaction? existingTransaction;
+    try {
+      existingTransaction = transactions.firstWhere((t) => t.id == transaction.id);
+    } catch (e) {
+      // Transaction doesn't exist yet
+    }
+    
     // Remove existing transaction with same ID
     transactions.removeWhere((t) => t.id == transaction.id);
     // Add updated transaction
@@ -206,17 +215,96 @@ class LocalDatabaseService {
 
     final transactionsJson = transactions.map((t) => jsonEncode(t.toJson())).toList();
     await prefs.setStringList('transactions_${transaction.userId}', transactionsJson);
+    
+    // Update wallet balance locally
+    await _updateWalletBalanceForTransaction(transaction, existingTransaction);
+  }
+
+  Future<void> _updateWalletBalanceForTransaction(Transaction newTransaction, Transaction? oldTransaction) async {
+    try {
+      // Get the wallet
+      final wallet = await getWallet(newTransaction.walletId, newTransaction.userId);
+      if (wallet == null) return;
+      
+      double balanceChange = 0;
+      
+      if (oldTransaction == null) {
+        // New transaction - add the amount
+        balanceChange = newTransaction.amount;
+      } else {
+        // Update transaction - calculate the difference
+        if (oldTransaction.walletId == newTransaction.walletId) {
+          // Same wallet - just update the difference
+          balanceChange = newTransaction.amount - oldTransaction.amount;
+        } else {
+          // Different wallet - remove from old wallet and add to new wallet
+          final oldWallet = await getWallet(oldTransaction.walletId, oldTransaction.userId);
+          if (oldWallet != null) {
+            final updatedOldWallet = oldWallet.copyWith(
+              balance: oldWallet.balance - oldTransaction.amount,
+              needsSync: true,
+              updatedAt: DateTime.now(),
+            );
+            await saveWallet(updatedOldWallet);
+          }
+          balanceChange = newTransaction.amount;
+        }
+      }
+      
+      // Update wallet balance
+      final updatedWallet = wallet.copyWith(
+        balance: wallet.balance + balanceChange,
+        needsSync: true,
+        updatedAt: DateTime.now(),
+      );
+      await saveWallet(updatedWallet);
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error updating wallet balance: $e');
+      }
+    }
   }
 
   Future<void> deleteTransaction(String transactionId, String userId) async {
     final transaction = await getTransaction(transactionId, userId);
     if (transaction != null) {
+      // Update wallet balance before marking as deleted
+      await _updateWalletBalanceForTransactionDeletion(transaction);
+      
       final deletedTransaction = transaction.copyWith(
         isDeleted: true,
         needsSync: true,
         updatedAt: DateTime.now(),
       );
-      await saveTransaction(deletedTransaction);
+      
+      // Save the deleted transaction (for sync purposes)
+      final prefs = await SharedPreferences.getInstance();
+      final transactions = await getTransactions(userId);
+      transactions.removeWhere((t) => t.id == transactionId);
+      transactions.add(deletedTransaction);
+      
+      final transactionsJson = transactions.map((t) => jsonEncode(t.toJson())).toList();
+      await prefs.setStringList('transactions_$userId', transactionsJson);
+    }
+  }
+
+  Future<void> _updateWalletBalanceForTransactionDeletion(Transaction transaction) async {
+    try {
+      // Get the wallet
+      final wallet = await getWallet(transaction.walletId, transaction.userId);
+      if (wallet == null) return;
+      
+      // Remove the transaction amount from wallet balance
+      final updatedWallet = wallet.copyWith(
+        balance: wallet.balance - transaction.amount,
+        needsSync: true,
+        updatedAt: DateTime.now(),
+      );
+      await saveWallet(updatedWallet);
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error updating wallet balance for deletion: $e');
+      }
     }
   }
 
@@ -233,5 +321,155 @@ class LocalDatabaseService {
       );
       await saveTransaction(syncedTransaction);
     }
+  }
+
+  // =============================================
+  // ADVANCED WALLET/CATEGORY OPERATIONS
+  // =============================================
+
+  // Check if wallet has transactions before deletion
+  Future<bool> walletHasTransactions(String walletId, String userId) async {
+    final transactions = await getTransactions(userId, walletId: walletId);
+    return transactions.isNotEmpty;
+  }
+
+  // Check if category has transactions before deletion
+  Future<bool> categoryHasTransactions(String categoryId, String userId) async {
+    final transactions = await getTransactions(userId, categoryId: categoryId);
+    return transactions.isNotEmpty;
+  }
+
+  // Transfer all transactions from one wallet to another
+  Future<int> transferTransactionsToWallet(String fromWalletId, String toWalletId, String userId) async {
+    final transactions = await getTransactions(userId, walletId: fromWalletId);
+    
+    for (final transaction in transactions) {
+      final updatedTransaction = transaction.copyWith(
+        walletId: toWalletId,
+        needsSync: true,
+        updatedAt: DateTime.now(),
+      );
+      await saveTransaction(updatedTransaction);
+    }
+    
+    // Recalculate balances for both wallets
+    await _recalculateWalletBalance(fromWalletId, userId);
+    await _recalculateWalletBalance(toWalletId, userId);
+    
+    return transactions.length;
+  }
+
+  // Transfer all transactions from one category to another
+  Future<int> transferTransactionsToCategory(String fromCategoryId, String toCategoryId, String userId) async {
+    final transactions = await getTransactions(userId, categoryId: fromCategoryId);
+    
+    // Get category types to determine if amount should be flipped
+    final fromCategory = await getCategory(fromCategoryId, userId);
+    final toCategory = await getCategory(toCategoryId, userId);
+    
+    if (fromCategory == null || toCategory == null) {
+      throw Exception('Category not found');
+    }
+    
+    final shouldFlipAmount = fromCategory.type != toCategory.type;
+    
+    for (final transaction in transactions) {
+      final updatedTransaction = transaction.copyWith(
+        categoryId: toCategoryId,
+        amount: shouldFlipAmount ? -transaction.amount : transaction.amount,
+        needsSync: true,
+        updatedAt: DateTime.now(),
+      );
+      await saveTransaction(updatedTransaction);
+    }
+    
+    // If amounts were flipped, recalculate all wallet balances
+    if (shouldFlipAmount) {
+      await _recalculateAllWalletBalances(userId);
+    }
+    
+    return transactions.length;
+  }
+
+  // Recalculate wallet balance from transactions
+  Future<void> _recalculateWalletBalance(String walletId, String userId) async {
+    try {
+      final wallet = await getWallet(walletId, userId);
+      if (wallet == null) return;
+      
+      final transactions = await getTransactions(userId, walletId: walletId);
+      final calculatedBalance = transactions.fold<double>(0, (sum, transaction) => sum + transaction.amount);
+      
+      final updatedWallet = wallet.copyWith(
+        balance: calculatedBalance,
+        needsSync: true,
+        updatedAt: DateTime.now(),
+      );
+      await saveWallet(updatedWallet);
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error recalculating wallet balance: $e');
+      }
+    }
+  }
+
+  // Recalculate all wallet balances for a user
+  Future<void> _recalculateAllWalletBalances(String userId) async {
+    try {
+      final wallets = await getWallets(userId);
+      for (final wallet in wallets) {
+        await _recalculateWalletBalance(wallet.id, userId);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error recalculating all wallet balances: $e');
+      }
+    }
+  }
+
+  // Public method to recalculate wallet balance (useful for fixing inconsistencies)
+  Future<void> recalculateWalletBalance(String walletId, String userId) async {
+    await _recalculateWalletBalance(walletId, userId);
+  }
+
+  // Public method to recalculate all wallet balances
+  Future<void> recalculateAllWalletBalances(String userId) async {
+    await _recalculateAllWalletBalances(userId);
+  }
+
+  // Safe delete wallet with transaction transfer
+  Future<void> safeDeleteWallet(String walletId, String userId, {String? transferToWalletId}) async {
+    // Check if wallet has transactions
+    final hasTransactions = await walletHasTransactions(walletId, userId);
+    
+    if (hasTransactions) {
+      if (transferToWalletId == null) {
+        throw Exception('Wallet has transactions. Please specify a wallet to transfer transactions to.');
+      }
+      
+      // Transfer transactions to another wallet
+      await transferTransactionsToWallet(walletId, transferToWalletId, userId);
+    }
+    
+    // Now safe to delete wallet
+    await deleteWallet(walletId, userId);
+  }
+
+  // Safe delete category with transaction transfer
+  Future<void> safeDeleteCategory(String categoryId, String userId, {String? transferToCategoryId}) async {
+    // Check if category has transactions
+    final hasTransactions = await categoryHasTransactions(categoryId, userId);
+    
+    if (hasTransactions) {
+      if (transferToCategoryId == null) {
+        throw Exception('Category has transactions. Please specify a category to transfer transactions to.');
+      }
+      
+      // Transfer transactions to another category
+      await transferTransactionsToCategory(categoryId, transferToCategoryId, userId);
+    }
+    
+    // Now safe to delete category
+    await deleteCategory(categoryId, userId);
   }
 }

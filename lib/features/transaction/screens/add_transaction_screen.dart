@@ -429,7 +429,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         await transactionService.createTransaction(user.id, request);
       }
 
-      // Refresh transactions list
+      // Refresh transactions list and wallet balances
       ref.invalidate(transactionsProvider(user.id));
       ref.invalidate(
         transactionsSummaryProvider((
@@ -438,6 +438,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           endDate: null,
         )),
       );
+      // Refresh wallet data to show updated balance
+      ref.invalidate(walletsProvider(user.id));
+      ref.invalidate(activeWalletsProvider(user.id));
+      if (_selectedWallet != null) {
+        ref.invalidate(walletProvider((walletId: _selectedWallet!.id, userId: user.id)));
+      }
 
       if (mounted) {
         Navigator.pop(context);

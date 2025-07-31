@@ -39,13 +39,13 @@ class ManageWalletsScreen extends ConsumerWidget {
           }
 
           final walletsAsync = ref.watch(walletsProvider(user.id));
-          
+
           return walletsAsync.when(
             data: (wallets) {
               if (wallets.isEmpty) {
                 return _buildEmptyState(context, ref, user.id);
               }
-              
+
               return RefreshIndicator(
                 onRefresh: () async {
                   ref.invalidate(walletsProvider(user.id));
@@ -94,16 +94,14 @@ class ManageWalletsScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Text('Error: $error'),
-        ),
+        error: (error, stack) => Center(child: Text('Error: $error')),
       ),
     );
   }
 
   Widget _buildEmptyState(BuildContext context, WidgetRef ref, String userId) {
     final theme = Theme.of(context);
-    
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -114,10 +112,7 @@ class ManageWalletsScreen extends ConsumerWidget {
             color: theme.colorScheme.onSurfaceVariant,
           ),
           const SizedBox(height: 24),
-          Text(
-            'No Wallets Yet',
-            style: theme.textTheme.headlineSmall,
-          ),
+          Text('No Wallets Yet', style: theme.textTheme.headlineSmall),
           const SizedBox(height: 8),
           Text(
             'Create your first wallet to start\nmanaging your finances',
@@ -135,25 +130,30 @@ class ManageWalletsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildWalletCard(BuildContext context, WidgetRef ref, Wallet wallet, String userId) {
+  Widget _buildWalletCard(
+    BuildContext context,
+    WidgetRef ref,
+    Wallet wallet,
+    String userId,
+  ) {
     final theme = Theme.of(context);
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         leading: CircleAvatar(
           radius: 24, // Larger circle for 36px icon
-          backgroundColor: wallet.isActive 
+          backgroundColor: wallet.isActive
               ? theme.colorScheme.primary.withValues(alpha: 0.1)
               : theme.colorScheme.outline.withValues(alpha: 0.1),
           child: WalletIconHelper.buildIcon(
             wallet.icon,
             size: 36, // Full size for 1:1 SVG display
             // Only apply color for default icon (when wallet.icon is null)
-            color: wallet.icon == null || wallet.icon!.isEmpty 
-                ? (wallet.isActive 
-                    ? theme.colorScheme.primary 
-                    : theme.colorScheme.onSurfaceVariant)
+            color: wallet.icon == null || wallet.icon!.isEmpty
+                ? (wallet.isActive
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant)
                 : null,
           ),
         ),
@@ -163,8 +163,8 @@ class ManageWalletsScreen extends ConsumerWidget {
               child: Text(
                 wallet.name,
                 style: theme.textTheme.titleMedium?.copyWith(
-                  color: wallet.isActive 
-                      ? null 
+                  color: wallet.isActive
+                      ? null
                       : theme.colorScheme.onSurfaceVariant,
                 ),
               ),
@@ -175,11 +175,16 @@ class ManageWalletsScreen extends ConsumerWidget {
               Tooltip(
                 message: 'Waiting to sync with server',
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.orange.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: Colors.orange.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -212,8 +217,8 @@ class ManageWalletsScreen extends ConsumerWidget {
               CurrencyFormatter.format(wallet.balance, wallet.currency),
               style: theme.textTheme.bodyLarge?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: wallet.balance >= 0 
-                    ? theme.colorScheme.primary 
+                color: wallet.balance >= 0
+                    ? theme.colorScheme.primary
                     : theme.colorScheme.error,
               ),
             ),
@@ -231,16 +236,13 @@ class ManageWalletsScreen extends ConsumerWidget {
           ],
         ),
         trailing: PopupMenuButton<String>(
-          onSelected: (value) => _handleMenuAction(context, ref, value, wallet, userId),
+          onSelected: (value) =>
+              _handleMenuAction(context, ref, value, wallet, userId),
           itemBuilder: (context) => [
             const PopupMenuItem(
               value: 'edit',
               child: Row(
-                children: [
-                  Icon(Icons.edit),
-                  SizedBox(width: 8),
-                  Text('Edit'),
-                ],
+                children: [Icon(Icons.edit), SizedBox(width: 8), Text('Edit')],
               ),
             ),
             // Show sync option only if wallet needs sync
@@ -263,7 +265,9 @@ class ManageWalletsScreen extends ConsumerWidget {
               value: wallet.isActive ? 'deactivate' : 'activate',
               child: Row(
                 children: [
-                  Icon(wallet.isActive ? Icons.visibility_off : Icons.visibility),
+                  Icon(
+                    wallet.isActive ? Icons.visibility_off : Icons.visibility,
+                  ),
                   const SizedBox(width: 8),
                   Text(wallet.isActive ? 'Deactivate' : 'Activate'),
                 ],
@@ -286,7 +290,13 @@ class ManageWalletsScreen extends ConsumerWidget {
     );
   }
 
-  void _handleMenuAction(BuildContext context, WidgetRef ref, String action, Wallet wallet, String userId) {
+  void _handleMenuAction(
+    BuildContext context,
+    WidgetRef ref,
+    String action,
+    Wallet wallet,
+    String userId,
+  ) {
     switch (action) {
       case 'edit':
         _showEditWalletDialog(context, ref, wallet);
@@ -321,7 +331,11 @@ class ManageWalletsScreen extends ConsumerWidget {
     );
   }
 
-  void _showEditWalletDialog(BuildContext context, WidgetRef ref, Wallet wallet) {
+  void _showEditWalletDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Wallet wallet,
+  ) {
     showDialog(
       context: context,
       builder: (context) => WalletFormDialog(
@@ -342,7 +356,12 @@ class ManageWalletsScreen extends ConsumerWidget {
     );
   }
 
-  void _toggleWalletStatus(BuildContext context, WidgetRef ref, Wallet wallet, String userId) async {
+  void _toggleWalletStatus(
+    BuildContext context,
+    WidgetRef ref,
+    Wallet wallet,
+    String userId,
+  ) async {
     try {
       final walletService = ref.read(walletServiceProvider);
       await walletService.updateWallet(
@@ -351,13 +370,13 @@ class ManageWalletsScreen extends ConsumerWidget {
         UpdateWalletRequest(isActive: !wallet.isActive),
       );
       ref.invalidate(walletsProvider(userId));
-      
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              wallet.isActive 
-                  ? '${wallet.name} deactivated' 
+              wallet.isActive
+                  ? '${wallet.name} deactivated'
                   : '${wallet.name} activated',
             ),
           ),
@@ -375,12 +394,19 @@ class ManageWalletsScreen extends ConsumerWidget {
     }
   }
 
-  void _showDeleteConfirmation(BuildContext context, WidgetRef ref, Wallet wallet, String userId) {
+  void _showDeleteConfirmation(
+    BuildContext context,
+    WidgetRef ref,
+    Wallet wallet,
+    String userId,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Wallet'),
-        content: Text('Are you sure you want to delete "${wallet.name}"? This action cannot be undone.'),
+        content: Text(
+          'Are you sure you want to delete "${wallet.name}"? This action cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -402,16 +428,21 @@ class ManageWalletsScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _deleteWallet(BuildContext context, WidgetRef ref, Wallet wallet, String userId) async {
+  Future<void> _deleteWallet(
+    BuildContext context,
+    WidgetRef ref,
+    Wallet wallet,
+    String userId,
+  ) async {
     try {
       final walletService = ref.read(walletServiceProvider);
       await walletService.deleteWallet(wallet.id, userId);
       ref.invalidate(walletsProvider(userId));
-      
+
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${wallet.name} deleted')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('${wallet.name} deleted')));
       }
     } catch (e) {
       if (context.mounted) {
@@ -434,12 +465,26 @@ class ManageWalletsScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildDetailRow('Balance', CurrencyFormatter.format(wallet.balance, wallet.currency)),
+            _buildDetailRow(
+              'Balance',
+              CurrencyFormatter.format(wallet.balance, wallet.currency),
+            ),
             _buildDetailRow('Currency', wallet.currency),
-            _buildDetailRow('Icon', wallet.icon != null ? WalletIconHelper.getIconDisplayName(wallet.icon!) : 'Default'),
+            _buildDetailRow(
+              'Icon',
+              wallet.icon != null
+                  ? WalletIconHelper.getIconDisplayName(wallet.icon!)
+                  : 'Default',
+            ),
             _buildDetailRow('Status', wallet.isActive ? 'Active' : 'Inactive'),
-            _buildDetailRow('Created', '${wallet.createdAt.day}/${wallet.createdAt.month}/${wallet.createdAt.year}'),
-            _buildDetailRow('Last Updated', '${wallet.updatedAt.day}/${wallet.updatedAt.month}/${wallet.updatedAt.year}'),
+            _buildDetailRow(
+              'Created',
+              '${wallet.createdAt.day}/${wallet.createdAt.month}/${wallet.createdAt.year}',
+            ),
+            _buildDetailRow(
+              'Last Updated',
+              '${wallet.updatedAt.day}/${wallet.updatedAt.month}/${wallet.updatedAt.year}',
+            ),
             if (wallet.needsSync)
               _buildDetailRow('Sync Status', 'Pending sync'),
           ],
@@ -552,7 +597,15 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
   bool _isActive = true;
   bool _isLoading = false;
 
-  final List<String> _currencies = ['IDR', 'USD', 'EUR', 'GBP', 'JPY', 'SGD', 'MYR'];
+  final List<String> _currencies = [
+    'IDR',
+    'USD',
+    'EUR',
+    'GBP',
+    'JPY',
+    'SGD',
+    'MYR',
+  ];
 
   @override
   void initState() {
@@ -600,14 +653,14 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
               TextFormField(
                 controller: _balanceController,
                 decoration: const InputDecoration(
-                  labelText: 'Initial Balance',
+                  labelText: 'Balance',
                   border: OutlineInputBorder(),
                   prefixText: '\$ ',
                 ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please enter initial balance';
+                    return 'Please enter balance';
                   }
                   if (double.tryParse(value) == null) {
                     return 'Please enter a valid number';
@@ -687,7 +740,7 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
         ),
         FilledButton(
           onPressed: _isLoading ? null : _handleSave,
-          child: _isLoading 
+          child: _isLoading
               ? const SizedBox(
                   width: 16,
                   height: 16,
@@ -702,13 +755,11 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
   void _showIconSelectionDialog() {
     final screenHeight = MediaQuery.of(context).size.height;
     final maxDialogHeight = screenHeight * 0.7; // 70% of screen height
-    
+
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Container(
           width: double.maxFinite,
           constraints: BoxConstraints(
@@ -722,8 +773,12 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -744,7 +799,7 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
                   ],
                 ),
               ),
-              
+
               // Scrollable Content
               Flexible(
                 child: Container(
@@ -760,16 +815,20 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
                   ),
                 ),
               ),
-              
+
               // Action Buttons
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
-                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                  borderRadius: const BorderRadius.vertical(
+                    bottom: Radius.circular(16),
+                  ),
                   border: Border(
                     top: BorderSide(
-                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outline.withValues(alpha: 0.2),
                     ),
                   ),
                 ),
@@ -809,7 +868,7 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
 
     try {
       final balance = double.parse(_balanceController.text);
-      
+
       if (widget.initialData != null) {
         // Update existing wallet
         final request = UpdateWalletRequest(
@@ -835,9 +894,11 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(widget.initialData != null 
-                ? 'Wallet updated successfully' 
-                : 'Wallet created successfully'),
+            content: Text(
+              widget.initialData != null
+                  ? 'Wallet updated successfully'
+                  : 'Wallet created successfully',
+            ),
           ),
         );
       }

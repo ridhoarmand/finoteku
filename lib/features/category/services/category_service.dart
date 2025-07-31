@@ -58,6 +58,18 @@ class CategoryService {
       throw Exception('Unauthorized');
     }
 
+    // Check if category type is changing
+    final isTypeChanging = request.type != null && request.type != existingCategory.type;
+    
+    if (isTypeChanging) {
+      // Check if category has transactions
+      final hasTransactions = await _localDb.categoryHasTransactions(categoryId, userId);
+      if (hasTransactions) {
+        // Type change will flip all transaction amounts and recalculate wallet balances
+        await _handleCategoryTypeChange(categoryId, userId, existingCategory.type, request.type!);
+      }
+    }
+
     final updatedCategory = existingCategory.copyWith(
       name: request.name ?? existingCategory.name,
       type: request.type ?? existingCategory.type,
@@ -77,6 +89,27 @@ class CategoryService {
     return updatedCategory;
   }
 
+  // Handle category type change
+  Future<void> _handleCategoryTypeChange(String categoryId, String userId, CategoryType oldType, CategoryType newType) async {
+    if (oldType == newType) return;
+
+    // Get all transactions with this category
+    final transactions = await _localDb.getTransactions(userId, categoryId: categoryId);
+    
+    // Flip all transaction amounts
+    for (final transaction in transactions) {
+      final updatedTransaction = transaction.copyWith(
+        amount: -transaction.amount,
+        needsSync: true,
+        updatedAt: DateTime.now(),
+      );
+      await _localDb.saveTransaction(updatedTransaction);
+    }
+
+    // Recalculate all wallet balances
+    await _localDb.recalculateAllWalletBalances(userId);
+  }
+
   // Hapus category
   Future<void> deleteCategory(String categoryId, String userId) async {
     final category = await _localDb.getCategory(categoryId, userId);
@@ -88,11 +121,63 @@ class CategoryService {
       throw Exception('Unauthorized');
     }
 
+    // Check if category has transactions
+    final hasTransactions = await _localDb.categoryHasTransactions(categoryId, userId);
+    if (hasTransactions) {
+      throw Exception('Cannot delete category that has transactions. Please transfer transactions to another category first.');
+    }
+
     // Hapus dari local database (soft delete)
     await _localDb.deleteCategory(categoryId, userId);
 
     // Coba sync penghapusan ke server jika online
     await _syncHelper.trySyncCategoryDeletion(categoryId, userId);
+  }
+
+  // Safe delete category with transaction transfer
+  Future<void> safeDeleteCategory(String categoryId, String userId, {String? transferToCategoryId}) async {
+    final category = await _localDb.getCategory(categoryId, userId);
+    if (category == null) {
+      throw Exception('Category not found');
+    }
+
+    if (category.userId != userId) {
+      throw Exception('Unauthorized');
+    }
+
+    // Use the safe delete method from local database
+    await _localDb.safeDeleteCategory(categoryId, userId, transferToCategoryId: transferToCategoryId);
+
+    // Coba sync penghapusan ke server jika online
+    await _syncHelper.trySyncCategoryDeletion(categoryId, userId);
+  }
+
+  // Check if category can be deleted
+  Future<bool> canDeleteCategory(String categoryId, String userId) async {
+    return !(await _localDb.categoryHasTransactions(categoryId, userId));
+  }
+
+  // Get transaction count for category
+  Future<int> getCategoryTransactionCount(String categoryId, String userId) async {
+    final transactions = await _localDb.getTransactions(userId, categoryId: categoryId);
+    return transactions.length;
+  }
+
+  // Transfer transactions between categories
+  Future<int> transferTransactionsToCategory(String fromCategoryId, String toCategoryId, String userId) async {
+    // Validate both categories exist and belong to user
+    final fromCategory = await _localDb.getCategory(fromCategoryId, userId);
+    final toCategory = await _localDb.getCategory(toCategoryId, userId);
+    
+    if (fromCategory == null || toCategory == null) {
+      throw Exception('Category not found');
+    }
+
+    if (fromCategory.userId != userId || toCategory.userId != userId) {
+      throw Exception('Unauthorized');
+    }
+
+    return await _localDb.transferTransactionsToCategory(fromCategoryId, toCategoryId, userId);
   }
 
   // Ambil semua categories user

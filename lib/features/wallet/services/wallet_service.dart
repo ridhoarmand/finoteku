@@ -79,11 +79,68 @@ class WalletService {
       throw Exception('Unauthorized');
     }
 
+    // Check if wallet has transactions
+    final hasTransactions = await _localDb.walletHasTransactions(walletId, userId);
+    if (hasTransactions) {
+      throw Exception('Cannot delete wallet that has transactions. Please transfer transactions to another wallet first.');
+    }
+
     // Hapus dari local database
     await _localDb.deleteWallet(walletId, userId);
 
     // Coba sync penghapusan ke server jika online
     await _syncHelper.trySyncWalletDeletion(walletId, userId);
+  }
+
+  // Safe delete wallet with transaction transfer
+  Future<void> safeDeleteWallet(String walletId, String userId, {String? transferToWalletId}) async {
+    final wallet = await _localDb.getWallet(walletId, userId);
+    if (wallet == null) {
+      throw Exception('Wallet not found');
+    }
+
+    if (wallet.userId != userId) {
+      throw Exception('Unauthorized');
+    }
+
+    // Use the safe delete method from local database
+    await _localDb.safeDeleteWallet(walletId, userId, transferToWalletId: transferToWalletId);
+
+    // Coba sync penghapusan ke server jika online
+    await _syncHelper.trySyncWalletDeletion(walletId, userId);
+  }
+
+  // Check if wallet can be deleted
+  Future<bool> canDeleteWallet(String walletId, String userId) async {
+    return !(await _localDb.walletHasTransactions(walletId, userId));
+  }
+
+  // Get transaction count for wallet
+  Future<int> getWalletTransactionCount(String walletId, String userId) async {
+    final transactions = await _localDb.getTransactions(userId, walletId: walletId);
+    return transactions.length;
+  }
+
+  // Transfer transactions between wallets
+  Future<int> transferTransactionsToWallet(String fromWalletId, String toWalletId, String userId) async {
+    // Validate both wallets exist and belong to user
+    final fromWallet = await _localDb.getWallet(fromWalletId, userId);
+    final toWallet = await _localDb.getWallet(toWalletId, userId);
+    
+    if (fromWallet == null || toWallet == null) {
+      throw Exception('Wallet not found');
+    }
+
+    if (fromWallet.userId != userId || toWallet.userId != userId) {
+      throw Exception('Unauthorized');
+    }
+
+    return await _localDb.transferTransactionsToWallet(fromWalletId, toWalletId, userId);
+  }
+
+  // Recalculate wallet balance
+  Future<void> recalculateWalletBalance(String walletId, String userId) async {
+    await _localDb.recalculateWalletBalance(walletId, userId);
   }
 
   // Ambil semua wallets user
