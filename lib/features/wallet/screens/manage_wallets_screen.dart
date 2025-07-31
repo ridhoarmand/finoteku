@@ -28,7 +28,19 @@ class ManageWalletsScreen extends ConsumerWidget {
           const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () => _showAddWalletDialog(context, ref),
+            onPressed: () {
+              // Check if user is authenticated before showing dialog
+              final user = currentUser.valueOrNull;
+              if (user != null) {
+                _showAddWalletDialog(context, ref);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please wait for authentication to complete'),
+                  ),
+                );
+              }
+            },
           ),
         ],
       ),
@@ -48,9 +60,20 @@ class ManageWalletsScreen extends ConsumerWidget {
 
               return RefreshIndicator(
                 onRefresh: () async {
-                  ref.invalidate(walletsProvider(user.id));
-                  final walletService = ref.read(walletServiceProvider);
-                  await walletService.syncWallets(user.id);
+                  try {
+                    ref.invalidate(walletsProvider(user.id));
+                    final walletService = ref.read(walletServiceProvider);
+                    await walletService.syncWallets(user.id);
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Sync failed: ${e.toString()}'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                    }
+                  }
                 },
                 child: ListView.builder(
                   padding: const EdgeInsets.all(16),
@@ -93,8 +116,44 @@ class ManageWalletsScreen extends ConsumerWidget {
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
+        loading: () => const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Loading user data...'),
+            ],
+          ),
+        ),
+        error: (error, stack) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: theme.colorScheme.error,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Authentication Error',
+                style: theme.textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                error.toString(),
+                style: theme.textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () => ref.invalidate(currentUserProvider),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
