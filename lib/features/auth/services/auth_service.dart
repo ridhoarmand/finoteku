@@ -109,7 +109,7 @@ class AuthService {
     try {
       // Note: This requires a server-side function to properly delete user
       // as Supabase doesn't allow direct user deletion from client
-      await _supabase.rpc('delete_user_account');
+      await _supabase.rpc('delete_user_account_complete');
     } on PostgrestException catch (e) {
       throw Exception('Database error during account deletion: ${e.message}');
     } catch (e) {
