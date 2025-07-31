@@ -162,10 +162,19 @@ class LocalDatabaseService {
   Future<List<Category>> getCategories(String userId) async {
     final prefs = await SharedPreferences.getInstance();
     final categoriesJson = prefs.getStringList('categories_$userId') ?? [];
-    return categoriesJson
+    final categories = categoriesJson
         .map((json) => Category.fromJson(jsonDecode(json)))
         .where((category) => !category.isDeleted)
         .toList();
+    
+    if (kDebugMode) {
+      print('💾 LocalDB.getCategories() for user $userId: found ${categories.length} categories');
+      for (final cat in categories) {
+        print('   - ${cat.name} (${cat.type.name}) needsSync: ${cat.needsSync}');
+      }
+    }
+    
+    return categories;
   }
 
   Future<List<Category>> getCategoriesByType(String userId, CategoryType type) async {
@@ -183,6 +192,10 @@ class LocalDatabaseService {
   }
 
   Future<void> saveCategory(Category category) async {
+    if (kDebugMode) {
+      print('💾 LocalDB.saveCategory() for ${category.name} (${category.id})');
+    }
+    
     final prefs = await SharedPreferences.getInstance();
     final categories = await getCategories(category.userId);
     
@@ -193,6 +206,10 @@ class LocalDatabaseService {
 
     final categoriesJson = categories.map((c) => jsonEncode(c.toJson())).toList();
     await prefs.setStringList('categories_${category.userId}', categoriesJson);
+    
+    if (kDebugMode) {
+      print('✅ Category saved to SharedPreferences. Total categories: ${categories.length}');
+    }
   }
 
   Future<void> deleteCategory(String categoryId, String userId) async {

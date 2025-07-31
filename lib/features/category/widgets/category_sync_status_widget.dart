@@ -14,82 +14,77 @@ class CategorySyncStatusWidget extends ConsumerWidget {
     if (userId == null) return const SizedBox.shrink();
 
     final connectionAsync = ref.watch(connectionStatusProvider);
-    final expenseCategoriesAsync = ref.watch(expenseCategoriesProvider(userId));
-    final incomeCategoriesAsync = ref.watch(incomeCategoriesProvider(userId));
+    // Gunakan categoriesProvider untuk menghindari duplicate calls dengan expense/income providers
+    final categoriesAsync = ref.watch(categoriesProvider(userId));
 
     return connectionAsync.when(
-      data: (isConnected) => expenseCategoriesAsync.when(
-        data: (expenseCategories) => incomeCategoriesAsync.when(
-          data: (incomeCategories) {
-            final allCategories = [...expenseCategories, ...incomeCategories];
-            final unsyncedCount = allCategories
-                .where((cat) => cat.needsSync)
-                .length;
+      data: (isConnected) => categoriesAsync.when(
+        data: (allCategories) {
+          final unsyncedCount = allCategories
+              .where((cat) => cat.needsSync)
+              .length;
 
-            if (unsyncedCount == 0) {
-              return Tooltip(
-                message: isConnected
-                    ? 'All categories synced'
-                    : 'All categories synced (offline)',
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.cloud_done, color: Colors.green[600], size: 20),
-                    if (!isConnected) ...[
-                      const SizedBox(width: 4),
-                      Icon(Icons.wifi_off, color: Colors.grey[600], size: 16),
-                    ],
+          if (unsyncedCount == 0) {
+            return Tooltip(
+              message: isConnected
+                  ? 'All categories synced'
+                  : 'All categories synced (offline)',
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.cloud_done, color: Colors.green[600], size: 20),
+                  if (!isConnected) ...[
+                    const SizedBox(width: 4),
+                    Icon(Icons.wifi_off, color: Colors.grey[600], size: 16),
                   ],
+                ],
+              ),
+            );
+          }
+
+          return Tooltip(
+            message: isConnected
+                ? '$unsyncedCount categories waiting to sync'
+                : '$unsyncedCount categories waiting to sync (offline)',
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: isConnected
+                    ? Colors.orange.withValues(alpha: 0.1)
+                    : Colors.grey.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isConnected
+                      ? Colors.orange.withValues(alpha: 0.3)
+                      : Colors.grey.withValues(alpha: 0.3),
                 ),
-              );
-            } else {
-              return Tooltip(
-                message: isConnected
-                    ? '$unsyncedCount categories will sync automatically'
-                    : '$unsyncedCount categories waiting for internet connection',
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isConnected ? Icons.sync_problem : Icons.sync_disabled,
+                    color: isConnected ? Colors.orange[700] : Colors.grey[600],
+                    size: 16,
                   ),
-                  decoration: BoxDecoration(
-                    color: isConnected ? Colors.orange : Colors.grey,
-                    borderRadius: BorderRadius.circular(12),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$unsyncedCount',
+                    style: TextStyle(
+                      color: isConnected ? Colors.orange[700] : Colors.grey[600],
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isConnected ? Icons.sync : Icons.sync_disabled,
-                        color: Colors.white,
-                        size: 14,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$unsyncedCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      if (!isConnected) ...[
-                        const SizedBox(width: 4),
-                        const Icon(
-                          Icons.wifi_off,
-                          color: Colors.white,
-                          size: 12,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              );
-            }
-          },
-          loading: () => const SizedBox.shrink(),
-          error: (_, _) => const SizedBox.shrink(),
-        ),
+                  if (!isConnected) ...[
+                    const SizedBox(width: 4),
+                    Icon(Icons.wifi_off, color: Colors.grey[600], size: 14),
+                  ],
+                ],
+              ),
+            ),
+          );
+        },
         loading: () => const SizedBox.shrink(),
         error: (_, _) => const SizedBox.shrink(),
       ),

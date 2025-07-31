@@ -67,6 +67,10 @@ class CategorySyncHelper {
   /// Try sync single category to server
   Future<void> trySyncCategory(Category category) async {
     try {
+      if (kDebugMode) {
+        print('🔄 Starting sync for category: ${category.name} (ID: ${category.id})');
+      }
+      
       // Coba sync ke Supabase
       final syncedCategory = await _supabaseCategoryService.syncCategory(category);
       
@@ -76,6 +80,11 @@ class CategorySyncHelper {
       
       if (kDebugMode) {
         print('✅ Category synced successfully: ${category.name}');
+        print('📝 Category saved to local DB with needsSync=false');
+        
+        // Verify the save by reading it back
+        final verifyCategory = await _localDb.getCategory(category.id, category.userId);
+        print('🔍 Verification - Category in local DB: ${verifyCategory?.name}, needsSync: ${verifyCategory?.needsSync}');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -102,18 +111,44 @@ class CategorySyncHelper {
   /// Fetch and merge categories from server
   Future<void> fetchAndMergeFromServer(String userId) async {
     try {
+      if (kDebugMode) {
+        print('🔄 Fetching categories from server for user: $userId');
+      }
+      
       // Ambil data category dari server dan merge dengan local
       final serverCategories = await _supabaseCategoryService.getCategories(userId);
+      
+      if (kDebugMode) {
+        print('📥 Got ${serverCategories.length} categories from server');
+        for (final cat in serverCategories) {
+          print('   - ${cat.name} (${cat.type.name})');
+        }
+      }
 
       for (final serverCategory in serverCategories) {
         final localCategory = await _localDb.getCategory(serverCategory.id, userId);
 
         if (localCategory == null) {
           // Category baru dari server, simpan ke local
+          if (kDebugMode) {
+            print('📝 Saving new category from server: ${serverCategory.name}');
+          }
           await _localDb.saveCategory(serverCategory);
         } else if (serverCategory.updatedAt.isAfter(localCategory.updatedAt)) {
           // Server lebih baru, update local
+          if (kDebugMode) {
+            print('📝 Updating category from server: ${serverCategory.name}');
+          }
           await _localDb.saveCategory(serverCategory);
+        }
+      }
+      
+      if (kDebugMode) {
+        // Verify all categories are in local DB
+        final allLocalCategories = await _localDb.getCategories(userId);
+        print('🔍 Verification - Total categories in local DB: ${allLocalCategories.length}');
+        for (final cat in allLocalCategories) {
+          print('   - ${cat.name} (${cat.type.name}) needsSync: ${cat.needsSync}');
         }
       }
     } catch (e) {

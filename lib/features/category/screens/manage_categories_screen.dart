@@ -114,8 +114,8 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
           SnackBar(content: Text('$name category added successfully')),
         );
 
-        // Refresh the categories list
-        ref.invalidate(categoriesByTypeProvider);
+        // Refresh all categories providers
+        refreshCategoryProviders(ref);
       }
     } catch (e) {
       if (mounted) {
@@ -150,21 +150,32 @@ class CategoryListTab extends ConsumerWidget {
     return categoriesAsync.when(
       data: (categories) => _buildCategoryList(context, ref, categories),
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stackTrace) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            Text('Error: ${error.toString()}'),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => ref.refresh(
-                categoriesByTypeProvider((userId: userId, type: categoryType)),
+      error: (error, stackTrace) => RefreshIndicator(
+        onRefresh: () async {
+          refreshCategoryProviders(ref);
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.7,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text('Error: ${error.toString()}'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => ref.refresh(
+                      categoriesByTypeProvider((userId: userId, type: categoryType)),
+                    ),
+                    child: const Text('Retry'),
+                  ),
+                ],
               ),
-              child: const Text('Retry'),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -176,32 +187,50 @@ class CategoryListTab extends ConsumerWidget {
     List<Category> categories,
   ) {
     if (categories.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              categoryType == CategoryType.expense
-                  ? Icons.trending_down
-                  : Icons.trending_up,
-              size: 64,
-              color: Colors.grey[400],
+      return RefreshIndicator(
+        onRefresh: () async {
+          refreshCategoryProviders(ref);
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.7,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    categoryType == CategoryType.expense
+                        ? Icons.trending_down
+                        : Icons.trending_up,
+                    size: 64,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No categories yet',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tap + to add your first category',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Pull down to refresh',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.grey[400]),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              'No categories yet',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Tap + to add your first category',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
-            ),
-          ],
+          ),
         ),
       );
     }
@@ -257,7 +286,8 @@ class CategoryListTab extends ConsumerWidget {
 
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(categoriesByTypeProvider);
+        // Refresh all categories providers
+        refreshCategoryProviders(ref);
       },
       child: ListView(
         padding: const EdgeInsets.all(12),
@@ -540,8 +570,8 @@ class CategoryListTab extends ConsumerWidget {
           SnackBar(content: Text('${category.name} updated successfully')),
         );
 
-        // Refresh the categories list
-        ref.invalidate(categoriesByTypeProvider);
+        // Refresh all categories providers
+        refreshCategoryProviders(ref);
       }
     } catch (e) {
       if (context.mounted) {
@@ -602,8 +632,8 @@ class CategoryListTab extends ConsumerWidget {
           SnackBar(content: Text('${category.name} deleted successfully')),
         );
 
-        // Refresh the categories list
-        ref.invalidate(categoriesByTypeProvider);
+        // Refresh all categories providers
+        refreshCategoryProviders(ref);
       }
     } catch (e) {
       if (context.mounted) {
@@ -660,8 +690,8 @@ class CategoryListTab extends ConsumerWidget {
           ),
         );
 
-        // Refresh the categories list
-        ref.invalidate(categoriesByTypeProvider);
+        // Refresh all categories providers
+        refreshCategoryProviders(ref);
       }
     } catch (e) {
       if (context.mounted) {

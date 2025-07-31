@@ -10,9 +10,24 @@ class CategoryService {
   final SupabaseCategoryService _supabaseCategoryService;
   late final CategorySyncHelper _syncHelper;
   final _uuid = const Uuid();
+  
+  // Callback untuk notify UI when data changes
+  void Function()? _onDataChanged;
 
   CategoryService(this._localDb, this._supabaseCategoryService) {
     _syncHelper = CategorySyncHelper(_localDb, _supabaseCategoryService);
+  }
+  
+  // Set callback untuk notify UI changes
+  void setDataChangeCallback(void Function()? callback) {
+    _onDataChanged = callback;
+  }
+  
+  // Notify UI tentang data changes
+  void _notifyDataChanged() {
+    if (_onDataChanged != null) {
+      _onDataChanged!();
+    }
   }
 
   // Buat category baru
@@ -20,27 +35,31 @@ class CategoryService {
     String userId,
     CreateCategoryRequest request,
   ) async {
-    final category = Category(
-      id: _uuid.v4(),
-      userId: userId,
+    final id = _uuid.v4();
+    final newCategory = Category(
+      id: id,
       name: request.name,
       type: request.type,
-      parentId: request.parentId,
+      userId: userId,
       iconCodePoint: request.iconCodePoint,
       color: request.color,
-      isActive: true,
-      needsSync: true,
+      parentId: request.parentId,
+      needsSync: true, // Always sync - user pasti sudah login
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
+      isActive: true,
     );
 
     // Simpan ke local database
-    await _localDb.saveCategory(category);
+    await _localDb.saveCategory(newCategory);
 
-    // Coba sync ke server jika online
-    await _syncHelper.trySyncCategory(category);
+    // Sync ke server
+    await _syncHelper.trySyncCategory(newCategory);
+    
+    // Notify UI about data changes
+    _notifyDataChanged();
 
-    return category;
+    return newCategory;
   }
 
   // Update category
@@ -77,14 +96,17 @@ class CategoryService {
       iconCodePoint: request.iconCodePoint ?? existingCategory.iconCodePoint,
       color: request.color ?? existingCategory.color,
       isActive: request.isActive ?? existingCategory.isActive,
-      needsSync: true,
+      needsSync: true, // Always sync
       updatedAt: DateTime.now(),
     );
 
     await _localDb.saveCategory(updatedCategory);
 
-    // Coba sync ke server jika online
+    // Sync ke server
     await _syncHelper.trySyncCategory(updatedCategory);
+    
+    // Notify UI about data changes
+    _notifyDataChanged();
 
     return updatedCategory;
   }
@@ -130,8 +152,11 @@ class CategoryService {
     // Hapus dari local database (soft delete)
     await _localDb.deleteCategory(categoryId, userId);
 
-    // Coba sync penghapusan ke server jika online
+    // Sync ke server
     await _syncHelper.trySyncCategoryDeletion(categoryId, userId);
+    
+    // Notify UI about data changes
+    _notifyDataChanged();
   }
 
   // Safe delete category with transaction transfer
@@ -148,7 +173,7 @@ class CategoryService {
     // Use the safe delete method from local database
     await _localDb.safeDeleteCategory(categoryId, userId, transferToCategoryId: transferToCategoryId);
 
-    // Coba sync penghapusan ke server jika online
+    // Sync ke server
     await _syncHelper.trySyncCategoryDeletion(categoryId, userId);
   }
 
@@ -182,15 +207,27 @@ class CategoryService {
 
   // Ambil semua categories user
   Future<List<Category>> getCategories(String userId) async {
-    final categories = await _localDb.getCategories(userId);
-
-    // Jika belum ada category, buat default categories
-    if (categories.isEmpty) {
-      await _createDefaultCategories(userId);
-      return _localDb.getCategories(userId);
+    try {
+      final categories = await _localDb.getCategories(userId);
+      
+      // Jika belum ada category, buat default categories
+      if (categories.isEmpty) {
+        if (kDebugMode) {
+          print('📂 No categories found for user $userId, creating default categories');
+        }
+        await _createDefaultCategories(userId);
+        // Return hasil dari _createDefaultCategories langsung tanpa query ulang
+        return await _localDb.getCategories(userId);
+      }
+      
+      return categories.where((category) => category.isActive).toList();
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error getting categories for user $userId: $e');
+      }
+      // Return empty list on error to prevent crashes
+      return [];
     }
-
-    return categories;
   }
 
   // Ambil categories by type
@@ -198,10 +235,32 @@ class CategoryService {
     String userId,
     CategoryType type,
   ) async {
-    final categories = await getCategories(
-      userId,
-    ); // Ini akan create default jika belum ada
-    return categories.where((category) => category.type == type).toList();
+    try {
+      // Langsung ambil semua categories dari database (jangan lewat getCategories)
+      final categories = await _localDb.getCategories(userId);
+      
+      // Jika belum ada category, buat default categories
+      if (categories.isEmpty) {
+        if (kDebugMode) {
+          print('📂 No categories found for user $userId, creating default categories');
+        }
+        await _createDefaultCategories(userId);
+        // Ambil ulang setelah create default
+        final newCategories = await _localDb.getCategories(userId);
+        return newCategories
+            .where((category) => category.type == type && category.isActive)
+            .toList();
+      }
+      
+      return categories
+          .where((category) => category.type == type && category.isActive)
+          .toList();
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error getting categories by type for user $userId: $e');
+      }
+      return [];
+    }
   }
 
   // Ambil category by ID (memerlukan userId untuk security)
@@ -214,23 +273,25 @@ class CategoryService {
     return null;
   }
 
-  // Sync semua categories ke server
+  // Sync semua categories ke server (simplified)
   Future<void> syncCategories(String userId) async {
     try {
-      final localCategories = await _localDb.getCategories(userId);
-      final categoriesNeedingSync = localCategories
-          .where((c) => c.needsSync)
-          .toList();
-
-      for (final category in categoriesNeedingSync) {
-        await _syncHelper.trySyncCategory(category);
+      if (kDebugMode) {
+        print('🔄 Starting category sync for user: $userId');
       }
 
-      // Ambil data terbaru dari server
+      // Sync unsynced categories to server
+      await syncUnsyncedCategories(userId);
+      
+      // Fetch and merge dari server
       await _syncHelper.fetchAndMergeFromServer(userId);
+
+      if (kDebugMode) {
+        print('✅ Category sync completed');
+      }
     } catch (e) {
       if (kDebugMode) {
-        print('Sync categories error: $e');
+        print('❌ Category sync failed: $e');
       }
       // Jangan throw error, biarkan app tetap berfungsi offline
     }
@@ -239,56 +300,81 @@ class CategoryService {
   // Private methods
 
   Future<void> _createDefaultCategories(String userId) async {
-    final defaultExpenseCategories = [
-      'Food & Dining',
-      'Transportation',
-      'Shopping',
-      'Bills & Utilities',
-      'Entertainment',
-      'Health & Medical',
-      'Education',
-      'Others',
-    ];
+    try {
+      if (kDebugMode) {
+        print('📂 Creating default categories for user: $userId');
+      }
 
-    final defaultIncomeCategories = [
-      'Salary',
-      'Freelance',
-      'Investment',
-      'Business',
-      'Gift',
-      'Others',
-    ];
+      // Default expense categories
+      final expenseCategories = [
+        'Food & Dining', 'Transportation', 'Shopping', 'Entertainment',
+        'Bills & Utilities', 'Healthcare', 'Education', 'Travel'
+      ];
 
-    // Create expense categories
-    for (final name in defaultExpenseCategories) {
-      final category = Category(
-        id: _uuid.v4(),
-        userId: userId,
-        name: name,
-        type: CategoryType.expense,
-        isActive: true,
-        needsSync: true,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-      await _localDb.saveCategory(category);
-      await _syncHelper.trySyncCategory(category);
+      // Default income categories
+      final incomeCategories = [
+        'Salary', 'Business', 'Investment', 'Gift', 'Other Income'
+      ];
+
+      // Collect all categories untuk batch save
+      final categoriesToCreate = <Category>[];
+
+      // Create expense categories (tapi jangan save dulu)
+      for (final name in expenseCategories) {
+        categoriesToCreate.add(Category(
+          id: _uuid.v4(),
+          userId: userId,
+          name: name,
+          type: CategoryType.expense,
+          isActive: true,
+          needsSync: true,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ));
+      }
+
+      // Create income categories (tapi jangan save dulu)
+      for (final name in incomeCategories) {
+        categoriesToCreate.add(Category(
+          id: _uuid.v4(),
+          userId: userId,
+          name: name,
+          type: CategoryType.income,
+          isActive: true,
+          needsSync: true,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ));
+      }
+
+      // Batch save semua categories sekaligus - lebih efisien
+      for (final category in categoriesToCreate) {
+        await _localDb.saveCategory(category);
+      }
+
+      // Try sync in background tapi jangan block creation
+      _syncCategoriesInBackground(categoriesToCreate);
+
+      if (kDebugMode) {
+        print('✅ Default categories created successfully for user: $userId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error creating default categories: $e');
+      }
+      rethrow;
     }
+  }
 
-    // Create income categories
-    for (final name in defaultIncomeCategories) {
-      final category = Category(
-        id: _uuid.v4(),
-        userId: userId,
-        name: name,
-        type: CategoryType.income,
-        isActive: true,
-        needsSync: true,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-      await _localDb.saveCategory(category);
-      await _syncHelper.trySyncCategory(category);
+  // Background sync untuk tidak block UI
+  void _syncCategoriesInBackground(List<Category> categories) {
+    // Fire and forget - jangan block creation process
+    for (final category in categories) {
+      _syncHelper.trySyncCategory(category).catchError((error) {
+        if (kDebugMode) {
+          print('⚠️ Background sync failed for category ${category.name}: $error');
+        }
+      });
     }
   }
 
@@ -297,43 +383,34 @@ class CategoryService {
     final category = await _localDb.getCategory(categoryId, userId);
     if (category != null) {
       await _syncHelper.trySyncCategory(category);
+      // Notify UI about data changes after force sync
+      _notifyDataChanged();
     } else {
       throw Exception('Category not found: $categoryId');
     }
   }
 
-  // Public method untuk sync semua unsynced categories
+  // Public method untuk sync semua unsynced categories (simplified)
   Future<void> syncUnsyncedCategories(String userId) async {
     try {
-      if (kDebugMode) {
-        print('🔄 Starting auto sync for unsynced categories...');
-      }
-
       final unsyncedCategories = await _localDb.getUnsyncedCategories(userId);
       if (unsyncedCategories.isEmpty) {
-        if (kDebugMode) {
-          print('✅ No categories need sync');
-        }
         return;
       }
 
       if (kDebugMode) {
-        print('📝 Found ${unsyncedCategories.length} categories to sync');
+        print('📝 Syncing ${unsyncedCategories.length} unsynced categories');
       }
 
       for (final category in unsyncedCategories) {
         await _syncHelper.trySyncCategory(category);
       }
-
-      // Fetch and merge dari server
-      await _syncHelper.fetchAndMergeFromServer(userId);
-
-      if (kDebugMode) {
-        print('✅ Auto sync completed for categories');
-      }
+      
+      // Notify UI about data changes after sync
+      _notifyDataChanged();
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Auto sync failed for categories: $e');
+        print('❌ Sync unsynced categories failed: $e');
       }
     }
   }
