@@ -107,7 +107,25 @@ final activeCategoriesProvider = FutureProvider.family<List<Category>, String>((
   return categories.where((category) => category.isActive).toList();
 });
 
-// Helper function to refresh all category providers
+// Provider for checking if template offer should be shown
+final shouldOfferTemplateProvider = FutureProvider.family<bool, String>((ref, userId) async {
+  // Watch refresh notifier untuk invalidate ketika ada perubahan
+  ref.watch(categoryRefreshProvider);
+  
+  final categoryService = ref.watch(categoryServiceProvider);
+  return await categoryService.shouldOfferCategoryTemplate(userId);
+});
+
+// Provider untuk check apakah user sudah pernah punya categories
+final hasUserEverHadCategoriesProvider = FutureProvider.family<bool, String>((ref, userId) async {
+  // Watch refresh notifier untuk invalidate ketika ada perubahan
+  ref.watch(categoryRefreshProvider);
+  
+  final categoryService = ref.watch(categoryServiceProvider);
+  return await categoryService.hasUserEverHadCategories(userId);
+});
+
+// Helper function untuk refresh semua category providers
 void refreshCategoryProviders(WidgetRef ref) {
   if (kDebugMode) {
     print('🔄 Refreshing all category providers...');

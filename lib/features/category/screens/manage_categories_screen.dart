@@ -6,6 +6,8 @@ import '../../../models/category.dart';
 import '../../../utils/category_icon_helper.dart';
 import '../widgets/category_form_dialog.dart';
 import '../widgets/category_sync_status_widget.dart';
+import '../widgets/category_delete_dialog.dart';
+import '../widgets/category_template_dialog.dart';
 
 class ManageCategoriesScreen extends ConsumerStatefulWidget {
   const ManageCategoriesScreen({super.key});
@@ -90,6 +92,8 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
     IconData? icon,
     String? parentId,
   ) async {
+    if (!context.mounted) return;
+    
     try {
       final userId = SupabaseService.currentUserId;
       if (userId == null) {
@@ -220,6 +224,11 @@ class CategoryListTab extends ConsumerWidget {
                       context,
                     ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
                   ),
+                  const SizedBox(height: 16),
+                  
+                  // Check if should offer template import
+                  _buildTemplateImportButton(context, ref),
+                  
                   const SizedBox(height: 8),
                   Text(
                     'Pull down to refresh',
@@ -293,6 +302,43 @@ class CategoryListTab extends ConsumerWidget {
         padding: const EdgeInsets.all(12),
         children: hierarchicalItems,
       ),
+    );
+  }
+
+  Widget _buildTemplateImportButton(BuildContext context, WidgetRef ref) {
+    final userId = SupabaseService.currentUserId;
+    if (userId == null) return const SizedBox.shrink();
+
+    // Watch untuk check apakah harus tampilkan tombol template
+    final shouldOfferAsync = ref.watch(shouldOfferTemplateProvider(userId));
+    
+    return shouldOfferAsync.when(
+      data: (shouldOffer) {
+        if (!shouldOffer) return const SizedBox.shrink();
+        
+        return Column(
+          children: [
+            OutlinedButton.icon(
+              onPressed: () => CategoryTemplateDialog.handleTemplateImport(context, ref),
+              icon: const Icon(Icons.file_download_outlined),
+              label: const Text('Import Category Templates'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'or',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.grey[400],
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 
@@ -547,6 +593,8 @@ class CategoryListTab extends ConsumerWidget {
     IconData? icon,
     String? parentId,
   ) async {
+    if (!context.mounted) return;
+    
     try {
       final userId = SupabaseService.currentUserId;
       if (userId == null) {
@@ -590,61 +638,8 @@ class CategoryListTab extends ConsumerWidget {
     WidgetRef ref,
     Category category,
   ) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Category'),
-        content: Text('Delete "${category.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _handleDeleteCategory(context, ref, category);
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _handleDeleteCategory(
-    BuildContext context,
-    WidgetRef ref,
-    Category category,
-  ) async {
-    try {
-      final userId = SupabaseService.currentUserId;
-      if (userId == null) {
-        throw Exception('User not authenticated');
-      }
-
-      final categoryService = ref.read(categoryServiceProvider);
-      await categoryService.deleteCategory(category.id, userId);
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${category.name} deleted successfully')),
-        );
-
-        // Refresh all categories providers
-        refreshCategoryProviders(ref);
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+    // Use the new comprehensive delete dialog
+    CategoryDeleteDialog.show(context, ref, category);
   }
 
   void _forceSyncCategory(
@@ -652,6 +647,8 @@ class CategoryListTab extends ConsumerWidget {
     WidgetRef ref,
     Category category,
   ) async {
+    if (!context.mounted) return;
+    
     try {
       final userId = SupabaseService.currentUserId;
       if (userId == null) {
@@ -659,25 +656,27 @@ class CategoryListTab extends ConsumerWidget {
       }
 
       // Show loading indicator
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Text('Syncing ${category.name}...'),
-            ],
+                const SizedBox(width: 12),
+                Text('Syncing ${category.name}...'),
+              ],
+            ),
+            duration: const Duration(seconds: 2),
           ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+        );
+      }
 
       final categoryService = ref.read(categoryServiceProvider);
       await categoryService.forceSyncCategory(category.id, userId);
