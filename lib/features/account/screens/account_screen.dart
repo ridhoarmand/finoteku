@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../services/supabase_service.dart';
-import 'widgets/profile_section_widget.dart';
-import 'widgets/preferences_settings_widget.dart';
-import 'widgets/wallet_category_settings_widget.dart';
-import 'widgets/support_settings_widget.dart';
-import 'widgets/logout_button_widget.dart';
+import '../../../services/supabase_service.dart';
+import '../widgets/profile_section_widget.dart';
+import '../widgets/preferences_settings_widget.dart';
+import '../widgets/wallet_category_settings_widget.dart';
+import '../widgets/support_settings_widget.dart';
+import '../widgets/logout_button_widget.dart';
 
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
@@ -27,22 +27,22 @@ class AccountScreen extends ConsumerWidget {
             children: [
               // Profile Section
               ProfileSectionWidget(user: user),
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
 
               // Wallet & Categories Section
               const WalletCategorySettingsWidget(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
               // Preferences Section
               const PreferencesSettingsWidget(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
               const SupportSettingsWidget(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
 
               // Logout Button
               const LogoutButtonWidget(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
             ],
           ),
         ),

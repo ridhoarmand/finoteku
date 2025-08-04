@@ -15,11 +15,7 @@ class PreferencesSettingsWidget extends StatelessWidget {
           title: 'Notifications',
           subtitle: 'Manage your notification preferences',
           onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Notifications settings coming soon'),
-              ),
-            );
+                              context.push('/account/notifications');
           },
         ),
         SettingsTileWidget(

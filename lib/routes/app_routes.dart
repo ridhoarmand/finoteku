@@ -8,9 +8,10 @@ import '../features/auth/services/auth_service.dart';
 import '../features/home/home_screen.dart';
 import '../features/transaction/screens/transaction_screen.dart';
 import '../features/chart/chart_screen.dart';
-import '../features/account/account_screen.dart';
-import '../features/account/edit_profile_screen.dart';
-import '../features/account/change_password_screen.dart';
+import '../features/account/screens/account_screen.dart';
+import '../features/account/screens/edit_profile_screen.dart';
+import '../features/account/screens/change_password_screen.dart';
+import '../features/account/screens/notification_screen.dart';
 import '../features/settings/theme_settings_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/splash/splash_screen.dart';
@@ -125,6 +126,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'theme-settings',
                 builder: (context, state) => const ThemeSettingsScreen(),
               ),
+              GoRoute(
+                path: 'notifications',
+                builder: (context, state) => const NotificationScreen(),
+              ),
             ],
           ),
         ],
@@ -182,6 +187,7 @@ class AppRoutes {
   static const String editProfile = '/account/edit-profile';
   static const String changePassword = '/account/change-password';
   static const String themeSettings = '/account/theme-settings';
+  static const String notifications = '/account/notifications';
   static const String manageWallets = '/wallets/manage';
   static const String manageCategories = '/categories/manage';
 }

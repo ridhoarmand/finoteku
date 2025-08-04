@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../services/supabase_service.dart';
-import 'providers/edit_profile_provider.dart';
-import 'widgets/profile_avatar_widget.dart';
-import 'widgets/profile_form_widget.dart';
-import 'widgets/save_profile_button.dart';
-import 'widgets/account_settings_widget.dart';
+import '../../../services/supabase_service.dart';
+import '../providers/edit_profile_provider.dart';
+import '../widgets/profile_avatar_widget.dart';
+import '../widgets/profile_form_widget.dart';
+import '../widgets/save_profile_button.dart';
+import '../widgets/account_settings_widget.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});

@@ -15,7 +15,6 @@ class WalletCategorySettingsWidget extends StatelessWidget {
           icon: Icons.account_balance_wallet_outlined,
           title: 'Manage Wallets',
           subtitle: 'Add, edit, or delete your wallets',
-          iconColor: Colors.green,
           onTap: () {
             context.push(AppRoutes.manageWallets);
           },
@@ -24,7 +23,6 @@ class WalletCategorySettingsWidget extends StatelessWidget {
           icon: Icons.category_outlined,
           title: 'Manage Categories',
           subtitle: 'Organize your transaction categories',
-          iconColor: Colors.blue,
           onTap: () {
             context.push(AppRoutes.manageCategories);
           },
