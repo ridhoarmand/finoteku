@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/category/providers/category_providers.dart';
 import '../services/supabase_service.dart';
+import '../services/notification_service.dart';
+import '../services/user_service.dart';
 
 class AppInitializer extends ConsumerStatefulWidget {
   final Widget child;
@@ -37,6 +39,10 @@ class _AppInitializerState extends ConsumerState<AppInitializer> {
         _initStatus = 'Loading user data...';
         _progress = 0.6;
       });
+
+      // Initialize notification service with user service
+      final userService = ref.read(userServiceProvider);
+      await NotificationService.initialize(userService: userService);
 
       // Check if user is authenticated - kalau tidak ada user, biarkan auth wrapper handle
       final currentUser = ref.read(currentUserProvider).value;
