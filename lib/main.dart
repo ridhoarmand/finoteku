@@ -7,7 +7,7 @@ import 'routes/app_routes.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_provider.dart';
 import 'services/supabase_service.dart';
-import 'services/notification_service.dart';
+import 'features/notification/services/notification_service.dart';
 import 'utils/environment.dart';
 import 'widgets/app_initializer.dart';
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'settings_section_widget.dart';
+import '../account/widgets/settings_section_widget.dart';
 
 class PreferencesSettingsWidget extends StatelessWidget {
   const PreferencesSettingsWidget({super.key});

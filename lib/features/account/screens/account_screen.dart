@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../services/supabase_service.dart';
 import '../widgets/profile_section_widget.dart';
-import '../widgets/preferences_settings_widget.dart';
+import '../../settings/preferences_settings_widget.dart';
 import '../widgets/wallet_category_settings_widget.dart';
 import '../widgets/support_settings_widget.dart';
 import '../widgets/logout_button_widget.dart';
