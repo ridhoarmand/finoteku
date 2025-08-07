@@ -148,15 +148,8 @@ class WalletService {
     try {
       final wallets = await _localDb.getWallets(userId);
       
-      // Jika belum ada wallet, buat default wallet
-      if (wallets.isEmpty) {
-        if (kDebugMode) {
-          print('🏦 No wallets found for user $userId, creating default wallet');
-        }
-        await _createDefaultWallet(userId);
-        return _localDb.getWallets(userId);
-      }
-      
+      // No longer auto-create default wallet here
+      // Default wallet will be created during account registration
       return wallets;
     } catch (e) {
       if (kDebugMode) {
@@ -251,48 +244,6 @@ class WalletService {
 
   // Private methods
 
-  Future<void> _createDefaultWallet(String userId) async {
-    try {
-      if (kDebugMode) {
-        print('🏦 Creating default wallet for user: $userId');
-      }
-
-      final defaultWallet = Wallet(
-        id: _uuid.v4(),
-        userId: userId,
-        name: 'Cash',
-        balance: 0.0,
-        currency: 'IDR',
-        icon: 'cash', // Icon untuk default cash wallet
-        isActive: true,
-        needsSync: true,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-
-      await _localDb.saveWallet(defaultWallet);
-      
-      // Try sync to server but don't fail if it doesn't work
-      try {
-        await _syncHelper.trySyncWallet(defaultWallet);
-      } catch (syncError) {
-        if (kDebugMode) {
-          print('⚠️ Failed to sync default wallet to server: $syncError');
-        }
-        // Continue anyway - wallet is saved locally
-      }
-
-      if (kDebugMode) {
-        print('✅ Default wallet created successfully');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error creating default wallet: $e');
-      }
-      throw Exception('Failed to create default wallet: $e');
-    }
-  }
-
   // Force sync single wallet
   Future<void> forceSyncWallet(String walletId, String userId) async {
     final wallet = await _localDb.getWallet(walletId, userId);
@@ -302,5 +253,59 @@ class WalletService {
 
     // Force sync this specific wallet
     await _syncHelper.trySyncWallet(wallet);
+  }
+
+  // Clean up duplicate Cash wallets (untuk fix existing duplicates)
+  Future<void> cleanupDuplicateCashWallets(String userId) async {
+    try {
+      final wallets = await _localDb.getWallets(userId);
+      final cashWallets = wallets.where((wallet) => 
+        wallet.name.toLowerCase() == 'cash' && wallet.isActive).toList();
+
+      if (cashWallets.length <= 1) {
+        if (kDebugMode) {
+          print('✅ No duplicate Cash wallets found');
+        }
+        return;
+      }
+
+      if (kDebugMode) {
+        print('🧹 Found ${cashWallets.length} duplicate Cash wallets, cleaning up...');
+      }
+
+      // Keep the oldest one (first created)
+      cashWallets.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      final walletToKeep = cashWallets.first;
+      final walletsToRemove = cashWallets.skip(1).toList();
+
+      // Merge balances ke wallet yang dipertahankan
+      double totalBalance = cashWallets.fold(0.0, (sum, wallet) => sum + wallet.balance);
+      
+      // Update wallet yang dipertahankan dengan total balance
+      if (totalBalance != walletToKeep.balance) {
+        final updatedWallet = walletToKeep.copyWith(
+          balance: totalBalance,
+          needsSync: true,
+          updatedAt: DateTime.now(),
+        );
+        await _localDb.saveWallet(updatedWallet);
+      }
+
+      // Hapus duplikat wallets
+      for (final wallet in walletsToRemove) {
+        await _localDb.deleteWallet(wallet.id, userId);
+        if (kDebugMode) {
+          print('🗑️ Removed duplicate Cash wallet: ${wallet.id}');
+        }
+      }
+
+      if (kDebugMode) {
+        print('✅ Cleanup completed. Kept wallet: ${walletToKeep.id} with balance: $totalBalance');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error during cleanup: $e');
+      }
+    }
   }
 }

@@ -323,26 +323,8 @@ class CategoryService {
     try {
       final categories = await _localDb.getCategories(userId);
       
-      // Jika belum ada category dan user belum pernah punya categories (first-time user)
-      if (categories.isEmpty) {
-        final hasEverHadCategories = await hasUserEverHadCategories(userId);
-        
-        if (!hasEverHadCategories) {
-          // First-time user - auto create default categories
-          if (kDebugMode) {
-            print('📂 First-time user detected, creating default categories for user $userId');
-          }
-          await _createDefaultCategories(userId);
-          return await _localDb.getCategories(userId);
-        } else {
-          // User had categories before but deleted them all - don't auto-create
-          if (kDebugMode) {
-            print('📂 User $userId has no active categories but had categories before - not auto-creating');
-          }
-          return [];
-        }
-      }
-      
+      // No longer auto-create default categories here
+      // Default categories will be created during account registration via InitialDataService
       return categories.where((category) => category.isActive).toList();
     } catch (e) {
       if (kDebugMode) {
@@ -362,30 +344,8 @@ class CategoryService {
       // Langsung ambil semua categories dari database (jangan lewat getCategories)
       final categories = await _localDb.getCategories(userId);
       
-      // Jika belum ada category dan user belum pernah punya categories (first-time user)
-      if (categories.isEmpty) {
-        final hasEverHadCategories = await hasUserEverHadCategories(userId);
-        
-        if (!hasEverHadCategories) {
-          // First-time user - auto create default categories
-          if (kDebugMode) {
-            print('📂 First-time user detected, creating default categories for user $userId');
-          }
-          await _createDefaultCategories(userId);
-          // Ambil ulang setelah create default
-          final newCategories = await _localDb.getCategories(userId);
-          return newCategories
-              .where((category) => category.type == type && category.isActive)
-              .toList();
-        } else {
-          // User had categories before but deleted them all - don't auto-create
-          if (kDebugMode) {
-            print('📂 User $userId has no active categories of type $type but had categories before - not auto-creating');
-          }
-          return [];
-        }
-      }
-      
+      // No longer auto-create default categories here
+      // Default categories will be created during account registration via InitialDataService
       return categories
           .where((category) => category.type == type && category.isActive)
           .toList();
