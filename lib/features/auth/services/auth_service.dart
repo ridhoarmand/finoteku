@@ -1,14 +1,17 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 import '../../../services/supabase_service.dart';
+import 'initial_data_service.dart';
 
 /// Authentication service for handling user auth operations
 class AuthService {
   final SupabaseClient _supabase;
+  final Ref _ref;
 
-  AuthService(this._supabase);
+  AuthService(this._supabase, this._ref);
 
-  /// Sign up with email and password
+  /// Sign up with email and password + setup initial data
   Future<AuthResponse> signUp({
     required String email,
     required String password,
@@ -20,6 +23,18 @@ class AuthService {
         password: password,
         data: {'full_name': fullName},
       );
+
+      // If signup successful and user is confirmed, setup initial data
+      if (response.user != null) {
+        try {
+          final initialDataService = _ref.read(initialDataServiceProvider);
+          await initialDataService.setupInitialData(response.user!.id);
+        } catch (e) {
+          // Log error but don't fail signup
+          debugPrint('⚠️ Failed to setup initial data: $e');
+        }
+      }
+
       return response;
     } on AuthException catch (e) {
       throw AuthException(e.message);
@@ -28,7 +43,7 @@ class AuthService {
     }
   }
 
-  /// Sign in with email and password
+  /// Sign in with email and password + perform full sync
   Future<AuthResponse> signIn({
     required String email,
     required String password,
@@ -38,6 +53,18 @@ class AuthService {
         email: email,
         password: password,
       );
+
+      // If signin successful, perform full sync
+      if (response.user != null) {
+        try {
+          final initialDataService = _ref.read(initialDataServiceProvider);
+          await initialDataService.performFullSync(response.user!.id);
+        } catch (e) {
+          // Log error but don't fail signin - user can still use app offline
+          debugPrint('⚠️ Full sync failed: $e');
+        }
+      }
+
       return response;
     } on AuthException catch (e) {
       throw AuthException(e.message);
@@ -133,7 +160,7 @@ class AuthService {
 /// Provider for AuthService
 final authServiceProvider = Provider<AuthService>((ref) {
   final supabase = ref.watch(supabaseProvider);
-  return AuthService(supabase);
+  return AuthService(supabase, ref);
 });
 
 /// Provider for current auth state

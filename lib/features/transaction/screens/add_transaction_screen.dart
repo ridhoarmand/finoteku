@@ -42,7 +42,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       _amountController.text = transaction.amount.abs().toString();
       _notesController.text = transaction.notes ?? '';
       _selectedDate = transaction.date;
-      
+
       // Load category and wallet from IDs will be done in didChangeDependencies
       // after the provider is available
     }
@@ -51,10 +51,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    
+
     // Load category and wallet when editing existing transaction
-    if (widget.initialTransaction != null && 
-        _selectedCategory == null && 
+    if (widget.initialTransaction != null &&
+        _selectedCategory == null &&
         _selectedWallet == null) {
       _loadInitialData();
     }
@@ -65,7 +65,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     if (user == null) return;
 
     final transaction = widget.initialTransaction!;
-    
+
     // Load categories and find the selected one
     final categoriesAsync = ref.read(categoriesProvider(user.id));
     final categories = categoriesAsync.value ?? [];
@@ -75,7 +75,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     } catch (e) {
       // Category not found, keep as null
     }
-    
+
     // Load wallets and find the selected one
     final walletsAsync = ref.read(activeWalletsProvider(user.id));
     final wallets = walletsAsync.value ?? [];
@@ -85,7 +85,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     } catch (e) {
       // Wallet not found, keep as null
     }
-    
+
     if (mounted) {
       setState(() {
         _selectedCategory = category;
@@ -168,7 +168,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       )
                     : Text(
@@ -218,7 +220,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 ),
                 prefixText: 'Rp ',
                 prefixStyle: TextStyle(
-                  fontSize: 32, 
+                  fontSize: 32,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
                 ),
@@ -392,11 +394,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       final user = ref.read(currentUserProvider).value!;
       final amount = double.parse(_amountController.text);
       final notes = _notesController.text.trim();
-      
+
       // Convert amount based on category type
       // Income categories get positive amount, expense categories get negative amount
-      final finalAmount = _selectedCategory!.type == CategoryType.expense 
-          ? -amount.abs() 
+      final finalAmount = _selectedCategory!.type == CategoryType.expense
+          ? -amount.abs()
           : amount.abs();
 
       if (widget.initialTransaction != null) {
@@ -431,7 +433,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
       // Refresh transactions list and wallet balances
       ref.invalidate(transactionsProvider(user.id));
-      ref.invalidate(filteredTransactionsProvider); // Fix: Invalidate filtered transactions
+      ref.invalidate(
+        filteredTransactionsProvider,
+      ); // Fix: Invalidate filtered transactions
       ref.invalidate(
         transactionsSummaryProvider((
           userId: user.id,
@@ -440,10 +444,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         )),
       );
       // Refresh wallet data to show updated balance
-      ref.invalidate(walletsProvider(user.id));
-      ref.invalidate(activeWalletsProvider(user.id));
+      refreshWalletProviders(ref);
       if (_selectedWallet != null) {
-        ref.invalidate(walletProvider((walletId: _selectedWallet!.id, userId: user.id)));
+        ref.invalidate(
+          walletProvider((walletId: _selectedWallet!.id, userId: user.id)),
+        );
       }
 
       if (mounted) {

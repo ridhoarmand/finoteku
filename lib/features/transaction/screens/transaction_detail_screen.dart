@@ -358,7 +358,7 @@ class TransactionDetailScreen extends ConsumerWidget {
       // Invalidate providers to ensure fresh data
       ref.invalidate(transactionProvider);
       ref.invalidate(filteredTransactionsProvider);
-      ref.invalidate(activeWalletsProvider);
+      refreshWalletProviders(ref);
     }
   }
 
@@ -414,7 +414,7 @@ class TransactionDetailScreen extends ConsumerWidget {
       ref.invalidate(transactionProvider);
       
       // Also invalidate wallet providers to update balances
-      ref.invalidate(activeWalletsProvider);
+      refreshWalletProviders(ref);
       ref.invalidate(walletProvider);
 
       if (context.mounted) {

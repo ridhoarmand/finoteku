@@ -121,7 +121,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
             final user = ref.read(currentUserProvider).value;
             if (user != null) {
               ref.invalidate(filteredTransactionsProvider);
-              ref.invalidate(activeWalletsProvider(user.id));
+              refreshWalletProviders(ref);
             }
           }
         },
@@ -437,7 +437,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                 final user = ref.read(currentUserProvider).value;
                 if (user != null) {
                   ref.invalidate(filteredTransactionsProvider);
-                  ref.invalidate(activeWalletsProvider(user.id));
+                  refreshWalletProviders(ref);
                 }
               }
             },
@@ -457,7 +457,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
         if (user != null) {
           ref.invalidate(filteredTransactionsProvider);
           ref.invalidate(transactionsProvider(user.id));
-          ref.invalidate(activeWalletsProvider(user.id));
+          refreshWalletProviders(ref);
         }
       },
       child: ListView.builder(

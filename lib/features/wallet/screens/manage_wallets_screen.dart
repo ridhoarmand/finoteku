@@ -6,6 +6,7 @@ import '../../../services/supabase_service.dart';
 import '../../../utils/currency_formatter.dart';
 import '../../../utils/wallet_icon_helper.dart';
 import '../widgets/wallet_sync_status_widget.dart';
+import '../widgets/auto_sync_hook.dart';
 
 class ManageWalletsScreen extends ConsumerWidget {
   const ManageWalletsScreen({super.key});
@@ -19,139 +20,140 @@ class ManageWalletsScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final currentUser = ref.watch(currentUserProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Manage Wallets'),
-        actions: [
-          // Wallet Sync Status Widget
-          _buildSyncStatusIndicator(),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              // Check if user is authenticated before showing dialog
-              final user = currentUser.valueOrNull;
-              if (user != null) {
-                _showAddWalletDialog(context, ref);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please wait for authentication to complete'),
+    return AutoSyncScreenBuilder(
+      builder: (context) => Scaffold(
+        appBar: AppBar(
+          title: const Text('Manage Wallets'),
+          actions: [
+            // Wallet Sync Status Widget
+            _buildSyncStatusIndicator(),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () {
+                // Check if user is authenticated before showing dialog
+                final user = currentUser.valueOrNull;
+                if (user != null) {
+                  _showAddWalletDialog(context, ref);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Please wait for authentication to complete',
+                      ),
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+        ),
+        body: currentUser.when(
+          data: (user) {
+            if (user == null) {
+              return const Center(child: Text('Please login first'));
+            }
+
+            final walletsAsync = ref.watch(walletsProvider(user.id));
+
+            return walletsAsync.when(
+              data: (wallets) {
+                if (wallets.isEmpty) {
+                  return _buildEmptyState(context, ref, user.id);
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    try {
+                      ref.invalidate(walletsProvider(user.id));
+                      final walletService = ref.read(walletServiceProvider);
+                      await walletService.syncWallets(user.id);
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Sync failed: ${e.toString()}'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: wallets.length,
+                    itemBuilder: (context, index) {
+                      final wallet = wallets[index];
+                      return _buildWalletCard(context, ref, wallet, user.id);
+                    },
                   ),
                 );
-              }
-            },
-          ),
-        ],
-      ),
-      body: currentUser.when(
-        data: (user) {
-          if (user == null) {
-            return const Center(child: Text('Please login first'));
-          }
-
-          final walletsAsync = ref.watch(walletsProvider(user.id));
-
-          return walletsAsync.when(
-            data: (wallets) {
-              if (wallets.isEmpty) {
-                return _buildEmptyState(context, ref, user.id);
-              }
-
-              return RefreshIndicator(
-                onRefresh: () async {
-                  try {
-                    ref.invalidate(walletsProvider(user.id));
-                    final walletService = ref.read(walletServiceProvider);
-                    await walletService.syncWallets(user.id);
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Sync failed: ${e.toString()}'),
-                          backgroundColor: Colors.orange,
-                        ),
-                      );
-                    }
-                  }
-                },
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: wallets.length,
-                  itemBuilder: (context, index) {
-                    final wallet = wallets[index];
-                    return _buildWalletCard(context, ref, wallet, user.id);
-                  },
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: theme.colorScheme.error,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error loading wallets',
+                      style: theme.textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      error.toString(),
+                      style: theme.textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: () => ref.invalidate(walletsProvider(user.id)),
+                      child: const Text('Retry'),
+                    ),
+                  ],
                 ),
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stack) => Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: theme.colorScheme.error,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Error loading wallets',
-                    style: theme.textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    error.toString(),
-                    style: theme.textTheme.bodyMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: () => ref.invalidate(walletsProvider(user.id)),
-                    child: const Text('Retry'),
-                  ),
-                ],
               ),
+            );
+          },
+          loading: () => const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Loading user data...'),
+              ],
             ),
-          );
-        },
-        loading: () => const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Loading user data...'),
-            ],
           ),
-        ),
-        error: (error, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: theme.colorScheme.error,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Authentication Error',
-                style: theme.textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                error.toString(),
-                style: theme.textTheme.bodyMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () => ref.invalidate(currentUserProvider),
-                child: const Text('Retry'),
-              ),
-            ],
+          error: (error, stack) => Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: theme.colorScheme.error,
+                ),
+                const SizedBox(height: 16),
+                Text('Authentication Error', style: theme.textTheme.titleLarge),
+                const SizedBox(height: 8),
+                Text(
+                  error.toString(),
+                  style: theme.textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => ref.invalidate(currentUserProvider),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -383,7 +385,8 @@ class ManageWalletsScreen extends ConsumerWidget {
           if (user != null) {
             final walletService = ref.read(walletServiceProvider);
             await walletService.createWallet(user.id, request);
-            ref.invalidate(walletsProvider(user.id));
+            // Refresh semua wallet providers untuk memastikan semua UI terupdate
+            refreshWalletProviders(ref);
           }
         },
       ),
@@ -409,7 +412,8 @@ class ManageWalletsScreen extends ConsumerWidget {
         onSave: (request) async {
           final walletService = ref.read(walletServiceProvider);
           await walletService.updateWallet(wallet.id, wallet.userId, request);
-          ref.invalidate(walletsProvider(wallet.userId));
+          // Refresh semua wallet providers untuk memastikan semua UI terupdate
+          refreshWalletProviders(ref);
         },
       ),
     );
@@ -428,7 +432,8 @@ class ManageWalletsScreen extends ConsumerWidget {
         userId,
         UpdateWalletRequest(isActive: !wallet.isActive),
       );
-      ref.invalidate(walletsProvider(userId));
+      // Refresh semua wallet providers untuk memastikan semua UI terupdate
+      refreshWalletProviders(ref);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
