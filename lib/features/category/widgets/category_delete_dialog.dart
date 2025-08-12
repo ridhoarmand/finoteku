@@ -3,188 +3,57 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/category.dart';
 import '../../../services/supabase_service.dart';
 import '../providers/category_providers.dart';
+import '../services/category_service.dart';
 
 class CategoryDeleteDialog extends ConsumerWidget {
   final Category category;
 
-  const CategoryDeleteDialog({
-    super.key,
-    required this.category,
-  });
+  const CategoryDeleteDialog({super.key, required this.category});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final categoryService = ref.read(categoryServiceProvider);
-    final userId = SupabaseService.currentUserId;
-
-    return FutureBuilder<Map<String, dynamic>>(
-      future: userId != null 
-          ? categoryService.getCategoryDeletionInfo(category.id, userId)
-          : Future.value({'canDelete': false, 'reason': 'User not authenticated'}),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const AlertDialog(
-            content: SizedBox(
-              height: 80,
-              child: Center(child: CircularProgressIndicator()),
+    return AlertDialog(
+      title: Row(
+        children: [
+          const Icon(Icons.delete_outline, color: Colors.red, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Delete Category',
+              style: const TextStyle(color: Colors.red),
             ),
-          );
-        }
-
-        final deletionInfo = snapshot.data ?? {'canDelete': false, 'reason': 'Unknown error'};
-        final canDelete = deletionInfo['canDelete'] as bool;
-        final reason = deletionInfo['reason'] as String;
-        final transactionCount = deletionInfo['transactionCount'] as int? ?? 0;
-        final childrenWithTransactions = deletionInfo['childrenWithTransactions'] as List<String>? ?? [];
-
-        return AlertDialog(
-          title: Row(
-            children: [
-              Icon(
-                canDelete ? Icons.delete_outline : Icons.warning_amber_rounded,
-                color: canDelete ? Colors.red : Colors.orange,
-                size: 24,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  canDelete ? 'Delete Category' : 'Cannot Delete Category',
-                  style: TextStyle(
-                    color: canDelete ? Colors.red : Colors.orange,
-                  ),
-                ),
-              ),
-            ],
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Category: ${category.name}',
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-              ),
-              const SizedBox(height: 12),
-              
-              if (canDelete) ...[
-                const Text(
-                  'This category can be safely deleted.',
-                  style: TextStyle(color: Colors.green, fontSize: 14),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Are you sure you want to proceed?',
-                  style: TextStyle(fontSize: 14),
-                ),
-              ] else ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.error_outline, color: Colors.red, size: 18),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Cannot delete:',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.red,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(reason, style: const TextStyle(fontSize: 14)),
-                      
-                      if (transactionCount > 0) ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.receipt_long, color: Colors.orange, size: 16),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Has $transactionCount transaction(s)',
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                      
-                      if (childrenWithTransactions.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Child categories with transactions:',
-                          style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
-                        ),
-                        const SizedBox(height: 4),
-                        ...childrenWithTransactions.map((child) => Padding(
-                          padding: const EdgeInsets.only(left: 12, top: 2),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
-                              Expanded(child: Text(child, style: const TextStyle(fontSize: 12))),
-                            ],
-                          ),
-                        )),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.info_outline, color: Colors.blue, size: 16),
-                      SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          'Transfer transactions to another category first, then try deleting again.',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ],
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Category: ${category.name}',
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            if (canDelete)
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Delete'),
-              ),
-          ],
-        );
-      },
+          const SizedBox(height: 12),
+          const Text(
+            'Are you sure you want to delete this category? This action cannot be undone.',
+            style: TextStyle(fontSize: 14),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Delete'),
+        ),
+      ],
     );
   }
 
@@ -236,7 +105,9 @@ class CategoryDeleteDialog extends ConsumerWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('✅ Category "${category.name}" deleted successfully'),
+              content: Text(
+                '✅ Category "${category.name}" deleted successfully',
+              ),
               backgroundColor: Colors.green,
             ),
           );

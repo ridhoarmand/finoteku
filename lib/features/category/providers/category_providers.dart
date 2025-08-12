@@ -2,27 +2,22 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/category.dart';
 import '../services/category_service.dart';
-import '../services/supabase_category_service.dart';
 
 // Global refresh notifier untuk trigger refresh semua category providers
 class CategoryRefreshNotifier extends StateNotifier<int> {
   CategoryRefreshNotifier() : super(0);
-  
+
   void refresh() {
     state = state + 1;
   }
 }
 
-final categoryRefreshProvider = StateNotifierProvider<CategoryRefreshNotifier, int>((ref) {
-  return CategoryRefreshNotifier();
-});
+final categoryRefreshProvider =
+    StateNotifierProvider<CategoryRefreshNotifier, int>((ref) {
+      return CategoryRefreshNotifier();
+    });
 
-// Provider untuk CategoryService (online-only)
-final categoryServiceProvider = Provider<CategoryService>((ref) {
-  final supabaseCategoryService = ref.watch(supabaseCategoryServiceProvider);
-  // CategoryService tidak lagi punya callback data change; gunakan manual refresh via notifier
-  return CategoryService(supabaseCategoryService);
-});
+// Provider untuk CategoryService sudah didefinisikan di file service; gunakan langsung.
 
 // Helper function untuk manual refresh semua category providers
 void refreshCategoryProviders(WidgetRef ref) {
@@ -51,16 +46,19 @@ final categoriesByTypeProvider =
       (ref, params) async {
         ref.watch(categoryRefreshProvider);
         final all = await ref.watch(categoriesProvider(params.userId).future);
-        return all
-            .where((c) => c.type == params.type && c.isActive)
-            .toList();
+        return all.where((c) => c.type == params.type && c.isActive).toList();
       },
     );
 
 final expenseCategoriesProvider = FutureProvider.family<List<Category>, String>(
   (ref, userId) async {
     ref.watch(categoryRefreshProvider);
-    return ref.watch(categoriesByTypeProvider((userId: userId, type: CategoryType.expense)).future);
+    return ref.watch(
+      categoriesByTypeProvider((
+        userId: userId,
+        type: CategoryType.expense,
+      )).future,
+    );
   },
 );
 
@@ -69,17 +67,26 @@ final incomeCategoriesProvider = FutureProvider.family<List<Category>, String>((
   userId,
 ) async {
   ref.watch(categoryRefreshProvider);
-  return ref.watch(categoriesByTypeProvider((userId: userId, type: CategoryType.income)).future);
+  return ref.watch(
+    categoriesByTypeProvider((
+      userId: userId,
+      type: CategoryType.income,
+    )).future,
+  );
 });
 
-final categoryProvider = FutureProvider.family<Category?, ({String categoryId, String userId})>((
-  ref,
-  params,
-) async {
-  ref.watch(categoryRefreshProvider);
-  final categoryService = ref.watch(categoryServiceProvider);
-  return categoryService.getCategoryById(params.categoryId, userId: params.userId);
-});
+final categoryProvider =
+    FutureProvider.family<Category?, ({String categoryId, String userId})>((
+      ref,
+      params,
+    ) async {
+      ref.watch(categoryRefreshProvider);
+      final categoryService = ref.watch(categoryServiceProvider);
+      return categoryService.getCategoryById(
+        params.categoryId,
+        userId: params.userId,
+      );
+    });
 
 final activeCategoriesProvider = FutureProvider.family<List<Category>, String>((
   ref,

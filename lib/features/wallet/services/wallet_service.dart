@@ -48,11 +48,7 @@ class WalletService {
   Future<List<Wallet>> getWallets(String userId) async => _supabaseWalletService.getWallets(userId);
   Future<Wallet?> getWalletById(String walletId, {String? userId}) async => userId == null ? null : _supabaseWalletService.getWallet(walletId, userId);
 
-  // NO-OP legacy methods (dihapus nanti saat provider dibersihkan)
-  Future<void> syncWallets(String userId) async {}
-  Future<void> syncUnsyncedWallets(String userId) async {}
-  Future<void> forceSyncWallet(String walletId, String userId) async {}
-  Future<void> cleanupDuplicateCashWallets(String userId) async {}
+  // Legacy offline sync methods removed.
 
   Future<Wallet> updateWalletBalance(String walletId, String userId, double newBalance) async {
     return updateWallet(walletId, userId, UpdateWalletRequest(balance: newBalance));
