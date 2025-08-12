@@ -1,16 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import '../../../models/wallet.dart';
-import '../../../services/local_database_service.dart';
 import '../services/wallet_service.dart';
 import '../services/supabase_wallet_service.dart';
-import '../../../services/connectivity_service.dart';
 
 // Provider untuk WalletService  
 final walletServiceProvider = Provider<WalletService>((ref) {
-  final localDb = ref.watch(localDatabaseServiceProvider);
   final supabaseWalletService = ref.watch(supabaseWalletServiceProvider);
-  return WalletService(localDb, supabaseWalletService);
+  return WalletService(supabaseWalletService);
 });
 
 // StateProvider untuk trigger refresh wallets
@@ -24,32 +21,7 @@ final walletsProvider = FutureProvider.family<List<Wallet>, String>((ref, userId
     
     final walletService = ref.watch(walletServiceProvider);
     
-    // Cleanup duplicate Cash wallets before fetching
-    await walletService.cleanupDuplicateCashWallets(userId);
-    
-    final wallets = await walletService.getWallets(userId);
-    
-    // Check if any wallets need sync and trigger auto sync in background
-    final unsyncedWallets = wallets.where((w) => w.needsSync).toList();
-    if (unsyncedWallets.isNotEmpty) {
-      // Trigger background sync without blocking the UI
-      Future.microtask(() async {
-        try {
-          final isConnected = await ref.read(connectionStatusProvider.future);
-          if (isConnected) {
-            await walletService.syncUnsyncedWallets(userId);
-            // Trigger refresh
-            ref.read(walletRefreshTriggerProvider.notifier).state++;
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            print('Background sync failed: $e');
-          }
-        }
-      });
-    }
-    
-    return wallets;
+  return await walletService.getWallets(userId);
   } catch (e) {
     if (kDebugMode) {
       print('❌ Error in walletsProvider for user $userId: $e');
@@ -105,18 +77,8 @@ final totalBalanceProvider = FutureProvider.family<double, String>((ref, userId)
 });
 
 // Provider untuk cleanup duplicate wallets (one-time use)
-final walletCleanupProvider = FutureProvider.family<bool, String>((ref, userId) async {
-  try {
-    final walletService = ref.read(walletServiceProvider);
-    await walletService.cleanupDuplicateCashWallets(userId);
-    return true;
-  } catch (e) {
-    if (kDebugMode) {
-      print('❌ Error in walletCleanupProvider: $e');
-    }
-    return false;
-  }
-});
+// Cleanup wallet duplicate (tidak diperlukan lagi di mode online-only) -> selalu true
+final walletCleanupProvider = FutureProvider.family<bool, String>((ref, userId) async => true);
 
 // Helper function untuk refresh semua wallet providers
 void refreshWalletProviders(WidgetRef ref) {
