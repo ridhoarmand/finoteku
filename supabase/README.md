@@ -151,3 +151,85 @@ supabase/
 3. Run database migrations
 4. Test connection with Flutter app
 5. Implement authentication flow
+
+---
+
+## 🔄 Reset Database (Destructive Reset)
+Gunakan hanya jika ingin benar‑benar mulai bersih (SEMUA data hilang).
+
+### Langkah Cepat
+1. (Opsional) Backup data penting:
+    ```bash
+    pg_dump --data-only "$SUPABASE_DB_URL" > backup-data.sql
+    ```
+2. Buka Supabase Dashboard → SQL Editor.
+3. Jalankan isi file: `supabase/resetdb.sql`.
+4. Setelah sukses, jalankan BERURUTAN:
+    1. `supabase/schema.sql`
+    2. `supabase/policies.sql`
+    3. `supabase/storage.sql`
+5. (Opsional) Seed kategori & wallet default.
+6. Login dari aplikasi untuk menciptakan row di `public.users` via trigger.
+
+### Verifikasi Pasca Reset
+```sql
+SELECT tablename FROM pg_tables WHERE schemaname='public';
+SELECT schemaname, tablename, policyname FROM pg_policies WHERE schemaname='public';
+SELECT * FROM storage.buckets;
+```
+
+### Kenapa Ada `resetdb.sql`?
+File ini membersihkan: storage objects, policies, triggers, functions, RLS policies, tabel, types, index. Aman untuk memastikan tidak ada sisa struktur lama yang konflik.
+
+### Catatan Trigger Saldo
+- Versi final fungsi & trigger saldo ADA di `schema.sql` (3 trigger: insert/update/delete).
+- Duplikasi `update_wallet_balance` & trigger gabungan SUDAH dihapus dari `policies.sql` agar tidak double update.
+
+### Normalisasi Data (Jika Sebelum Reset Ingin Migrasi Saja)
+Jika memilih migrasi incremental (tanpa reset penuh):
+```sql
+-- Pastikan kolom is_hidden
+ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS is_hidden BOOLEAN DEFAULT false;
+-- Ubah semua amount negatif jadi positif
+UPDATE public.transactions SET amount = ABS(amount) WHERE amount < 0;
+-- Tambahkan constraint (jika belum)
+ALTER TABLE public.transactions
+   ADD CONSTRAINT transactions_amount_positive CHECK (amount > 0) NOT VALID;
+ALTER TABLE public.transactions VALIDATE CONSTRAINT transactions_amount_positive;
+```
+Lalu recalculation:
+```sql
+DO $$
+DECLARE r RECORD; BEGIN
+   FOR r IN SELECT id FROM public.users LOOP
+      PERFORM public.recalculate_all_wallet_balances(r.id);
+   END LOOP;
+END;$$;
+```
+
+### Seed Minimal (Contoh)
+```sql
+INSERT INTO public.categories (user_id, name, type)
+SELECT u.id, x.name, x.type::category_type
+FROM public.users u
+CROSS JOIN (VALUES
+   ('Gaji','income'),
+   ('Bonus','income'),
+   ('Makan','expense'),
+   ('Transport','expense'),
+   ('Langganan','expense')
+) AS x(name, type)
+ON CONFLICT DO NOTHING;
+```
+
+### Checklist Selesai
+- [ ] resetdb.sql sukses (pesan konfirmasi)
+- [ ] schema.sql sukses
+- [ ] policies.sql sukses (tanpa buat fungsi saldo duplikat)
+- [ ] storage.sql sukses (bucket muncul)
+- [ ] Login user baru berhasil & row di `public.users`
+- [ ] Buat dompet + transaksi tes (saldo berubah sesuai)
+
+---
+
+Jika butuh skrip otomatis (CLI) nanti bisa ditambahkan. Dokumentasi ini cukup untuk proses manual aman.

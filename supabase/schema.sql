@@ -1,421 +1,404 @@
 -- =============================================
--- Finoteku Database Schema (Supabase)
--- Simple Personal Finance Tracker
+-- Skema Database Finoteku (Supabase)
+-- Aplikasi Pencatatan Keuangan Pribadi Sederhana
 -- =============================================
-
--- Enable UUID extension
+-- Aktifkan ekstensi UUID (untuk generate id unik)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- =============================================
--- CUSTOM TYPES
+-- TIPE KUSTOM (ENUM)
 -- =============================================
-
-DO $$ 
+DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'category_type') THEN
-        CREATE TYPE category_type AS ENUM ('income', 'expense');
-    END IF;
-END $$;
+IF NOT EXISTS (
+  SELECT
+    1
+  FROM
+    pg_type
+  WHERE
+    typname = 'category_type'
+) THEN
+  CREATE TYPE category_type AS ENUM ('income', 'expense');
+END IF;
+END
+$$;
 
 -- =============================================
--- TABLES
+-- TABEL-TABEL INTI
 -- =============================================
-
--- Users (extends Supabase auth.users)
+-- Tabel users (perpanjangan dari auth.users milik Supabase)
 CREATE TABLE IF NOT EXISTS public.users (
-    id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-    email TEXT NOT NULL,
-    full_name TEXT,
-    currency TEXT DEFAULT 'IDR',
-    timezone TEXT DEFAULT 'Asia/Jakarta',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  email TEXT NOT NULL,
+  full_name TEXT,
+  currency TEXT DEFAULT 'IDR',
+  timezone TEXT DEFAULT 'Asia/Jakarta',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc' :: text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc' :: text, NOW()) NOT NULL
 );
 
--- Wallets (simplified)
+-- Tabel wallets (disederhanakan)
 CREATE TABLE IF NOT EXISTS public.wallets (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
-    name TEXT NOT NULL,
-    balance DECIMAL(15,2) NOT NULL DEFAULT 0.00,
-    currency TEXT NOT NULL DEFAULT 'IDR',
-    icon TEXT, -- Icon path from assets (banks/*.svg or ewallets/*.svg)
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL,
+  balance DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+  currency TEXT NOT NULL DEFAULT 'IDR',
+  icon TEXT,
+  -- Lokasi ikon (assets banks/*.svg atau ewallets/*.svg)
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc' :: text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc' :: text, NOW()) NOT NULL
 );
 
--- Categories (simplified)
+-- Tabel categories (sederhana + flag hide, tipe tidak boleh diubah setelah dipakai)
 CREATE TABLE IF NOT EXISTS public.categories (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
-    name TEXT NOT NULL,
-    type category_type NOT NULL,
-    parent_id UUID REFERENCES public.categories(id) ON DELETE CASCADE,
-    icon_code_point BIGINT, -- Store Material Icons codePoint for custom icons (changed to BIGINT)
-    color BIGINT, -- Store color as ARGB integer - changed to BIGINT to support unsigned 32-bit values
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL,
+  TYPE category_type NOT NULL,
+  parent_id UUID REFERENCES public.categories(id) ON DELETE CASCADE,
+  icon_code_point BIGINT,
+  -- Menyimpan codePoint Material Icon (untuk ikon kustom)
+  color BIGINT,
+  -- Menyimpan warna dalam integer ARGB
+  is_active BOOLEAN DEFAULT TRUE,
+  -- Menandai kategori masih aktif dipakai (soft disable)
+  is_hidden BOOLEAN DEFAULT false,
+  -- Disembunyikan dari picker tetapi tetap dihitung dalam analitik
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc' :: text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc' :: text, NOW()) NOT NULL
 );
 
--- Transactions (simplified)
+-- Tabel transactions (amount selalu positif; tanda + / - diturunkan dari category.type)
 CREATE TABLE IF NOT EXISTS public.transactions (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
-    wallet_id UUID REFERENCES public.wallets(id) ON DELETE RESTRICT NOT NULL,
-    category_id UUID REFERENCES public.categories(id) ON DELETE RESTRICT,
-    amount DECIMAL(15,2) NOT NULL,
-    notes TEXT,
-    date DATE NOT NULL DEFAULT CURRENT_DATE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  wallet_id UUID REFERENCES public.wallets(id) ON DELETE RESTRICT NOT NULL,
+  category_id UUID REFERENCES public.categories(id) ON DELETE RESTRICT NOT NULL,
+  amount DECIMAL(15, 2) NOT NULL CHECK (amount > 0),
+  notes TEXT,
+  date DATE NOT NULL DEFAULT CURRENT_DATE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc' :: text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc' :: text, NOW()) NOT NULL
 );
 
--- Transaction Images (for multiple image uploads)
+-- Tabel transaction_images (menyimpan banyak bukti gambar)
 CREATE TABLE IF NOT EXISTS public.transaction_images (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
-    transaction_id UUID REFERENCES public.transactions(id) ON DELETE CASCADE NOT NULL,
-    image_url TEXT NOT NULL,
-    image_name TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  transaction_id UUID REFERENCES public.transactions(id) ON DELETE CASCADE NOT NULL,
+  image_url TEXT NOT NULL,
+  image_name TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc' :: text, NOW()) NOT NULL
 );
 
--- Transfers (simplified)
+-- Tabel transfers (pemindahan antar wallet – versi sederhana)
 CREATE TABLE IF NOT EXISTS public.transfers (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
-    from_wallet_id UUID REFERENCES public.wallets(id) ON DELETE CASCADE NOT NULL,
-    to_wallet_id UUID REFERENCES public.wallets(id) ON DELETE CASCADE NOT NULL,
-    amount DECIMAL(15,2) NOT NULL,
-    fee DECIMAL(15,2) DEFAULT 0.00,
-    notes TEXT,
-    date DATE NOT NULL DEFAULT CURRENT_DATE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  from_wallet_id UUID REFERENCES public.wallets(id) ON DELETE CASCADE NOT NULL,
+  to_wallet_id UUID REFERENCES public.wallets(id) ON DELETE CASCADE NOT NULL,
+  amount DECIMAL(15, 2) NOT NULL,
+  fee DECIMAL(15, 2) DEFAULT 0.00,
+  notes TEXT,
+  date DATE NOT NULL DEFAULT CURRENT_DATE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc' :: text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc' :: text, NOW()) NOT NULL
 );
 
 -- =============================================
--- INDEXES FOR PERFORMANCE
+-- INDEX (untuk performa query)
 -- =============================================
-
 CREATE INDEX idx_wallets_user_id ON public.wallets(user_id);
+
 CREATE INDEX idx_wallets_active ON public.wallets(user_id, is_active);
+
 CREATE INDEX idx_categories_user_id ON public.categories(user_id);
-CREATE INDEX idx_categories_type ON public.categories(user_id, type);
+
+CREATE INDEX idx_categories_type ON public.categories(user_id, TYPE);
+
 CREATE INDEX idx_categories_parent_id ON public.categories(parent_id);
+
+CREATE INDEX idx_categories_hidden ON public.categories(user_id, is_hidden);
+
 CREATE INDEX idx_transactions_user_id ON public.transactions(user_id);
+
 CREATE INDEX idx_transactions_wallet_id ON public.transactions(wallet_id);
+
 CREATE INDEX idx_transactions_category_id ON public.transactions(category_id);
+
 CREATE INDEX idx_transactions_date ON public.transactions(user_id, date);
+
 CREATE INDEX idx_transaction_images_user_id ON public.transaction_images(user_id);
+
 CREATE INDEX idx_transaction_images_transaction_id ON public.transaction_images(transaction_id);
+
 CREATE INDEX idx_transfers_user_id ON public.transfers(user_id);
+
 CREATE INDEX idx_transfers_date ON public.transfers(user_id, date);
+
 CREATE INDEX idx_transfers_wallets ON public.transfers(from_wallet_id, to_wallet_id);
 
--- Create updated_at trigger function
-CREATE OR REPLACE FUNCTION public.handle_updated_at()
-RETURNS TRIGGER AS $$
+-- Fungsi trigger untuk mengisi kolom updated_at otomatis
+CREATE OR REPLACE FUNCTION public.handle_updated_at() RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = TIMEZONE('utc'::text, NOW());
+  NEW.updated_at = TIMEZONE('utc' :: text, NOW());
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Tambahkan trigger updated_at ke semua tabel
+CREATE TRIGGER set_updated_at BEFORE
+UPDATE
+  ON public.users FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+CREATE TRIGGER set_updated_at BEFORE
+UPDATE
+  ON public.wallets FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+CREATE TRIGGER set_updated_at BEFORE
+UPDATE
+  ON public.categories FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+CREATE TRIGGER set_updated_at BEFORE
+UPDATE
+  ON public.transactions FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+CREATE TRIGGER set_updated_at BEFORE
+UPDATE
+  ON public.transfers FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+-- =============================================
+-- TRIGGER UNTUK PERBARUI SALDO WALLET
+-- =============================================
+CREATE OR REPLACE FUNCTION public.update_wallet_balance() RETURNS TRIGGER AS $$
+DECLARE
+  old_sign NUMERIC := 0;
+  new_sign NUMERIC := 0;
+  old_effect NUMERIC := 0;
+  new_effect NUMERIC := 0;
+  old_type category_type;
+  new_type category_type;
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    SELECT TYPE INTO new_type FROM public.categories WHERE id = NEW.category_id;
+    new_sign := CASE WHEN new_type = 'expense' THEN -1 ELSE 1 END;
+    UPDATE public.wallets SET balance = balance + (NEW.amount * new_sign)
+      WHERE id = NEW.wallet_id AND user_id = NEW.user_id;
     RETURN NEW;
+  ELSIF TG_OP = 'UPDATE' THEN
+    SELECT TYPE INTO old_type FROM public.categories WHERE id = OLD.category_id;
+    SELECT TYPE INTO new_type FROM public.categories WHERE id = NEW.category_id;
+    old_sign := CASE WHEN old_type = 'expense' THEN -1 ELSE 1 END;
+    new_sign := CASE WHEN new_type = 'expense' THEN -1 ELSE 1 END;
+    old_effect := OLD.amount * old_sign;
+    new_effect := NEW.amount * new_sign;
+    IF OLD.wallet_id != NEW.wallet_id THEN
+      UPDATE public.wallets SET balance = balance - old_effect WHERE id = OLD.wallet_id AND user_id = OLD.user_id;
+      UPDATE public.wallets SET balance = balance + new_effect WHERE id = NEW.wallet_id AND user_id = NEW.user_id;
+    ELSE
+      UPDATE public.wallets SET balance = balance - old_effect + new_effect WHERE id = NEW.wallet_id AND user_id = NEW.user_id;
+    END IF;
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    SELECT TYPE INTO old_type FROM public.categories WHERE id = OLD.category_id;
+    old_sign := CASE WHEN old_type = 'expense' THEN -1 ELSE 1 END;
+    UPDATE public.wallets SET balance = balance - (OLD.amount * old_sign)
+      WHERE id = OLD.wallet_id AND user_id = OLD.user_id;
+    RETURN OLD;
+  END IF;
+  RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
 
--- Add updated_at triggers to all tables
-CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.wallets FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.categories FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.transactions FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.transfers FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-
--- =============================================
--- WALLET BALANCE UPDATE TRIGGERS
--- =============================================
-
--- Function to update wallet balance when transaction changes
-CREATE OR REPLACE FUNCTION public.update_wallet_balance()
-RETURNS TRIGGER AS $$
-BEGIN
-    -- Handle INSERT (new transaction)
-    IF TG_OP = 'INSERT' THEN
-        UPDATE public.wallets 
-        SET balance = balance + NEW.amount
-        WHERE id = NEW.wallet_id AND user_id = NEW.user_id;
-        RETURN NEW;
-    END IF;
-    
-    -- Handle UPDATE (modify existing transaction)
-    IF TG_OP = 'UPDATE' THEN
-        -- If wallet changed, update both old and new wallet
-        IF OLD.wallet_id != NEW.wallet_id THEN
-            -- Remove from old wallet
-            UPDATE public.wallets 
-            SET balance = balance - OLD.amount
-            WHERE id = OLD.wallet_id AND user_id = OLD.user_id;
-            
-            -- Add to new wallet
-            UPDATE public.wallets 
-            SET balance = balance + NEW.amount
-            WHERE id = NEW.wallet_id AND user_id = NEW.user_id;
-        ELSE
-            -- Same wallet, just update the difference
-            UPDATE public.wallets 
-            SET balance = balance - OLD.amount + NEW.amount
-            WHERE id = NEW.wallet_id AND user_id = NEW.user_id;
-        END IF;
-        RETURN NEW;
-    END IF;
-    
-    -- Handle DELETE (remove transaction)
-    IF TG_OP = 'DELETE' THEN
-        UPDATE public.wallets 
-        SET balance = balance - OLD.amount
-        WHERE id = OLD.wallet_id AND user_id = OLD.user_id;
-        RETURN OLD;
-    END IF;
-    
-    RETURN NULL;
-END;
-$$ LANGUAGE plpgsql;
-
--- Add triggers to automatically update wallet balance
+-- Pasang trigger agar saldo otomatis ter-update pada INSERT/UPDATE/DELETE transaksi
 CREATE TRIGGER update_wallet_balance_on_transaction_insert
-    AFTER INSERT ON public.transactions
-    FOR EACH ROW EXECUTE FUNCTION public.update_wallet_balance();
+AFTER
+INSERT
+  ON public.transactions FOR EACH ROW EXECUTE FUNCTION public.update_wallet_balance();
 
 CREATE TRIGGER update_wallet_balance_on_transaction_update
-    AFTER UPDATE ON public.transactions
-    FOR EACH ROW EXECUTE FUNCTION public.update_wallet_balance();
+AFTER
+UPDATE
+  ON public.transactions FOR EACH ROW EXECUTE FUNCTION public.update_wallet_balance();
 
 CREATE TRIGGER update_wallet_balance_on_transaction_delete
-    AFTER DELETE ON public.transactions
-    FOR EACH ROW EXECUTE FUNCTION public.update_wallet_balance();
+AFTER
+  DELETE ON public.transactions FOR EACH ROW EXECUTE FUNCTION public.update_wallet_balance();
 
 -- =============================================
--- WALLET BALANCE RECALCULATION FUNCTIONS
+-- FUNGSI REKALKULASI SALDO WALLET
 -- =============================================
-
--- Function to recalculate wallet balance from transactions
-CREATE OR REPLACE FUNCTION public.recalculate_wallet_balance(p_wallet_id UUID, p_user_id UUID)
-RETURNS DECIMAL(15,2) AS $$
-DECLARE
-    calculated_balance DECIMAL(15,2);
+-- Fungsi untuk menghitung ulang saldo 1 wallet dari seluruh transaksinya
+CREATE OR REPLACE FUNCTION public.recalculate_wallet_balance(p_wallet_id UUID, p_user_id UUID) RETURNS DECIMAL(15, 2) AS $$
+DECLARE calculated_balance DECIMAL(15, 2);
 BEGIN
-    -- Calculate balance from sum of all transactions
-    SELECT COALESCE(SUM(amount), 0) 
+  SELECT COALESCE(SUM(t.amount * CASE c.type WHEN 'expense' THEN -1 ELSE 1 END), 0)
     INTO calculated_balance
-    FROM public.transactions 
-    WHERE wallet_id = p_wallet_id AND user_id = p_user_id;
-    
-    -- Update wallet with calculated balance
-    UPDATE public.wallets 
+  FROM public.transactions t
+  JOIN public.categories c ON c.id = t.category_id
+  WHERE t.wallet_id = p_wallet_id AND t.user_id = p_user_id;
+  UPDATE public.wallets
     SET balance = calculated_balance,
-        updated_at = TIMEZONE('utc'::text, NOW())
-    WHERE id = p_wallet_id AND user_id = p_user_id;
-    
-    RETURN calculated_balance;
+        updated_at = TIMEZONE('utc' :: text, NOW())
+  WHERE id = p_wallet_id AND user_id = p_user_id;
+  RETURN calculated_balance;
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to recalculate all wallet balances for a user
-CREATE OR REPLACE FUNCTION public.recalculate_all_wallet_balances(p_user_id UUID)
-RETURNS VOID AS $$
-DECLARE
-    wallet_record RECORD;
+-- Fungsi untuk menghitung ulang semua saldo wallet milik 1 user
+CREATE OR REPLACE FUNCTION public.recalculate_all_wallet_balances(p_user_id UUID) RETURNS VOID AS $$
+DECLARE wallet_record RECORD;
 BEGIN
-    FOR wallet_record IN 
-        SELECT id FROM public.wallets WHERE user_id = p_user_id
-    LOOP
-        PERFORM public.recalculate_wallet_balance(wallet_record.id, p_user_id);
-    END LOOP;
+  FOR wallet_record IN SELECT id FROM public.wallets WHERE user_id = p_user_id LOOP
+    PERFORM public.recalculate_wallet_balance(wallet_record.id, p_user_id);
+  END LOOP;
 END;
 $$ LANGUAGE plpgsql;
 
 -- =============================================
--- CATEGORY TYPE CHANGE HANDLING
+-- PENANGANAN PERUBAHAN TIPE KATEGORI
 -- =============================================
-
--- Function to handle category type changes
-CREATE OR REPLACE FUNCTION public.handle_category_type_change()
-RETURNS TRIGGER AS $$
+-- Immutability & Proteksi Kategori
+-- Cegah penggantian type kategori jika sudah dipakai oleh transaksi
+CREATE OR REPLACE FUNCTION public.prevent_category_type_change() RETURNS TRIGGER AS $$
+DECLARE usage_exists BOOLEAN;
 BEGIN
-    -- If category type changed, flip all transaction amounts
-    IF OLD.type != NEW.type THEN
-        -- Update all transactions using this category
-        UPDATE public.transactions 
-        SET amount = -amount,
-            updated_at = TIMEZONE('utc'::text, NOW())
-        WHERE category_id = NEW.id AND user_id = NEW.user_id;
-        
-        -- Recalculate all affected wallet balances
-        PERFORM public.recalculate_all_wallet_balances(NEW.user_id);
+  IF OLD.type != NEW.type THEN
+    SELECT EXISTS(
+      SELECT 1 FROM public.transactions t WHERE t.category_id = OLD.id LIMIT 1
+    ) INTO usage_exists;
+    IF usage_exists THEN
+      RAISE EXCEPTION 'Cannot change category type after it is used by transactions';
     END IF;
-    
-    RETURN NEW;
+  END IF;
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- Add trigger for category type changes
-CREATE TRIGGER handle_category_type_change_trigger
-    AFTER UPDATE ON public.categories
-    FOR EACH ROW 
-    WHEN (OLD.type IS DISTINCT FROM NEW.type)
-    EXECUTE FUNCTION public.handle_category_type_change();
+CREATE TRIGGER prevent_category_type_change_trigger
+  BEFORE UPDATE ON public.categories
+  FOR EACH ROW EXECUTE FUNCTION public.prevent_category_type_change();
+
+-- Cegah penghapusan kategori bila sudah dipakai (sarankan hide)
+CREATE OR REPLACE FUNCTION public.prevent_category_delete() RETURNS TRIGGER AS $$
+DECLARE usage_exists BOOLEAN;
+BEGIN
+  SELECT EXISTS(
+    SELECT 1 FROM public.transactions t
+    WHERE t.category_id = OLD.id LIMIT 1
+  ) INTO usage_exists;
+  IF usage_exists THEN
+    RAISE EXCEPTION 'Cannot delete category with existing transactions. Use hide instead.';
+  END IF;
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER prevent_category_delete_trigger BEFORE DELETE ON public.categories FOR EACH ROW EXECUTE FUNCTION public.prevent_category_delete();
 
 -- =============================================
--- TRANSFER TRANSACTIONS FUNCTION
+-- FUNGSI TRANSFER TRANSAKSI
 -- =============================================
-
--- Function to transfer transactions from one wallet to another
+-- Pindahkan semua transaksi dari satu wallet ke wallet lain
 CREATE OR REPLACE FUNCTION public.transfer_transactions_to_wallet(
-    p_from_wallet_id UUID,
-    p_to_wallet_id UUID,
-    p_user_id UUID
-)
-RETURNS INTEGER AS $$
-DECLARE
-    transaction_count INTEGER;
+  p_from_wallet_id UUID,
+  p_to_wallet_id UUID,
+  p_user_id UUID
+) RETURNS INTEGER AS $$
+DECLARE transaction_count INTEGER;
 BEGIN
-    -- Count transactions to be transferred
-    SELECT COUNT(*) INTO transaction_count
-    FROM public.transactions
-    WHERE wallet_id = p_from_wallet_id AND user_id = p_user_id;
-    
-    -- Transfer transactions
-    UPDATE public.transactions
+  SELECT COUNT(*) INTO transaction_count
+  FROM public.transactions
+  WHERE wallet_id = p_from_wallet_id AND user_id = p_user_id;
+
+  UPDATE public.transactions
     SET wallet_id = p_to_wallet_id,
-        updated_at = TIMEZONE('utc'::text, NOW())
-    WHERE wallet_id = p_from_wallet_id AND user_id = p_user_id;
-    
-    -- Recalculate balances for both wallets
-    PERFORM public.recalculate_wallet_balance(p_from_wallet_id, p_user_id);
-    PERFORM public.recalculate_wallet_balance(p_to_wallet_id, p_user_id);
-    
-    RETURN transaction_count;
+        updated_at = TIMEZONE('utc' :: text, NOW())
+  WHERE wallet_id = p_from_wallet_id AND user_id = p_user_id;
+
+  PERFORM public.recalculate_wallet_balance(p_from_wallet_id, p_user_id);
+  PERFORM public.recalculate_wallet_balance(p_to_wallet_id, p_user_id);
+  RETURN transaction_count;
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to transfer transactions from one category to another
+-- Pindahkan transaksi dari satu kategori ke kategori lain (tanpa membalik amount)
 CREATE OR REPLACE FUNCTION public.transfer_transactions_to_category(
-    p_from_category_id UUID,
-    p_to_category_id UUID,
-    p_user_id UUID
-)
-RETURNS INTEGER AS $$
+  p_from_category_id UUID,
+  p_to_category_id UUID,
+  p_user_id UUID
+) RETURNS INTEGER AS $$
 DECLARE
-    transaction_count INTEGER;
-    from_category_type category_type;
-    to_category_type category_type;
+  transaction_count INTEGER;
+  from_category_type category_type;
+  to_category_type category_type;
 BEGIN
-    -- Get category types
-    SELECT type INTO from_category_type FROM public.categories WHERE id = p_from_category_id;
-    SELECT type INTO to_category_type FROM public.categories WHERE id = p_to_category_id;
-    
-    -- Count transactions to be transferred
-    SELECT COUNT(*) INTO transaction_count
-    FROM public.transactions
-    WHERE category_id = p_from_category_id AND user_id = p_user_id;
-    
-    -- Transfer transactions
-    UPDATE public.transactions
+  SELECT TYPE INTO from_category_type FROM public.categories WHERE id = p_from_category_id;
+  SELECT TYPE INTO to_category_type FROM public.categories WHERE id = p_to_category_id;
+
+  SELECT COUNT(*) INTO transaction_count
+  FROM public.transactions
+  WHERE category_id = p_from_category_id AND user_id = p_user_id;
+
+  UPDATE public.transactions
     SET category_id = p_to_category_id,
-        -- Flip amount if category types are different
-        amount = CASE 
-            WHEN from_category_type != to_category_type THEN -amount
-            ELSE amount
-        END,
-        updated_at = TIMEZONE('utc'::text, NOW())
-    WHERE category_id = p_from_category_id AND user_id = p_user_id;
-    
-    -- Recalculate all wallet balances if amounts were flipped
-    IF from_category_type != to_category_type THEN
-        PERFORM public.recalculate_all_wallet_balances(p_user_id);
-    END IF;
-    
-    RETURN transaction_count;
+        updated_at = TIMEZONE('utc' :: text, NOW())
+  WHERE category_id = p_from_category_id AND user_id = p_user_id;
+
+  -- No amount flipping because amounts are always positive & sign derived from category.type
+  IF from_category_type != to_category_type THEN
+    PERFORM public.recalculate_all_wallet_balances(p_user_id);
+  END IF;
+  RETURN transaction_count;
 END;
 $$ LANGUAGE plpgsql;
 
 -- =============================================
--- DELETE USER ACCOUNT FUNCTIONS
+-- FUNGSI PENGHAPUSAN AKUN USER (TERMASUK DATA & FILE)
 -- =============================================
-
--- Function to clean up user storage files
-CREATE OR REPLACE FUNCTION public.cleanup_user_storage_files(user_id_param UUID)
-RETURNS void AS $$
+-- Fungsi hapus file storage terkait user
+CREATE OR REPLACE FUNCTION public.cleanup_user_storage_files(user_id_param UUID) RETURNS void AS $$
 BEGIN
-    -- Delete avatar files for the user
-    DELETE FROM storage.objects 
-    WHERE bucket_id = 'avatars' 
+  DELETE FROM storage.objects
+  WHERE bucket_id = 'avatars'
     AND (storage.foldername(name))[1] = user_id_param::text;
-    
-    -- Delete transaction image files for the user
-    DELETE FROM storage.objects 
-    WHERE bucket_id = 'transaction-images' 
+
+  DELETE FROM storage.objects
+  WHERE bucket_id = 'transaction-images'
     AND (storage.foldername(name))[1] = user_id_param::text;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Function to delete all user data and account
-CREATE OR REPLACE FUNCTION public.delete_user_account()
-RETURNS void AS $$
-DECLARE
-    current_user_id UUID;
+-- Fungsi hapus semua data user + akun
+CREATE OR REPLACE FUNCTION public.delete_user_account() RETURNS void AS $$
+DECLARE current_user_id UUID;
 BEGIN
-    -- Get current authenticated user ID
-    current_user_id := auth.uid();
-    
-    -- Check if user is authenticated
-    IF current_user_id IS NULL THEN
-        RAISE EXCEPTION 'User not authenticated';
-    END IF;
+  current_user_id := auth.uid();
+  IF current_user_id IS NULL THEN
+    RAISE EXCEPTION 'User not authenticated';
+  END IF;
 
-    -- Delete user data in correct order (to handle foreign key constraints)
-    
-    -- 1. Delete transaction images first (references transactions)
-    DELETE FROM public.transaction_images WHERE user_id = current_user_id;
-    
-    -- 2. Delete transactions (references wallets and categories)
-    DELETE FROM public.transactions WHERE user_id = current_user_id;
-    
-    -- 3. Delete transfers (references wallets)
-    DELETE FROM public.transfers WHERE user_id = current_user_id;
-    
-    -- 4. Delete categories (may have parent-child relationships)
-    DELETE FROM public.categories WHERE user_id = current_user_id;
-    
-    -- 5. Delete wallets
-    DELETE FROM public.wallets WHERE user_id = current_user_id;
-    
-    -- 6. Delete user profile (this will cascade to auth.users due to FK relationship)
-    DELETE FROM public.users WHERE id = current_user_id;
-    
-    -- 7. Delete from auth.users (this should be done last)
-    DELETE FROM auth.users WHERE id = current_user_id;
+  DELETE FROM public.transaction_images WHERE user_id = current_user_id;
+  DELETE FROM public.transactions WHERE user_id = current_user_id;
+  DELETE FROM public.transfers WHERE user_id = current_user_id;
+  DELETE FROM public.categories WHERE user_id = current_user_id;
+  DELETE FROM public.wallets WHERE user_id = current_user_id;
+  DELETE FROM public.users WHERE id = current_user_id;
+  DELETE FROM auth.users WHERE id = current_user_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Comprehensive function that deletes both data and files
-CREATE OR REPLACE FUNCTION public.delete_user_account_complete()
-RETURNS void AS $$
-DECLARE
-    current_user_id UUID;
+-- Fungsi komprehensif: hapus file lalu data (wrapper)
+CREATE OR REPLACE FUNCTION public.delete_user_account_complete() RETURNS void AS $$
+DECLARE current_user_id UUID;
 BEGIN
-    -- Get current authenticated user ID
-    current_user_id := auth.uid();
-    
-    -- Check if user is authenticated
-    IF current_user_id IS NULL THEN
-        RAISE EXCEPTION 'User not authenticated';
-    END IF;
-
-    -- First clean up storage files
-    PERFORM public.cleanup_user_storage_files(current_user_id);
-    
-    -- Then delete all user data
-    PERFORM public.delete_user_account();
+  current_user_id := auth.uid();
+  IF current_user_id IS NULL THEN
+    RAISE EXCEPTION 'User not authenticated';
+  END IF;
+  PERFORM public.cleanup_user_storage_files(current_user_id);
+  PERFORM public.delete_user_account();
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
