@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../models/category.dart';
 
 class CategorySelectorSheet extends StatefulWidget {
   final List<Category> categories;
   final Function(Category) onCategorySelected;
+  final BuildContext rootContext; // context dari screen induk
 
   const CategorySelectorSheet({
     super.key,
     required this.categories,
     required this.onCategorySelected,
+    required this.rootContext,
   });
 
   @override
@@ -226,8 +229,14 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet>
           color: theme.colorScheme.primary,
         ),
         onTap: () {
+          // Capture router (not context) before async boundary
+          final router = GoRouter.of(widget.rootContext);
+          if (!mounted) return;
           Navigator.pop(context);
-          Navigator.of(context).pushNamed('/categories/manage');
+          // Schedule navigation after sheet pop without reusing context
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            router.push('/categories/manage');
+          });
         },
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 12,

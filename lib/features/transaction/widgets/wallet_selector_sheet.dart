@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../models/wallet.dart';
 import '../../../utils/currency_formatter.dart';
 
 class WalletSelectorSheet extends StatelessWidget {
   final List<Wallet> wallets;
   final Function(Wallet) onWalletSelected;
+  final BuildContext rootContext; // context dari screen induk
 
   const WalletSelectorSheet({
     super.key,
     required this.wallets,
     required this.onWalletSelected,
+    required this.rootContext,
   });
 
   @override
@@ -143,8 +146,13 @@ class WalletSelectorSheet extends StatelessWidget {
           color: theme.colorScheme.primary,
         ),
         onTap: () {
+          final router = GoRouter.of(rootContext);
           Navigator.pop(context);
-          Navigator.of(context).pushNamed('/wallets/manage');
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            try {
+              router.push('/wallets/manage');
+            } catch (_) {}
+          });
         },
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 10,

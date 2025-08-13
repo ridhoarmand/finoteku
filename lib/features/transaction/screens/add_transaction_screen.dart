@@ -26,6 +26,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _notesController = TextEditingController();
+  final _amountFocusNode = FocusNode();
 
   DateTime _selectedDate = DateTime.now();
   Category? _selectedCategory;
@@ -98,6 +99,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   void dispose() {
     _amountController.dispose();
     _notesController.dispose();
+  _amountFocusNode.dispose();
     super.dispose();
   }
 
@@ -116,18 +118,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               ? 'Edit Transaction'
               : 'Add Transaction',
         ),
-        actions: [
-          TextButton(
-            onPressed: _isLoading ? null : _saveTransaction,
-            child: _isLoading
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Save'),
-          ),
-        ],
       ),
       body: GestureDetector(
         onTap: () {
@@ -208,6 +198,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             Text('Amount', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 4), // Reduced from 8
             TextFormField(
+              focusNode: _amountFocusNode,
               controller: _amountController,
               style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
               decoration: const InputDecoration(
@@ -226,6 +217,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 ),
               ),
               keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _unfocus(),
+              onTapOutside: (_) => _unfocus(),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
               ],
@@ -250,24 +244,51 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     final categoriesAsync = ref.watch(categoriesProvider(userId));
 
     return Card(
-      child: ListTile(
-        leading: _selectedCategory != null
-            ? Icon(
-                IconData(
-                  _selectedCategory!.iconCodePoint ?? Icons.category.codePoint,
-                  fontFamily: 'MaterialIcons',
+      child: Column(
+        children: [
+          ListTile(
+            leading: _selectedCategory != null
+                ? Icon(
+                    IconData(
+                      _selectedCategory!.iconCodePoint ?? Icons.category.codePoint,
+                      fontFamily: 'MaterialIcons',
+                    ),
+                    color: _selectedCategory!.color != null
+                        ? Color(_selectedCategory!.color!)
+                        : null,
+                  )
+                : const Icon(Icons.category),
+            title: Text(_selectedCategory?.name ?? 'Select Category'),
+            subtitle: _selectedCategory != null
+                ? Text(_selectedCategory!.type.name.toUpperCase())
+                : const Text('Choose transaction category'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () => _selectCategory(categoriesAsync.value ?? []),
+          ),
+          if ((_selectedCategory == null) && (categoriesAsync.value?.isEmpty ?? true))
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () {
+                    if (!mounted) return;
+                    Navigator.of(context).pushNamed('/categories/manage').then((value) {
+                      if (!mounted) return;
+                      if (value == true) {
+                        final user = ref.read(currentUserProvider).value;
+                        if (user != null) {
+                          ref.invalidate(categoriesProvider(user.id));
+                        }
+                      }
+                    });
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create Category'),
                 ),
-                color: _selectedCategory!.color != null
-                    ? Color(_selectedCategory!.color!)
-                    : null,
-              )
-            : const Icon(Icons.category),
-        title: Text(_selectedCategory?.name ?? 'Select Category'),
-        subtitle: _selectedCategory != null
-            ? Text(_selectedCategory!.type.name.toUpperCase())
-            : const Text('Choose transaction category'),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: () => _selectCategory(categoriesAsync.value ?? []),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -276,21 +297,48 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     final walletsAsync = ref.watch(activeWalletsProvider(userId));
 
     return Card(
-      child: ListTile(
-        leading: _selectedWallet != null
-            ? Icon(
-                _getWalletIcon(_selectedWallet!.icon),
-                color: Theme.of(context).primaryColor,
-              )
-            : const Icon(Icons.account_balance_wallet),
-        title: Text(_selectedWallet?.name ?? 'Select Wallet'),
-        subtitle: _selectedWallet != null
-            ? Text(
-                'Balance: ${CurrencyFormatter.format(_selectedWallet!.balance, _selectedWallet!.currency)}',
-              )
-            : const Text('Choose wallet for transaction'),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: () => _selectWallet(walletsAsync.value ?? []),
+      child: Column(
+        children: [
+          ListTile(
+            leading: _selectedWallet != null
+                ? Icon(
+                    _getWalletIcon(_selectedWallet!.icon),
+                    color: Theme.of(context).primaryColor,
+                  )
+                : const Icon(Icons.account_balance_wallet),
+            title: Text(_selectedWallet?.name ?? 'Select Wallet'),
+            subtitle: _selectedWallet != null
+                ? Text(
+                    'Balance: ${CurrencyFormatter.format(_selectedWallet!.balance, _selectedWallet!.currency)}',
+                  )
+                : const Text('Choose wallet for transaction'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () => _selectWallet(walletsAsync.value ?? []),
+          ),
+          if ((_selectedWallet == null) && (walletsAsync.value?.isEmpty ?? true))
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () {
+                    if (!mounted) return;
+                    Navigator.of(context).pushNamed('/wallets/manage').then((value) {
+                      if (!mounted) return;
+                      if (value == true) {
+                        final user = ref.read(currentUserProvider).value;
+                        if (user != null) {
+                          refreshWalletProviders(ref);
+                        }
+                      }
+                    });
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create Wallet'),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -323,6 +371,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   Future<void> _selectDate() async {
+  _unfocus();
     final date = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
@@ -338,6 +387,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   void _selectCategory(List<Category> categories) {
+  _unfocus();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -348,12 +398,18 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             _selectedCategory = category;
           });
           Navigator.pop(context);
+          final user = ref.read(currentUserProvider).value;
+          if (user != null) {
+            ref.invalidate(categoriesProvider(user.id));
+          }
         },
+  rootContext: this.context,
       ),
     );
   }
 
   void _selectWallet(List<Wallet> wallets) {
+  _unfocus();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -364,12 +420,15 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             _selectedWallet = wallet;
           });
           Navigator.pop(context);
+          refreshWalletProviders(ref);
         },
+  rootContext: this.context,
       ),
     );
   }
 
   Future<void> _saveTransaction() async {
+  _unfocus();
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedCategory == null) {
@@ -395,11 +454,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       final amount = double.parse(_amountController.text);
       final notes = _notesController.text.trim();
 
-      // Convert amount based on category type
-      // Income categories get positive amount, expense categories get negative amount
-      final finalAmount = _selectedCategory!.type == CategoryType.expense
-          ? -amount.abs()
-          : amount.abs();
+  // Amount always stored as positive; category.type determines sign in analytics & wallet triggers
+  final finalAmount = amount.abs();
 
       if (widget.initialTransaction != null) {
         // Update existing transaction
@@ -479,6 +535,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         });
       }
     }
+  }
+
+  void _unfocus() {
+  // Always try to unfocus to dismiss keyboard
+  FocusManager.instance.primaryFocus?.unfocus();
   }
 
   String _formatDate(DateTime date) {
