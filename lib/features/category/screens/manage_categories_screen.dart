@@ -101,18 +101,23 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
         iconCodePoint: icon != null
             ? CategoryIconHelper.getCodePointFromIcon(icon)
             : null,
-        color: color.value,
+  // Using value for ARGB int; if migrating to Color.toARGB32() adjust here.
+  // ignore: deprecated_member_use
+  color: color.value,
       );
 
       await categoryService.createCategory(userId, request);
-
       if (mounted) {
+        // Refresh all categories providers first so UI updates immediately
+        refreshCategoryProviders(ref);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('$name category added successfully')),
         );
-
-        // Refresh all categories providers
-        refreshCategoryProviders(ref);
+        // Return success flag if this screen was pushed expecting a result
+        if (Navigator.canPop(context)) {
+          // Don't pop automatically if user may want to add many; comment out to enable auto-pop
+          // Navigator.pop(context, true);
+        }
       }
     } catch (e) {
       if (mounted) {

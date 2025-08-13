@@ -235,8 +235,7 @@ class SupabaseWalletService {
       'is_active': data['is_active'],
       'created_at': data['created_at'],
       'updated_at': data['updated_at'],
-      'is_deleted': false, // Supabase tidak menyimpan soft delete
-      'needs_sync': false, // Data dari server sudah ter-sync
+  // Offline flags removed
     };
   }
 }

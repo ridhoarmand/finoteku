@@ -54,16 +54,7 @@ class AuthService {
         password: password,
       );
 
-      // If signin successful, perform full sync
-      if (response.user != null) {
-        try {
-          final initialDataService = _ref.read(initialDataServiceProvider);
-          await initialDataService.performFullSync(response.user!.id);
-        } catch (e) {
-          // Log error but don't fail signin - user can still use app offline
-          debugPrint('⚠️ Full sync failed: $e');
-        }
-      }
+  // If signin successful, we could refresh initial data if needed (online-only now, so no sync step)
 
       return response;
     } on AuthException catch (e) {

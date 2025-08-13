@@ -170,8 +170,7 @@ class CategoryService {
       'is_active': data['is_active'],
       'created_at': data['created_at'],
       'updated_at': data['updated_at'],
-      'is_deleted': false, // field offline legacy -> default false
-      'needs_sync': false, // field offline legacy -> default false
+  'is_hidden': data['is_hidden'],
     };
   }
 }

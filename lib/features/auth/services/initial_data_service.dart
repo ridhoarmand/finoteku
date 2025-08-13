@@ -3,20 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../wallet/services/wallet_service.dart';
 import '../../wallet/providers/wallet_providers.dart';
 import '../../category/services/category_service.dart';
-import '../../transaction/services/transaction_service.dart';
-import '../../transaction/providers/transaction_providers.dart';
 import '../../../models/wallet.dart';
 
 /// Service untuk mengelola initial data setup dan full sync
 class InitialDataService {
   final WalletService _walletService;
   final CategoryService _categoryService;
-  final TransactionService _transactionService;
 
   InitialDataService(
     this._walletService,
     this._categoryService,
-    this._transactionService,
   );
 
   /// Setup initial data untuk new user (dipanggil saat register)
@@ -43,31 +39,8 @@ class InitialDataService {
     }
   }
 
-  /// Full sync deprecated (online-only); kept for backward compatibility
-  Future<void> performFullSync(String userId) async {
-    if (kDebugMode) {
-      print('ℹ️ performFullSync called (noop in online-only mode) for $userId');
-    }
-    // Optionally still refresh transactions
-    await _syncFromServerToLocal(userId);
-  }
 
-  /// Sync data dari server ke local (download)
-  Future<void> _syncFromServerToLocal(String userId) async {
-    if (kDebugMode) {
-      print('📥 Syncing data from server to local...');
-    }
-
-  // Wallets and categories fetched on-demand (removed explicit server->local sync)
-  // Sync transactions dari server (still needed to populate local view/state if any caching layer)
-    try {
-      await _transactionService.syncTransactions(userId);
-    } catch (e) {
-      if (kDebugMode) {
-        print('⚠️ Transaction sync from server failed: $e');
-      }
-    }
-  }
+  // _syncFromServerToLocal removed (online-only)
 
 
   /// Create default wallet untuk new user
@@ -169,8 +142,7 @@ class InitialDataService {
 final initialDataServiceProvider = Provider<InitialDataService>((ref) {
   final walletService = ref.watch(walletServiceProvider);
   final categoryService = ref.watch(categoryServiceProvider);
-  final transactionService = ref.watch(transactionServiceProvider);
-  return InitialDataService(walletService, categoryService, transactionService);
+    return InitialDataService(walletService, categoryService);
 });
 
 /// Provider untuk setup initial data (new user)
@@ -190,19 +162,4 @@ final setupInitialDataProvider = FutureProvider.family<bool, String>((
   }
 });
 
-/// Provider untuk full sync (existing user login)
-final fullSyncProvider = FutureProvider.family<bool, String>((
-  ref,
-  userId,
-) async {
-  final service = ref.read(initialDataServiceProvider);
-  try {
-    await service.performFullSync(userId);
-    return true;
-  } catch (e) {
-    if (kDebugMode) {
-      print('Full sync failed: $e');
-    }
-    return false;
-  }
-});
+// fullSyncProvider removed (online-only mode)

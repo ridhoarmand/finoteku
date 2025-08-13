@@ -11,6 +11,12 @@ class TransactionService {
   // Buat transaction baru
   Future<Transaction> createTransaction(String userId, CreateTransactionRequest request) async {
     try {
+      if (request.categoryId == null || request.categoryId!.isEmpty) {
+        throw Exception('Category is required');
+      }
+      if (request.amount <= 0) {
+        throw Exception('Amount must be greater than 0');
+      }
       return await _supabase.createTransaction(userId, request);
     } catch (e) {
       if (kDebugMode) print('❌ Gagal membuat transaksi: $e');
@@ -30,6 +36,9 @@ class TransactionService {
     }
 
     try {
+      if (request.amount != null && request.amount! <= 0) {
+        throw Exception('Amount must be greater than 0');
+      }
       return await _supabase.updateTransaction(transactionId, userId, request);
     } catch (e) {
       if (kDebugMode) print('❌ Gagal update transaksi: $e');
@@ -73,15 +82,7 @@ class TransactionService {
   return _supabase.getTransaction(transactionId, userId);
   }
 
-  // Sync semua transactions ke server
-  // Sync related methods no longer needed (online-only)
-  Future<void> syncTransactions(String userId) async {}
-
-  // Public method untuk sync semua unsynced transactions
-  Future<void> syncUnsyncedTransactions(String userId) async {}
-
-  // Force sync single transaction
-  Future<void> forceSyncTransaction(String transactionId, String userId) async {}
+  // Legacy sync methods removed (online-only)
 
   // Get transactions summary (income, expense totals)
   Future<Map<String, double>> getTransactionsSummary(String userId, {
