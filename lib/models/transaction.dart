@@ -8,8 +8,6 @@ class Transaction {
   final DateTime date;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final bool isDeleted;
-  final bool needsSync;
 
   const Transaction({
     required this.id,
@@ -21,8 +19,6 @@ class Transaction {
     required this.date,
     required this.createdAt,
     required this.updatedAt,
-    this.isDeleted = false,
-    this.needsSync = false,
   });
 
   Map<String, dynamic> toJson() {
@@ -36,8 +32,7 @@ class Transaction {
       'date': date.toIso8601String().split('T')[0], // Store as date only
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
-      'is_deleted': isDeleted ? 1 : 0,
-      'needs_sync': needsSync ? 1 : 0,
+  // Offline flags removed
     };
   }
 
@@ -52,8 +47,6 @@ class Transaction {
       date: DateTime.parse(json['date'] as String),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
-      isDeleted: (json['is_deleted'] as int? ?? 0) == 1,
-      needsSync: (json['needs_sync'] as int? ?? 0) == 1,
     );
   }
 
@@ -67,8 +60,7 @@ class Transaction {
     DateTime? date,
     DateTime? createdAt,
     DateTime? updatedAt,
-    bool? isDeleted,
-    bool? needsSync,
+    // offline flags removed
   }) {
     return Transaction(
       id: id ?? this.id,
@@ -80,8 +72,6 @@ class Transaction {
       date: date ?? this.date,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      isDeleted: isDeleted ?? this.isDeleted,
-      needsSync: needsSync ?? this.needsSync,
     );
   }
 
@@ -97,9 +87,7 @@ class Transaction {
         other.notes == notes &&
         other.date == date &&
         other.createdAt == createdAt &&
-        other.updatedAt == updatedAt &&
-        other.isDeleted == isDeleted &&
-        other.needsSync == needsSync;
+  other.updatedAt == updatedAt;
   }
 
   @override
@@ -113,15 +101,13 @@ class Transaction {
       notes,
       date,
       createdAt,
-      updatedAt,
-      isDeleted,
-      needsSync,
+  updatedAt,
     );
   }
 
   @override
   String toString() {
-    return 'Transaction(id: $id, userId: $userId, walletId: $walletId, categoryId: $categoryId, amount: $amount, notes: $notes, date: $date, createdAt: $createdAt, updatedAt: $updatedAt, isDeleted: $isDeleted, needsSync: $needsSync)';
+  return 'Transaction(id: $id, userId: $userId, walletId: $walletId, categoryId: $categoryId, amount: $amount, notes: $notes, date: $date, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 }
 
