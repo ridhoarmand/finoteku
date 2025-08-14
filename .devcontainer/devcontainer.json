@@ -8,7 +8,7 @@
   // 1. flutter config --enable-web && flutter precache --web
   // 2. (Opsional) forwardPorts [8080]
   // 3. flutter run -d web-server --web-port=8080
-  "postCreateCommand": "flutter pub get || true",
+  "postCreateCommand": "git lfs install --skip-repo && flutter pub get || true",
   "customizations": {
     "vscode": {
       "settings": {
