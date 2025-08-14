@@ -2,14 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../services/supabase_service.dart';
-import '../../../services/local_database_service.dart';
 
 /// Service untuk menangani delete account
 class DeleteAccountService {
   final SupabaseClient _supabase;
-  final LocalDatabaseService _localDb;
 
-  DeleteAccountService(this._supabase, this._localDb);
+  DeleteAccountService(this._supabase);
 
   /// Delete user account dan semua data terkait
   Future<void> deleteAccount() async {
@@ -23,10 +21,7 @@ class DeleteAccountService {
         print('🗑️ Starting account deletion process for user: $userId');
       }
 
-      // 1. Hapus data dari local database terlebih dahulu
-      await _deleteLocalUserData(userId);
-
-      // 2. Panggil function di Supabase untuk menghapus semua data user
+  // 1. Panggil function di Supabase untuk menghapus semua data user
       // Ini akan menghapus data dari database dan storage files
       await _supabase.rpc('delete_user_account_complete');
 
@@ -52,27 +47,7 @@ class DeleteAccountService {
     }
   }
 
-  /// Hapus semua data user dari local database
-  Future<void> _deleteLocalUserData(String userId) async {
-    try {
-      if (kDebugMode) {
-        print('🧹 Cleaning up local user data...');
-      }
-
-      // Hapus data user dari local database
-      // LocalDatabaseService menggunakan SharedPreferences, jadi kita hapus langsung
-      await _localDb.clearAllData(userId);
-
-      if (kDebugMode) {
-        print('✅ Local user data cleaned up successfully');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('⚠️ Error cleaning up local data: $e');
-      }
-      // Continue with server deletion even if local cleanup fails
-    }
-  }
+  // Local cleanup dihapus (tidak ada lagi storage lokal)
 
   /// Verify user identity sebelum delete (untuk keamanan)
   Future<bool> verifyUserPassword(String password) async {
@@ -105,19 +80,8 @@ class DeleteAccountService {
         throw Exception('User not authenticated');
       }
 
-      // Count data from local database
-      final wallets = await _localDb.getWallets(userId);
-      final categories = await _localDb.getCategories(userId);
-
-      // For transactions, we don't have them in LocalDatabaseService yet
-      // So we'll use 0 for now or implement it later
-      final transactionsCount = 0;
-
-      return UserDataSummary(
-        walletsCount: wallets.length,
-        categoriesCount: categories.length,
-        transactionsCount: transactionsCount,
-      );
+  // Data lokal dihapus: summary sekarang hanya mengambil 0 (server summary dapat ditambahkan nanti via RPC)
+  return UserDataSummary(walletsCount: 0, categoriesCount: 0, transactionsCount: 0);
     } catch (e) {
       if (kDebugMode) {
         print('❌ Error getting user data summary: $e');
@@ -149,8 +113,7 @@ class UserDataSummary {
 /// Provider untuk DeleteAccountService
 final deleteAccountServiceProvider = Provider<DeleteAccountService>((ref) {
   final supabase = ref.watch(supabaseProvider);
-  final localDb = ref.watch(localDatabaseServiceProvider);
-  return DeleteAccountService(supabase, localDb);
+  return DeleteAccountService(supabase);
 });
 
 /// State notifier untuk delete account process

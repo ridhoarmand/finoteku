@@ -4,12 +4,10 @@ class Wallet {
   final String name;
   final double balance;
   final String currency;
-  final String? icon; // Icon path from assets (banks/*.svg or ewallets/*.svg)
+  final String? icon; // Icon path
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final bool isDeleted;
-  final bool needsSync;
 
   const Wallet({
     required this.id,
@@ -21,8 +19,6 @@ class Wallet {
     this.isActive = true,
     required this.createdAt,
     required this.updatedAt,
-    this.isDeleted = false,
-    this.needsSync = false,
   });
 
   Map<String, dynamic> toJson() {
@@ -36,8 +32,7 @@ class Wallet {
       'is_active': isActive,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
-      'is_deleted': isDeleted,
-      'needs_sync': needsSync,
+  // Offline flags removed
     };
   }
 
@@ -52,8 +47,6 @@ class Wallet {
       isActive: json['is_active'] as bool? ?? true,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
-      isDeleted: json['is_deleted'] as bool? ?? false,
-      needsSync: json['needs_sync'] as bool? ?? false,
     );
   }
 
@@ -67,8 +60,6 @@ class Wallet {
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
-    bool? isDeleted,
-    bool? needsSync,
   }) {
     return Wallet(
       id: id ?? this.id,
@@ -80,8 +71,6 @@ class Wallet {
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      isDeleted: isDeleted ?? this.isDeleted,
-      needsSync: needsSync ?? this.needsSync,
     );
   }
 

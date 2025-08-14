@@ -6,13 +6,12 @@ class Category {
   final String name;
   final CategoryType type;
   final String? parentId;
-  final int? iconCodePoint; // Store Material Icons codePoint for custom icons
-  final int? color; // Store color as ARGB integer
+  final int? iconCodePoint; // Nullable sesuai kolom
+  final int? color; // Nullable sesuai kolom
   final bool isActive;
+  final bool isHidden; // Kolom baru di skema
   final DateTime createdAt;
   final DateTime updatedAt;
-  final bool isDeleted;
-  final bool needsSync;
 
   const Category({
     required this.id,
@@ -23,10 +22,9 @@ class Category {
     this.iconCodePoint,
     this.color,
     this.isActive = true,
+    this.isHidden = false,
     required this.createdAt,
     required this.updatedAt,
-    this.isDeleted = false,
-    this.needsSync = false,
   });
 
   Map<String, dynamic> toJson() {
@@ -41,8 +39,7 @@ class Category {
       'is_active': isActive,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
-      'is_deleted': isDeleted,
-      'needs_sync': needsSync,
+  'is_hidden': isHidden,
     };
   }
 
@@ -58,8 +55,7 @@ class Category {
       isActive: json['is_active'] as bool? ?? true,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
-      isDeleted: json['is_deleted'] as bool? ?? false,
-      needsSync: json['needs_sync'] as bool? ?? false,
+  isHidden: json['is_hidden'] as bool? ?? false,
     );
   }
 
@@ -72,10 +68,9 @@ class Category {
     int? iconCodePoint,
     int? color,
     bool? isActive,
+    bool? isHidden,
     DateTime? createdAt,
     DateTime? updatedAt,
-    bool? isDeleted,
-    bool? needsSync,
   }) {
     return Category(
       id: id ?? this.id,
@@ -86,10 +81,9 @@ class Category {
       iconCodePoint: iconCodePoint ?? this.iconCodePoint,
       color: color ?? this.color,
       isActive: isActive ?? this.isActive,
+      isHidden: isHidden ?? this.isHidden,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      isDeleted: isDeleted ?? this.isDeleted,
-      needsSync: needsSync ?? this.needsSync,
     );
   }
 
@@ -104,7 +98,7 @@ class Category {
 
   @override
   String toString() {
-    return 'Category(id: $id, name: $name, type: ${type.name})';
+  return 'Category(id: $id, name: $name, type: ${type.name}, hidden: $isHidden)';
   }
 }
 

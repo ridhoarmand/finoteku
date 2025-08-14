@@ -112,6 +112,9 @@ class SupabaseCategoryService {
     CreateCategoryRequest request,
   ) async {
     try {
+      if (request.name.trim().isEmpty) {
+        throw Exception('Name is required');
+      }
       final data = {
         'user_id': userId,
         'name': request.name,
@@ -130,7 +133,7 @@ class SupabaseCategoryService {
 
       return Category.fromJson(_convertFromSupabase(response));
     } catch (e) {
-      throw Exception('Failed to create category: $e');
+  throw Exception(_friendlyError('create category', e));
     }
   }
 
@@ -163,7 +166,7 @@ class SupabaseCategoryService {
 
       return Category.fromJson(_convertFromSupabase(response));
     } catch (e) {
-      throw Exception('Failed to update category: $e');
+  throw Exception(_friendlyError('update category', e));
     }
   }
 
@@ -176,95 +179,10 @@ class SupabaseCategoryService {
           .eq('id', categoryId)
           .eq('user_id', userId);
     } catch (e) {
-      throw Exception('Failed to delete category: $e');
+    throw Exception(_friendlyError('delete category', e));
     }
   }
-
-  // Sync category ke server
-  Future<Category> syncCategory(Category category) async {
-    try {
-      if (kDebugMode) {
-        print(
-          '🔄 Syncing category: ${category.id} for user: ${category.userId}',
-        );
-      }
-
-      // Cek apakah category sudah ada di server (tanpa menggunakan .single())
-      final checkResponse = await _supabase
-          .from('categories')
-          .select('*')
-          .eq('id', category.id)
-          .eq('user_id', category.userId);
-
-      if (checkResponse.isEmpty) {
-        // Buat baru di server
-        if (kDebugMode) {
-          print('📝 Creating new category in server: ${category.id}');
-        }
-        final data = {
-          'id': category.id, // Gunakan ID yang sama dari local
-          'user_id': category.userId,
-          'name': category.name,
-          'type': category.type.name,
-          'parent_id': category.parentId,
-          'icon_code_point': category.iconCodePoint,
-          'color': category.color,
-          'is_active': category.isActive,
-          'created_at': category.createdAt.toIso8601String(),
-        };
-
-        final response = await _supabase
-            .from('categories')
-            .insert(data)
-            .select()
-            .single();
-
-        if (kDebugMode) {
-          print('✅ Category created successfully in server');
-        }
-        return Category.fromJson(_convertFromSupabase(response));
-      } else {
-        // Update yang sudah ada
-        if (kDebugMode) {
-          print('🔄 Updating existing category in server: ${category.id}');
-        }
-        final updateRequest = UpdateCategoryRequest(
-          name: category.name,
-          type: category.type,
-          parentId: category.parentId,
-          iconCodePoint: category.iconCodePoint,
-          color: category.color,
-          isActive: category.isActive,
-        );
-        final updatedCategory = await updateCategory(
-          category.id,
-          category.userId,
-          updateRequest,
-        );
-        if (kDebugMode) {
-          print('✅ Category updated successfully in server');
-        }
-        return updatedCategory;
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Failed to sync category ${category.id}: $e');
-      }
-      throw Exception('Failed to sync category: $e');
-    }
-  }
-
-  // Sync penghapusan category
-  Future<void> syncCategoryDeletion(String categoryId, String userId) async {
-    try {
-      await deleteCategory(categoryId, userId);
-    } catch (e) {
-      // Jika category tidak ditemukan di server, anggap sudah dihapus
-      if (!e.toString().contains('No rows found')) {
-        throw Exception('Failed to sync category deletion: $e');
-      }
-    }
-  }
+  // Legacy sync methods removed (online-only)
 
   // Convert dari format Supabase ke format aplikasi
   Map<String, dynamic> _convertFromSupabase(Map<String, dynamic> data) {
@@ -279,8 +197,21 @@ class SupabaseCategoryService {
       'is_active': data['is_active'],
       'created_at': data['created_at'],
       'updated_at': data['updated_at'],
-      'is_deleted': false, // Supabase tidak menyimpan soft delete
-      'needs_sync': false, // Data dari server sudah ter-sync
+  'is_hidden': data['is_hidden'],
     };
+  }
+
+  String _friendlyError(String action, Object e) {
+    final msg = e.toString();
+    if (msg.contains('foreign key') && msg.contains('parent_id')) {
+      return 'Failed to $action: parent category not found';
+    }
+    if (msg.contains('duplicate key') || msg.contains('already exists')) {
+      return 'Failed to $action: duplicate name';
+    }
+    if (msg.contains('null value')) {
+      return 'Failed to $action: missing required field';
+    }
+    return 'Failed to $action: $e';
   }
 }

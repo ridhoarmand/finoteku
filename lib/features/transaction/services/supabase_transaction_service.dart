@@ -96,6 +96,13 @@ class SupabaseTransactionService {
     CreateTransactionRequest request,
   ) async {
     try {
+      // Validasi dasar sesuai schema: category_id wajib & amount > 0
+      if (request.categoryId == null || request.categoryId!.isEmpty) {
+        throw Exception('Category is required');
+      }
+      if (request.amount <= 0) {
+        throw Exception('Amount must be greater than 0');
+      }
       final data = {
         'user_id': userId,
         'wallet_id': request.walletId,
@@ -113,7 +120,7 @@ class SupabaseTransactionService {
 
       return Transaction.fromJson(_convertFromSupabase(response));
     } catch (e) {
-      throw Exception('Failed to create transaction: $e');
+      throw Exception(_friendlyError('create transaction', e));
     }
   }
 
@@ -135,6 +142,10 @@ class SupabaseTransactionService {
         throw Exception('No data to update');
       }
 
+      if (data.containsKey('amount') && (data['amount'] as num) <= 0) {
+        throw Exception('Amount must be greater than 0');
+      }
+
       final response = await _supabase
           .from('transactions')
           .update(data)
@@ -145,7 +156,7 @@ class SupabaseTransactionService {
 
       return Transaction.fromJson(_convertFromSupabase(response));
     } catch (e) {
-      throw Exception('Failed to update transaction: $e');
+      throw Exception(_friendlyError('update transaction', e));
     }
   }
 
@@ -158,92 +169,11 @@ class SupabaseTransactionService {
           .eq('id', transactionId)
           .eq('user_id', userId);
     } catch (e) {
-      throw Exception('Failed to delete transaction: $e');
+    throw Exception(_friendlyError('delete transaction', e));
     }
   }
 
-  // Sync transaction ke server
-  Future<Transaction> syncTransaction(Transaction transaction) async {
-    try {
-      if (kDebugMode) {
-        print('🔄 Syncing transaction: ${transaction.id} for user: ${transaction.userId}');
-      }
-
-      // Cek apakah transaction sudah ada di server
-      final checkResponse = await _supabase
-          .from('transactions')
-          .select('*')
-          .eq('id', transaction.id)
-          .eq('user_id', transaction.userId);
-
-      if (checkResponse.isEmpty) {
-        // Buat baru di server
-        if (kDebugMode) {
-          print('📝 Creating new transaction in server: ${transaction.id}');
-        }
-
-        final data = {
-          'id': transaction.id, // Gunakan ID yang sama dari local
-          'user_id': transaction.userId,
-          'wallet_id': transaction.walletId,
-          'category_id': transaction.categoryId,
-          'amount': transaction.amount,
-          'notes': transaction.notes,
-          'date': transaction.date.toIso8601String().split('T')[0],
-          'created_at': transaction.createdAt.toIso8601String(),
-        };
-
-        final response = await _supabase
-            .from('transactions')
-            .insert(data)
-            .select()
-            .single();
-
-        if (kDebugMode) {
-          print('✅ Transaction created successfully in server');
-        }
-        return Transaction.fromJson(_convertFromSupabase(response));
-      } else {
-        // Update yang sudah ada
-        if (kDebugMode) {
-          print('🔄 Updating existing transaction in server: ${transaction.id}');
-        }
-        final updateRequest = UpdateTransactionRequest(
-          walletId: transaction.walletId,
-          categoryId: transaction.categoryId,
-          amount: transaction.amount,
-          notes: transaction.notes,
-          date: transaction.date,
-        );
-        final updatedTransaction = await updateTransaction(
-          transaction.id,
-          transaction.userId,
-          updateRequest,
-        );
-        if (kDebugMode) {
-          print('✅ Transaction updated successfully in server');
-        }
-        return updatedTransaction;
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Failed to sync transaction ${transaction.id}: $e');
-      }
-      throw Exception('Failed to sync transaction: $e');
-    }
-  }
-
-  // Sync penghapusan transaction
-  Future<void> syncTransactionDeletion(String transactionId, String userId) async {
-    try {
-      await deleteTransaction(transactionId, userId);
-    } catch (e) {
-      // Jika transaction tidak ditemukan di server, anggap sudah dihapus
-      if (!e.toString().contains('No rows found')) {
-        throw Exception('Failed to sync transaction deletion: $e');
-      }
-    }
-  }
+  // Legacy sync methods removed (online-only architecture)
 
   // Convert dari format Supabase ke format aplikasi
   Map<String, dynamic> _convertFromSupabase(Map<String, dynamic> data) {
@@ -252,13 +182,34 @@ class SupabaseTransactionService {
       'user_id': data['user_id'],
       'wallet_id': data['wallet_id'],
       'category_id': data['category_id'],
-      'amount': data['amount'],
+      // Supabase bisa mengembalikan decimal sebagai String atau num
+      'amount': _parseAmount(data['amount']),
       'notes': data['notes'],
       'date': data['date'],
       'created_at': data['created_at'],
       'updated_at': data['updated_at'],
-      'is_deleted': false, // Supabase tidak menyimpan soft delete
-      'needs_sync': false, // Data dari server sudah ter-sync
+  // Offline flags removed
     };
+  }
+
+  double _parseAmount(dynamic value) {
+    if (value == null) return 0;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString()) ?? 0;
+  }
+
+  String _friendlyError(String action, Object e) {
+    final message = e.toString();
+    if (message.contains('foreign key')) {
+      if (message.contains('wallet_id')) return 'Failed to $action: wallet not found';
+      if (message.contains('category_id')) return 'Failed to $action: category not found';
+    }
+    if (message.contains('amount') && message.contains('violates')) {
+      return 'Failed to $action: invalid amount';
+    }
+    if (message.contains('null value')) {
+      return 'Failed to $action: missing required field';
+    }
+    return 'Failed to $action: $e';
   }
 }

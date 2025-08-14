@@ -1,14 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/transaction.dart';
-import '../../../services/local_database_service.dart';
 import '../services/transaction_service.dart';
 import '../services/supabase_transaction_service.dart';
 
 // Provider untuk TransactionService
 final transactionServiceProvider = Provider<TransactionService>((ref) {
-  final localDb = ref.watch(localDatabaseServiceProvider);
   final supabaseTransactionService = ref.watch(supabaseTransactionServiceProvider);
-  return TransactionService(localDb, supabaseTransactionService);
+  return TransactionService(supabaseTransactionService);
 });
 
 // Provider untuk daftar transactions berdasarkan user ID

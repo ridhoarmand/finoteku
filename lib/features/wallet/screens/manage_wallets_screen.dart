@@ -5,155 +5,122 @@ import '../providers/wallet_providers.dart';
 import '../../../services/supabase_service.dart';
 import '../../../utils/currency_formatter.dart';
 import '../../../utils/wallet_icon_helper.dart';
-import '../widgets/wallet_sync_status_widget.dart';
-import '../widgets/auto_sync_hook.dart';
+// import '../widgets/wallet_sync_status_widget.dart';
+// import '../widgets/auto_sync_hook.dart';
 
 class ManageWalletsScreen extends ConsumerWidget {
   const ManageWalletsScreen({super.key});
-
-  Widget _buildSyncStatusIndicator() {
-    return const WalletSyncStatusWidget();
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final currentUser = ref.watch(currentUserProvider);
-
-    return AutoSyncScreenBuilder(
-      builder: (context) => Scaffold(
-        appBar: AppBar(
-          title: const Text('Manage Wallets'),
-          actions: [
-            // Wallet Sync Status Widget
-            _buildSyncStatusIndicator(),
-            const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: () {
-                // Check if user is authenticated before showing dialog
-                final user = currentUser.valueOrNull;
-                if (user != null) {
-                  _showAddWalletDialog(context, ref);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Please wait for authentication to complete',
-                      ),
-                    ),
-                  );
-                }
-              },
-            ),
-          ],
-        ),
-        body: currentUser.when(
-          data: (user) {
-            if (user == null) {
-              return const Center(child: Text('Please login first'));
-            }
-
-            final walletsAsync = ref.watch(walletsProvider(user.id));
-
-            return walletsAsync.when(
-              data: (wallets) {
-                if (wallets.isEmpty) {
-                  return _buildEmptyState(context, ref, user.id);
-                }
-
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    try {
-                      ref.invalidate(walletsProvider(user.id));
-                      final walletService = ref.read(walletServiceProvider);
-                      await walletService.syncWallets(user.id);
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Sync failed: ${e.toString()}'),
-                            backgroundColor: Colors.orange,
-                          ),
-                        );
-                      }
-                    }
-                  },
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: wallets.length,
-                    itemBuilder: (context, index) {
-                      final wallet = wallets[index];
-                      return _buildWalletCard(context, ref, wallet, user.id);
-                    },
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Manage Wallets'),
+        actions: [
+          // Sync status indicator removed (online-only architecture)
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () {
+              // Check if user is authenticated before showing dialog
+              final user = currentUser.valueOrNull;
+              if (user != null) {
+                _showAddWalletDialog(context, ref);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please wait for authentication to complete'),
                   ),
                 );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: theme.colorScheme.error,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Error loading wallets',
-                      style: theme.textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      error.toString(),
-                      style: theme.textTheme.bodyMedium,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: () => ref.invalidate(walletsProvider(user.id)),
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-          loading: () => const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Loading user data...'),
-              ],
-            ),
+              }
+            },
           ),
-          error: (error, stack) => Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: theme.colorScheme.error,
+        ],
+      ),
+      body: currentUser.when(
+        data: (user) {
+          if (user == null) {
+            return const Center(child: Text('Please login first'));
+          }
+
+          final walletsAsync = ref.watch(walletsProvider(user.id));
+
+          return walletsAsync.when(
+            data: (wallets) {
+              if (wallets.isEmpty) {
+                return _buildEmptyState(context, ref, user.id);
+              }
+
+              return RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(walletsProvider(user.id));
+                },
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: wallets.length,
+                  itemBuilder: (context, index) {
+                    final wallet = wallets[index];
+                    return _buildWalletCard(context, ref, wallet, user.id);
+                  },
                 ),
-                const SizedBox(height: 16),
-                Text('Authentication Error', style: theme.textTheme.titleLarge),
-                const SizedBox(height: 8),
-                Text(
-                  error.toString(),
-                  style: theme.textTheme.bodyMedium,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: () => ref.invalidate(currentUserProvider),
-                  child: const Text('Retry'),
-                ),
-              ],
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stack) => Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: theme.colorScheme.error,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error loading wallets',
+                    style: theme.textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    error.toString(),
+                    style: theme.textTheme.bodyMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: () => ref.invalidate(walletsProvider(user.id)),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
             ),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: theme.colorScheme.error,
+              ),
+              const SizedBox(height: 16),
+              Text('Authentication Error', style: theme.textTheme.titleLarge),
+              const SizedBox(height: 8),
+              Text(
+                error.toString(),
+                style: theme.textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () => ref.invalidate(currentUserProvider),
+                child: const Text('Retry'),
+              ),
+            ],
           ),
         ),
       ),
@@ -230,45 +197,7 @@ class ManageWalletsScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            // Sync status indicator - only show when needs sync
-            if (wallet.needsSync) ...[
-              const SizedBox(width: 8),
-              Tooltip(
-                message: 'Waiting to sync with server',
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Colors.orange.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.sync_problem,
-                        size: 12,
-                        color: Colors.orange[700],
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Sync',
-                        style: TextStyle(
-                          color: Colors.orange[700],
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            // Sync status indicator removed
           ],
         ),
         subtitle: Column(
@@ -306,22 +235,7 @@ class ManageWalletsScreen extends ConsumerWidget {
                 children: [Icon(Icons.edit), SizedBox(width: 8), Text('Edit')],
               ),
             ),
-            // Show sync option only if wallet needs sync
-            if (wallet.needsSync)
-              PopupMenuItem(
-                value: 'sync',
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.sync, size: 18, color: Colors.orange[700]),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Force Sync',
-                      style: TextStyle(color: Colors.orange[700]),
-                    ),
-                  ],
-                ),
-              ),
+            // sync option removed
             PopupMenuItem(
               value: wallet.isActive ? 'deactivate' : 'activate',
               child: Row(
@@ -361,9 +275,6 @@ class ManageWalletsScreen extends ConsumerWidget {
     switch (action) {
       case 'edit':
         _showEditWalletDialog(context, ref, wallet);
-        break;
-      case 'sync':
-        _forceSyncWallet(context, ref, wallet);
         break;
       case 'activate':
       case 'deactivate':
@@ -549,8 +460,7 @@ class ManageWalletsScreen extends ConsumerWidget {
               'Last Updated',
               '${wallet.updatedAt.day}/${wallet.updatedAt.month}/${wallet.updatedAt.year}',
             ),
-            if (wallet.needsSync)
-              _buildDetailRow('Sync Status', 'Pending sync'),
+            // sync status removed
           ],
         ),
         actions: [
@@ -582,58 +492,7 @@ class ManageWalletsScreen extends ConsumerWidget {
     );
   }
 
-  void _forceSyncWallet(
-    BuildContext context,
-    WidgetRef ref,
-    Wallet wallet,
-  ) async {
-    try {
-      // Show loading indicator
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text('Syncing ${wallet.name}...'),
-            ],
-          ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-
-      final walletService = ref.read(walletServiceProvider);
-      await walletService.forceSyncWallet(wallet.id, wallet.userId);
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${wallet.name} synced successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        // Refresh the wallets list
-        ref.invalidate(walletsProvider(wallet.userId));
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Sync failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
+  // _forceSyncWallet removed
 }
 
 class WalletFormDialog extends StatefulWidget {

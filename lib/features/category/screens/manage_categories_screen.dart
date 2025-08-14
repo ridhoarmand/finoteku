@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/category_providers.dart';
+import '../services/category_service.dart'; // for categoryServiceProvider
 import '../../../services/supabase_service.dart';
 import '../../../models/category.dart';
 import '../../../utils/category_icon_helper.dart';
 import '../widgets/category_form_dialog.dart';
-import '../widgets/category_sync_status_widget.dart';
 import '../widgets/category_delete_dialog.dart';
-import '../widgets/category_template_dialog.dart';
 
 class ManageCategoriesScreen extends ConsumerStatefulWidget {
   const ManageCategoriesScreen({super.key});
@@ -33,10 +32,6 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
     super.dispose();
   }
 
-  Widget _buildSyncStatusIndicator() {
-    return const CategorySyncStatusWidget();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -50,8 +45,6 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
           ],
         ),
         actions: [
-          _buildSyncStatusIndicator(),
-          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => _showAddCategoryDialog(context),
@@ -93,7 +86,7 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
     String? parentId,
   ) async {
     if (!context.mounted) return;
-    
+
     try {
       final userId = SupabaseService.currentUserId;
       if (userId == null) {
@@ -108,18 +101,23 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
         iconCodePoint: icon != null
             ? CategoryIconHelper.getCodePointFromIcon(icon)
             : null,
-        color: color.value, // ignore: deprecated_member_use
+  // Using value for ARGB int; if migrating to Color.toARGB32() adjust here.
+  // ignore: deprecated_member_use
+  color: color.value,
       );
 
       await categoryService.createCategory(userId, request);
-
       if (mounted) {
+        // Refresh all categories providers first so UI updates immediately
+        refreshCategoryProviders(ref);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('$name category added successfully')),
         );
-
-        // Refresh all categories providers
-        refreshCategoryProviders(ref);
+        // Return success flag if this screen was pushed expecting a result
+        if (Navigator.canPop(context)) {
+          // Don't pop automatically if user may want to add many; comment out to enable auto-pop
+          // Navigator.pop(context, true);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -172,7 +170,10 @@ class CategoryListTab extends ConsumerWidget {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () => ref.refresh(
-                      categoriesByTypeProvider((userId: userId, type: categoryType)),
+                      categoriesByTypeProvider((
+                        userId: userId,
+                        type: categoryType,
+                      )),
                     ),
                     child: const Text('Retry'),
                   ),
@@ -192,9 +193,7 @@ class CategoryListTab extends ConsumerWidget {
   ) {
     if (categories.isEmpty) {
       return RefreshIndicator(
-        onRefresh: () async {
-          refreshCategoryProviders(ref);
-        },
+        onRefresh: () async => refreshCategoryProviders(ref),
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: SizedBox(
@@ -224,11 +223,6 @@ class CategoryListTab extends ConsumerWidget {
                       context,
                     ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
                   ),
-                  const SizedBox(height: 16),
-                  
-                  // Check if should offer template import
-                  _buildTemplateImportButton(context, ref),
-                  
                   const SizedBox(height: 8),
                   Text(
                     'Pull down to refresh',
@@ -257,7 +251,7 @@ class CategoryListTab extends ConsumerWidget {
 
     for (int i = 0; i < parentCategories.length; i++) {
       final parent = parentCategories[i];
-      
+
       // Add parent category
       hierarchicalItems.add(
         _buildCategoryItem(context, ref, parent, isParent: true),
@@ -272,10 +266,10 @@ class CategoryListTab extends ConsumerWidget {
         final isLastChild = j == children.length - 1;
         hierarchicalItems.add(
           _buildCategoryItem(
-            context, 
-            ref, 
-            child, 
-            isChild: true, 
+            context,
+            ref,
+            child,
+            isChild: true,
             isLastChild: isLastChild,
           ),
         );
@@ -305,42 +299,7 @@ class CategoryListTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildTemplateImportButton(BuildContext context, WidgetRef ref) {
-    final userId = SupabaseService.currentUserId;
-    if (userId == null) return const SizedBox.shrink();
-
-    // Watch untuk check apakah harus tampilkan tombol template
-    final shouldOfferAsync = ref.watch(shouldOfferTemplateProvider(userId));
-    
-    return shouldOfferAsync.when(
-      data: (shouldOffer) {
-        if (!shouldOffer) return const SizedBox.shrink();
-        
-        return Column(
-          children: [
-            OutlinedButton.icon(
-              onPressed: () => CategoryTemplateDialog.handleTemplateImport(context, ref),
-              icon: const Icon(Icons.file_download_outlined),
-              label: const Text('Import Category Templates'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'or',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[400],
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
-        );
-      },
-      loading: () => const SizedBox.shrink(),
-      error: (_, _) => const SizedBox.shrink(),
-    );
-  }
+  // Template import button removed (templates no longer offered in online-only mode)
 
   Widget _buildCategoryItem(
     BuildContext context,
@@ -355,10 +314,10 @@ class CategoryListTab extends ConsumerWidget {
     IconData icon = category.iconCodePoint != null
         ? CategoryIconHelper.getIconFromCodePoint(category.iconCodePoint)
         : CategoryIconHelper.getIconForCategory(category.name);
-    
+
     // Use color from database if available, otherwise use default
-    Color color = category.color != null 
-        ? Color(category.color!) 
+    Color color = category.color != null
+        ? Color(category.color!)
         : Theme.of(context).colorScheme.primary;
 
     // Different styling based on hierarchy level
@@ -387,8 +346,8 @@ class CategoryListTab extends ConsumerWidget {
       );
       // Close spacing for children, but add extra bottom margin for last child to separate from next parent
       cardMargin = EdgeInsets.only(
-        bottom: isLastChild ? 8 : 2, 
-        left: 20, 
+        bottom: isLastChild ? 8 : 2,
+        left: 20,
         top: 2,
       );
     } else if (isOrphan) {
@@ -412,7 +371,10 @@ class CategoryListTab extends ConsumerWidget {
         backgroundColor: color.withValues(alpha: 0.15),
         child: Icon(icon, color: color, size: 20),
       );
-      cardMargin = const EdgeInsets.only(bottom: 2, top: 4); // Close to children, normal spacing above
+      cardMargin = const EdgeInsets.only(
+        bottom: 2,
+        top: 4,
+      ); // Close to children, normal spacing above
     }
 
     return Card(
@@ -441,40 +403,7 @@ class CategoryListTab extends ConsumerWidget {
                 ),
               ),
             ),
-            // Sync status indicator - only show when needs sync
-            if (category.needsSync) ...[
-              const SizedBox(width: 8),
-              Tooltip(
-                message: 'Waiting to sync with server',
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.sync_problem,
-                        size: 12,
-                        color: Colors.orange[700],
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Sync',
-                        style: TextStyle(
-                          color: Colors.orange[700],
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            // Sync status indicator removed
           ],
         ),
         trailing: PopupMenuButton<String>(
@@ -486,9 +415,6 @@ class CategoryListTab extends ConsumerWidget {
                 break;
               case 'delete':
                 _showDeleteConfirmation(context, ref, category);
-                break;
-              case 'sync':
-                _forceSyncCategory(context, ref, category);
                 break;
             }
           },
@@ -504,22 +430,6 @@ class CategoryListTab extends ConsumerWidget {
                 ],
               ),
             ),
-            // Show sync option only if category needs sync
-            if (category.needsSync)
-              PopupMenuItem(
-                value: 'sync',
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.sync, size: 18, color: Colors.orange[700]),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Force Sync',
-                      style: TextStyle(color: Colors.orange[700]),
-                    ),
-                  ],
-                ),
-              ),
             const PopupMenuItem(
               value: 'delete',
               child: Row(
@@ -594,7 +504,7 @@ class CategoryListTab extends ConsumerWidget {
     String? parentId,
   ) async {
     if (!context.mounted) return;
-    
+
     try {
       final userId = SupabaseService.currentUserId;
       if (userId == null) {
@@ -642,65 +552,4 @@ class CategoryListTab extends ConsumerWidget {
     CategoryDeleteDialog.show(context, ref, category);
   }
 
-  void _forceSyncCategory(
-    BuildContext context,
-    WidgetRef ref,
-    Category category,
-  ) async {
-    if (!context.mounted) return;
-    
-    try {
-      final userId = SupabaseService.currentUserId;
-      if (userId == null) {
-        throw Exception('User not authenticated');
-      }
-
-      // Show loading indicator
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text('Syncing ${category.name}...'),
-              ],
-            ),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-
-      final categoryService = ref.read(categoryServiceProvider);
-      await categoryService.forceSyncCategory(category.id, userId);
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${category.name} synced successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        // Refresh all categories providers
-        refreshCategoryProviders(ref);
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Sync failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
 }

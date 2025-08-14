@@ -3,20 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../wallet/services/wallet_service.dart';
 import '../../wallet/providers/wallet_providers.dart';
 import '../../category/services/category_service.dart';
-import '../../category/providers/category_providers.dart';
-import '../../transaction/services/transaction_service.dart';
-import '../../transaction/providers/transaction_providers.dart';
-import '../../../services/connectivity_service.dart';
 import '../../../models/wallet.dart';
 
 /// Service untuk mengelola initial data setup dan full sync
 class InitialDataService {
   final WalletService _walletService;
   final CategoryService _categoryService;
-  final TransactionService _transactionService;
-  final Ref _ref;
 
-  InitialDataService(this._walletService, this._categoryService, this._transactionService, this._ref);
+  InitialDataService(
+    this._walletService,
+    this._categoryService,
+  );
 
   /// Setup initial data untuk new user (dipanggil saat register)
   Future<void> setupInitialData(String userId) async {
@@ -42,103 +39,9 @@ class InitialDataService {
     }
   }
 
-  /// Full sync untuk existing user (dipanggil saat login)
-  Future<void> performFullSync(String userId) async {
-    try {
-      if (kDebugMode) {
-        print('🔄 Starting full sync for user: $userId');
-      }
 
-      // Check connection
-      final isConnected = await _ref.read(connectionStatusProvider.future);
-      if (!isConnected) {
-        throw Exception('No internet connection for full sync');
-      }
+  // _syncFromServerToLocal removed (online-only)
 
-      // Step 1: Sync dari server ke local (download)
-      await _syncFromServerToLocal(userId);
-
-      // Step 2: Sync dari local ke server (upload unsynced)
-      await _syncFromLocalToServer(userId);
-
-      if (kDebugMode) {
-        print('✅ Full sync completed for user: $userId');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Full sync failed: $e');
-      }
-      throw Exception('Full sync failed: $e');
-    }
-  }
-
-  /// Sync data dari server ke local (download)
-  Future<void> _syncFromServerToLocal(String userId) async {
-    if (kDebugMode) {
-      print('📥 Syncing data from server to local...');
-    }
-
-    // Sync wallets dari server
-    try {
-      await _walletService.syncWallets(userId);
-    } catch (e) {
-      if (kDebugMode) {
-        print('⚠️ Wallet sync from server failed: $e');
-      }
-    }
-
-    // Sync categories dari server
-    try {
-      await _categoryService.syncCategories(userId);
-    } catch (e) {
-      if (kDebugMode) {
-        print('⚠️ Category sync from server failed: $e');
-      }
-    }
-
-    // Sync transactions dari server
-    try {
-      await _transactionService.syncTransactions(userId);
-    } catch (e) {
-      if (kDebugMode) {
-        print('⚠️ Transaction sync from server failed: $e');
-      }
-    }
-  }
-
-  /// Sync data dari local ke server (upload unsynced)
-  Future<void> _syncFromLocalToServer(String userId) async {
-    if (kDebugMode) {
-      print('📤 Syncing unsynced data from local to server...');
-    }
-
-    // Sync unsynced wallets
-    try {
-      await _walletService.syncUnsyncedWallets(userId);
-    } catch (e) {
-      if (kDebugMode) {
-        print('⚠️ Unsynced wallet upload failed: $e');
-      }
-    }
-
-    // Sync unsynced categories
-    try {
-      await _categoryService.syncUnsyncedCategories(userId);
-    } catch (e) {
-      if (kDebugMode) {
-        print('⚠️ Unsynced category upload failed: $e');
-      }
-    }
-
-    // Sync unsynced transactions
-    try {
-      await _transactionService.syncUnsyncedTransactions(userId);
-    } catch (e) {
-      if (kDebugMode) {
-        print('⚠️ Unsynced transaction upload failed: $e');
-      }
-    }
-  }
 
   /// Create default wallet untuk new user
   Future<void> _createDefaultWallet(String userId) async {
@@ -194,8 +97,7 @@ class InitialDataService {
         return;
       }
 
-      // Use existing method from CategoryService to avoid code duplication
-      await _categoryService.importDefaultCategories(userId);
+  // Default categories import removed (template/import deprecated)
 
       if (kDebugMode) {
         print('✅ Default categories created successfully');
@@ -240,8 +142,7 @@ class InitialDataService {
 final initialDataServiceProvider = Provider<InitialDataService>((ref) {
   final walletService = ref.watch(walletServiceProvider);
   final categoryService = ref.watch(categoryServiceProvider);
-  final transactionService = ref.watch(transactionServiceProvider);
-  return InitialDataService(walletService, categoryService, transactionService, ref);
+    return InitialDataService(walletService, categoryService);
 });
 
 /// Provider untuk setup initial data (new user)
@@ -261,19 +162,4 @@ final setupInitialDataProvider = FutureProvider.family<bool, String>((
   }
 });
 
-/// Provider untuk full sync (existing user login)
-final fullSyncProvider = FutureProvider.family<bool, String>((
-  ref,
-  userId,
-) async {
-  final service = ref.read(initialDataServiceProvider);
-  try {
-    await service.performFullSync(userId);
-    return true;
-  } catch (e) {
-    if (kDebugMode) {
-      print('Full sync failed: $e');
-    }
-    return false;
-  }
-});
+// fullSyncProvider removed (online-only mode)
