@@ -1,17 +1,14 @@
 {
   "name": "Flutter Dev",
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
-  "features": {
-    "ghcr.io/devcontainers/features/flutter:1": {
-      "version": "stable"
-    }
+  "build": {
+    "dockerfile": "Dockerfile"
   },
   // Web jarang dipakai -> tidak otomatis enable-web atau expose port.
   // Jika butuh web sekali waktu:
-  // 1. Jalankan di terminal container: flutter config --enable-web && flutter precache --web
-  // 2. (Opsional) Tambah port: buka file ini dan aktifkan forwardPorts [8080]
-  // 3. Run: flutter run -d web-server --web-port=8080
-  "postCreateCommand": "flutter pub get && flutter doctor",
+  // 1. flutter config --enable-web && flutter precache --web
+  // 2. (Opsional) forwardPorts [8080]
+  // 3. flutter run -d web-server --web-port=8080
+  "postCreateCommand": "flutter pub get || true",
   "customizations": {
     "vscode": {
       "settings": {
