@@ -6,6 +6,7 @@ import '../../settings/preferences_settings_widget.dart';
 import '../widgets/wallet_category_settings_widget.dart';
 import '../widgets/support_settings_widget.dart';
 import '../widgets/logout_button_widget.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
@@ -15,9 +16,9 @@ class AccountScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final currentUser = ref.watch(currentUserProvider);
 
-    return Scaffold(
+  return Scaffold(
       appBar: AppBar(
-        title: const Text('Account'),
+    title: Text(ref.tr(context, 'account_title')),
         automaticallyImplyLeading: false,
       ),
       body: currentUser.when(
@@ -58,7 +59,7 @@ class AccountScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Error loading user data',
+                ref.tr(context, 'error_loading_user'),
                 style: theme.textTheme.titleLarge,
               ),
               const SizedBox(height: 8),
@@ -70,7 +71,7 @@ class AccountScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () => ref.refresh(currentUserProvider),
-                child: const Text('Retry'),
+                child: Text(ref.tr(context, 'retry')),
               ),
             ],
           ),

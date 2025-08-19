@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class ProfileSectionWidget extends ConsumerWidget {
   final User? user;
@@ -73,7 +74,7 @@ class ProfileSectionWidget extends ConsumerWidget {
                       ),
                     ),
                   Text(
-                    user?.email ?? 'Unknown user',
+                    user?.email ?? ref.tr(context, 'unknown_user'),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -83,7 +84,7 @@ class ProfileSectionWidget extends ConsumerWidget {
                     onPressed: () {
                       context.push('/account/edit-profile');
                     },
-                    child: const Text('Edit Profile'),
+                    child: Text(ref.tr(context, 'edit_profile')),
                   ),
                 ],
               ),

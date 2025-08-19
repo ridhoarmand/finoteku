@@ -10,6 +10,7 @@ import '../../../services/supabase_service.dart';
 import '../../../utils/currency_formatter.dart';
 import '../../../models/wallet.dart';
 import '../../../core/state/balance_visibility_provider.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class TransactionScreen extends ConsumerStatefulWidget {
   const TransactionScreen({super.key});
@@ -34,7 +35,11 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     final user = ref.watch(currentUserProvider).value;
 
     if (user == null) {
-      return const Scaffold(body: Center(child: Text('Please login first')));
+      return Scaffold(
+        body: Center(
+          child: Text(ref.tr(context, 'login_required_short')),
+        ),
+      );
     }
 
     final walletsAsync = ref.watch(activeWalletsProvider(user.id));
@@ -55,7 +60,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Transactions'),
+        title: Text(ref.tr(context, 'transactions_title')),
         automaticallyImplyLeading: false,
       ),
       body: Column(
@@ -91,8 +96,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                         wallets,
                       );
                     },
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
+                    loading: () => const Center(child: CircularProgressIndicator()),
                     error: (error, stack) =>
                         _buildErrorState(error, user.id, theme),
                   );
@@ -161,7 +165,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
             Row(
               children: [
                 Text(
-                  'Total Balance',
+                  ref.tr(context, 'total_balance'),
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: Colors.white70,
                     fontWeight: FontWeight.w500,
@@ -204,7 +208,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
             const SizedBox(height: 4),
             Text(
               _selectedWalletId == null
-                  ? 'Semua Dompet'
+                  ? ref.tr(context, 'wallet_all_wallets')
                   : (selected?.name ?? ''),
               style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
               overflow: TextOverflow.ellipsis,
@@ -238,7 +242,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
         ),
       ),
       error: (error, stack) => Text(
-        'Error loading balance',
+        ref.tr(context, 'error_loading_balance'),
         style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
       ),
     );
@@ -272,12 +276,12 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
               style: theme.textTheme.bodySmall?.copyWith(color: Colors.white),
               onChanged: (val) => setState(() => _selectedWalletId = val),
               items: [
-                const DropdownMenuItem<String?>(
+                DropdownMenuItem<String?>(
                   value: null,
                   child: Text(
-                    'Semua',
+                    ref.tr(context, 'wallet_all_short'),
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Colors.white),
+                    style: const TextStyle(color: Colors.white),
                   ),
                 ),
                 ...wallets.map(
@@ -364,7 +368,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
         });
       },
       decoration: InputDecoration(
-        hintText: 'Search transactions...',
+        hintText: ref.tr(context, 'search_transactions'),
         prefixIcon: Icon(Icons.search),
         suffixIcon: _searchQuery.isNotEmpty
             ? IconButton(
@@ -405,7 +409,11 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
         children: [
           Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
-          Text('Error loading transactions: $error'),
+          Text(
+            ref
+                .tr(context, 'error_loading_transactions')
+                .replaceFirst('{error}', error.toString()),
+          ),
           const SizedBox(height: 16),
           FilledButton(
             onPressed: () => ref.invalidate(
@@ -417,7 +425,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                 endDate: null,
               )),
             ),
-            child: const Text('Retry'),
+            child: Text(ref.tr(context, 'retry')),
           ),
         ],
       ),
@@ -434,14 +442,14 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
           Icon(Icons.receipt_long_outlined, size: 80, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
-            'No Transactions Yet',
+            ref.tr(context, 'transactions_empty_title'),
             style: theme.textTheme.titleLarge?.copyWith(
               color: Colors.grey[600],
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Start by adding your first transaction',
+            ref.tr(context, 'transactions_empty_sub'),
             style: theme.textTheme.bodyMedium?.copyWith(
               color: Colors.grey[500],
             ),
@@ -466,7 +474,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
               }
             },
             icon: const Icon(Icons.add),
-            label: const Text('Add Transaction'),
+            label: Text(ref.tr(context, 'add_transaction')),
           ),
         ],
       ),
@@ -584,7 +592,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            category?.name ?? 'Uncategorized',
+                            category?.name ?? ref.tr(context, 'uncategorized'),
                             style: theme.textTheme.titleMedium,
                           ),
                           const SizedBox(height: 2),
@@ -605,7 +613,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          wallet?.name ?? 'Wallet',
+                          wallet?.name ?? ref.tr(context, 'wallet_label'),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
@@ -633,38 +641,38 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     if (_isSameDay(date, now)) {
-      return 'Hari ini';
+      return ref.tr(context, 'day_today');
     }
     final yesterday = DateTime(now.year, now.month, now.day - 1);
     if (_isSameDay(date, yesterday)) {
-      return 'Kemarin';
+      return ref.tr(context, 'day_yesterday');
     }
-    const hari = [
-      'Senin',
-      'Selasa',
-      'Rabu',
-      'Kamis',
-      'Jumat',
-      'Sabtu',
-      'Minggu',
+
+    final weekdayKeys = [
+      'weekday_monday',
+      'weekday_tuesday',
+      'weekday_wednesday',
+      'weekday_thursday',
+      'weekday_friday',
+      'weekday_saturday',
+      'weekday_sunday',
     ];
-    const bulan = [
-      'Januari',
-      'Februari',
-      'Maret',
-      'April',
-      'Mei',
-      'Juni',
-      'Juli',
-      'Agustus',
-      'September',
-      'Oktober',
-      'November',
-      'Desember',
+    final monthKeys = [
+      'month_january',
+      'month_february',
+      'month_march',
+      'month_april',
+      'month_may',
+      'month_june',
+      'month_july',
+      'month_august',
+      'month_september',
+      'month_october',
+      'month_november',
+      'month_december',
     ];
-    // Dart weekday: Monday=1 ... Sunday=7
-    final weekdayName = hari[date.weekday - 1];
-    final monthName = bulan[date.month - 1];
+    final weekdayName = ref.tr(context, weekdayKeys[date.weekday - 1]);
+    final monthName = ref.tr(context, monthKeys[date.month - 1]);
     return '$weekdayName, ${date.day} $monthName ${date.year}';
   }
 

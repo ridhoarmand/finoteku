@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/edit_profile_provider.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class ProfileFormWidget extends ConsumerWidget {
   final GlobalKey<FormState> formKey;
@@ -27,7 +28,7 @@ class ProfileFormWidget extends ConsumerWidget {
         children: [
           // Personal Information Section
           Text(
-            'Personal Information',
+            ref.tr(context, 'personal_info'),
             style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -37,20 +38,20 @@ class ProfileFormWidget extends ConsumerWidget {
           // Full Name Field
           TextFormField(
             controller: fullNameController,
-            decoration: const InputDecoration(
-              labelText: 'Full Name',
-              hintText: 'Enter your full name',
-              prefixIcon: Icon(Icons.person_outline),
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: ref.tr(context, 'full_name'),
+              hintText: ref.tr(context, 'full_name_hint'),
+              prefixIcon: const Icon(Icons.person_outline),
+              border: const OutlineInputBorder(),
             ),
             textInputAction: TextInputAction.next,
             onChanged: (_) => ref.read(editProfileProvider.notifier).setHasChanges(true),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
-                return 'Full name is required';
+                return ref.tr(context, 'full_name_required');
               }
               if (value.trim().length < 2) {
-                return 'Full name must be at least 2 characters';
+                return ref.tr(context, 'full_name_min_length');
               }
               return null;
             },
@@ -60,19 +61,19 @@ class ProfileFormWidget extends ConsumerWidget {
           // Email Field (Read-only)
           TextFormField(
             controller: emailController,
-            decoration: const InputDecoration(
-              labelText: 'Email Address',
-              hintText: 'Enter your email',
-              prefixIcon: Icon(Icons.email_outlined),
-              border: OutlineInputBorder(),
-              suffixIcon: Icon(Icons.lock_outline),
+            decoration: InputDecoration(
+              labelText: ref.tr(context, 'email_address'),
+              hintText: ref.tr(context, 'email_address_hint'),
+              prefixIcon: const Icon(Icons.email_outlined),
+              border: const OutlineInputBorder(),
+              suffixIcon: const Icon(Icons.lock_outline),
             ),
             readOnly: true,
             enabled: false,
           ),
           const SizedBox(height: 4),
           Text(
-            'Email cannot be changed. Contact support if needed.',
+            ref.tr(context, 'email_locked_note'),
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -82,11 +83,11 @@ class ProfileFormWidget extends ConsumerWidget {
           // Phone Field
           TextFormField(
             controller: phoneController,
-            decoration: const InputDecoration(
-              labelText: 'Phone Number',
-              hintText: 'Enter your phone number',
-              prefixIcon: Icon(Icons.phone_outlined),
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: ref.tr(context, 'phone_number'),
+              hintText: ref.tr(context, 'phone_number_hint'),
+              prefixIcon: const Icon(Icons.phone_outlined),
+              border: const OutlineInputBorder(),
             ),
             keyboardType: TextInputType.phone,
             textInputAction: TextInputAction.done,
@@ -96,10 +97,10 @@ class ProfileFormWidget extends ConsumerWidget {
                 // Basic phone validation
                 final phoneRegex = RegExp(r'^\+?[\d\s\-\(\)]+$');
                 if (!phoneRegex.hasMatch(value.trim())) {
-                  return 'Please enter a valid phone number';
+                  return ref.tr(context, 'phone_invalid');
                 }
                 if (value.trim().length < 10) {
-                  return 'Phone number must be at least 10 digits';
+                  return ref.tr(context, 'phone_too_short');
                 }
               }
               return null;

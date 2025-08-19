@@ -13,6 +13,7 @@ import '../features/account/screens/account_screen.dart';
 import '../features/account/screens/edit_profile_screen.dart';
 import '../features/account/screens/change_password_screen.dart';
 import '../features/settings/theme_settings_screen.dart';
+import '../features/settings/language_settings_screen.dart';
 import '../features/onboarding/screens/onboarding_screen.dart';
 import '../features/splash/splash_screen.dart';
 import '../features/wallet/screens/manage_wallets_screen.dart';
@@ -125,6 +126,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'theme-settings',
                 builder: (context, state) => const ThemeSettingsScreen(),
+              ),
+              GoRoute(
+                path: 'language-settings',
+                builder: (context, state) => const LanguageSettingsScreen(),
               ),
               GoRoute(
                 path: 'notifications',

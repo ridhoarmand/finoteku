@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/localization/app_localizations.dart';
 
-class MainShell extends StatelessWidget {
+class MainShell extends ConsumerWidget {
   final Widget child;
 
   const MainShell({super.key, required this.child});
@@ -23,7 +25,7 @@ class MainShell extends StatelessWidget {
     }
   }
 
-  Future<bool> _onWillPop(BuildContext context) async {
+  Future<bool> _onWillPop(BuildContext context, WidgetRef ref) async {
     // Jika sedang di tab Home, tampilkan konfirmasi keluar
     final currentIndex = _getCurrentIndex(context);
     if (currentIndex != 0) {
@@ -33,19 +35,19 @@ class MainShell extends StatelessWidget {
     }
 
     // Jika di Home tab, tampilkan dialog konfirmasi keluar
-    return await showDialog<bool>(
+  return await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Keluar Aplikasi'),
-        content: const Text('Apakah Anda yakin ingin keluar dari aplikasi?'),
+    title: Text(ref.tr(context, 'exit_app_title')),
+    content: Text(ref.tr(context, 'exit_app_message')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Batal'),
+      child: Text(ref.tr(context, 'exit_cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Keluar'),
+      child: Text(ref.tr(context, 'exit_confirm')),
           ),
         ],
       ),
@@ -53,7 +55,7 @@ class MainShell extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     
     return PopScope(
@@ -61,7 +63,7 @@ class MainShell extends StatelessWidget {
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         
-        final shouldPop = await _onWillPop(context);
+  final shouldPop = await _onWillPop(context, ref);
         if (shouldPop && context.mounted) {
           SystemNavigator.pop();
         }
@@ -91,26 +93,26 @@ class MainShell extends StatelessWidget {
                 break;
             }
           },
-          items: const [
+      items: [
             BottomNavigationBarItem(
               icon: Icon(Icons.home_outlined),
               activeIcon: Icon(Icons.home),
-              label: 'Home',
+        label: ref.tr(context, 'nav_home'),
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.receipt_long_outlined),
               activeIcon: Icon(Icons.receipt_long),
-              label: 'Transaction',
+        label: ref.tr(context, 'nav_transaction'),
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.bar_chart_outlined),
               activeIcon: Icon(Icons.bar_chart),
-              label: 'Chart',
+        label: ref.tr(context, 'nav_chart'),
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person_outline),
               activeIcon: Icon(Icons.person),
-              label: 'Account',
+        label: ref.tr(context, 'nav_account'),
             ),
           ],
         ),

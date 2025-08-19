@@ -7,6 +7,7 @@ import '../widgets/profile_avatar_widget.dart';
 import '../widgets/profile_form_widget.dart';
 import '../widgets/save_profile_button.dart';
 import '../widgets/account_settings_widget.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -71,7 +72,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             content: Text(profileState.error!),
             backgroundColor: Colors.red,
             action: SnackBarAction(
-              label: 'Dismiss',
+              label: ref.tr(context, 'dismiss'),
               onPressed: () {
                 ref.read(editProfileProvider.notifier).clearError();
               },
@@ -93,7 +94,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Edit Profile'),
+          title: Text(ref.tr(context, 'edit_profile')),
           leading: IconButton(
             icon: const Icon(Icons.close),
             onPressed: () => _handleBackPress(),

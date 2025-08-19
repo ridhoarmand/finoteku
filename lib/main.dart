@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'routes/app_routes.dart';
+import 'core/localization/locale_provider.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_provider.dart';
 import 'services/supabase_service.dart';
@@ -68,8 +70,9 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeProvider);
-    final router = ref.watch(routerProvider);
+  final themeMode = ref.watch(themeModeProvider);
+  final router = ref.watch(routerProvider);
+  final localeState = ref.watch(appLocaleProvider);
 
     return AppInitializer(
       child: MaterialApp.router(
@@ -78,6 +81,13 @@ class MyApp extends ConsumerWidget {
         darkTheme: AppTheme.dark,
         themeMode: themeMode,
         routerConfig: router,
+        locale: localeState.effectiveLocale,
+        supportedLocales: const [Locale('en'), Locale('id')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/theme_provider.dart';
+import '../../core/localization/app_localizations.dart';
 
 class ThemeSettingsScreen extends ConsumerWidget {
   const ThemeSettingsScreen({super.key});
@@ -8,11 +9,12 @@ class ThemeSettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final themeMode = ref.watch(themeModeProvider);
+  final themeMode = ref.watch(themeModeProvider);
+  String t(String key) => ref.tr(context, key);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Theme Settings'),
+  title: Text(t('theme_settings')),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
@@ -25,14 +27,14 @@ class ThemeSettingsScreen extends ConsumerWidget {
           children: [
             // Theme Options
             Text(
-              'Choose Theme',
+              t('choose_theme'),
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 12),
             Text(
-              'Select your preferred appearance for the app',
+              t('choose_theme_sub'),
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -46,8 +48,8 @@ class ThemeSettingsScreen extends ConsumerWidget {
               ThemeMode.light,
               themeMode,
               Icons.light_mode,
-              'Light Mode',
-              'Clean and bright interface',
+              t('light_mode'),
+              t('light_mode_sub'),
               () => ref.read(themeModeProvider.notifier).setLightMode(),
             ),
             const SizedBox(height: 12),
@@ -58,8 +60,8 @@ class ThemeSettingsScreen extends ConsumerWidget {
               ThemeMode.dark,
               themeMode,
               Icons.dark_mode,
-              'Dark Mode',
-              'Easy on the eyes in low light',
+              t('dark_mode_full'),
+              t('dark_mode_full_sub'),
               () => ref.read(themeModeProvider.notifier).setDarkMode(),
             ),
             const SizedBox(height: 12),
@@ -70,8 +72,8 @@ class ThemeSettingsScreen extends ConsumerWidget {
               ThemeMode.system,
               themeMode,
               Icons.brightness_auto,
-              'System Default',
-              'Follows your device settings',
+              t('system_default'),
+              t('system_default_sub'),
               () => ref.read(themeModeProvider.notifier).setSystemMode(),
             ),
             const SizedBox(height: 32),
