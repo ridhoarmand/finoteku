@@ -8,7 +8,7 @@ import '../features/auth/services/auth_service.dart';
 import '../features/home/home_screen.dart';
 import '../features/notification/screens/notification_screen.dart';
 import '../features/transaction/screens/transaction_screen.dart';
-import '../features/chart/chart_screen.dart';
+import '../features/chart/screens/chart_screen.dart';
 import '../features/account/screens/account_screen.dart';
 import '../features/account/screens/edit_profile_screen.dart';
 import '../features/account/screens/change_password_screen.dart';
