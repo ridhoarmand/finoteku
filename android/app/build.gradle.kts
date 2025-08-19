@@ -11,13 +11,15 @@ android {
     ndkVersion =  "27.0.12077973"
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-        isCoreLibraryDesugaringEnabled = true
+    // Upgrade to Java 17 (required by newer Android Gradle Plugin & recommended by Flutter 3.22+)
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+    isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8.toString()
+    // Match Kotlin JVM target with Java 17
+    jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     defaultConfig {
@@ -25,7 +27,9 @@ android {
         applicationId = "com.example.finoteku"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 21  // Minimum untuk exact alarms
+    // Kotlin DSL uses the property name `minSdk` instead of the Groovy method style `minSdkVersion`.
+    // The previous line caused a script compilation error.
+    minSdk = flutter.minSdkVersion  // Minimum untuk exact alarms
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

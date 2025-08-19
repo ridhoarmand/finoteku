@@ -520,7 +520,7 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
                 }).toList();
 
                 return DropdownButtonFormField<String?>(
-                  value: _selectedParentId,
+                  initialValue: _selectedParentId,
                   isExpanded: true, // Fix overflow
                   decoration: InputDecoration(
                     labelText: 'Parent Category (Optional)',
