@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/analytics_providers.dart';
-import '../../../utils/format_currency.dart';
+import '../../../utils/currency_formatter.dart';
 
 class SummaryStatsRow extends ConsumerWidget {
   const SummaryStatsRow({super.key});
@@ -30,7 +30,7 @@ class SummaryStatsRow extends ConsumerWidget {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: summaryAsync.when(
-                data: (s) => _StatTile(label: 'Net', value: formatCurrencyIDR(s.net), color: s.net >= 0 ? theme.colorScheme.secondary : theme.colorScheme.error),
+                data: (s) => _StatTile(label: 'Net', value: CurrencyFormatter.format(s.net, 'IDR'), color: s.net >= 0 ? theme.colorScheme.secondary : theme.colorScheme.error),
                 loading: () => const SizedBox(height: 40, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
                 error: (e, _) => _StatTile(label: 'Net', value: '-', color: theme.colorScheme.error),
               ),

@@ -1,13 +1,14 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../wallet/services/wallet_service.dart';
+// WalletService wrapper removed; use SupabaseWalletService directly
 import '../../wallet/providers/wallet_providers.dart';
+import '../../wallet/services/supabase_wallet_service.dart';
 import '../../category/services/category_service.dart';
 import '../../../models/wallet.dart';
 
 /// Service untuk mengelola initial data setup dan full sync
 class InitialDataService {
-  final WalletService _walletService;
+  final SupabaseWalletService _walletService;
   final CategoryService _categoryService;
 
   InitialDataService(
@@ -140,9 +141,9 @@ class InitialDataService {
 
 /// Provider untuk InitialDataService
 final initialDataServiceProvider = Provider<InitialDataService>((ref) {
-  final walletService = ref.watch(walletServiceProvider);
+  final walletService = ref.watch(walletRepositoryProvider);
   final categoryService = ref.watch(categoryServiceProvider);
-    return InitialDataService(walletService, categoryService);
+  return InitialDataService(walletService, categoryService);
 });
 
 /// Provider untuk setup initial data (new user)

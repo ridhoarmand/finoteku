@@ -1,8 +1,9 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/transaction.dart';
 import '../../../services/supabase_service.dart';
+import '../../../core/errors/failure.dart';
+import '../../../core/logging/logger.dart';
 
 // Provider untuk SupabaseTransactionService
 final supabaseTransactionServiceProvider = Provider<SupabaseTransactionService>((ref) {
@@ -16,7 +17,8 @@ class SupabaseTransactionService {
   SupabaseTransactionService(this._supabase);
 
   // Ambil semua transaction user dari server
-  Future<List<Transaction>> getTransactions(String userId, {
+  Future<List<Transaction>> getTransactions(
+    String userId, {
     String? walletId,
     String? categoryId,
     DateTime? startDate,
@@ -28,13 +30,8 @@ class SupabaseTransactionService {
           .select('*')
           .eq('user_id', userId);
 
-      // Apply filters
-      if (walletId != null) {
-        query = query.eq('wallet_id', walletId);
-      }
-      if (categoryId != null) {
-        query = query.eq('category_id', categoryId);
-      }
+      if (walletId != null) query = query.eq('wallet_id', walletId);
+      if (categoryId != null) query = query.eq('category_id', categoryId);
       if (startDate != null) {
         query = query.gte('date', startDate.toIso8601String().split('T')[0]);
       }
@@ -43,23 +40,14 @@ class SupabaseTransactionService {
       }
 
       final response = await query.order('date', ascending: false);
-
-      // Handle empty result
-      if (response.isEmpty) {
-        if (kDebugMode) {
-          print('ℹ️ No transactions found in server for user: $userId');
-        }
-        return [];
-      }
+      if (response.isEmpty) return [];
 
       return (response as List)
           .map((item) => Transaction.fromJson(_convertFromSupabase(item)))
           .toList();
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error fetching transactions from server: $e');
-      }
-      throw Exception('Failed to fetch transactions: $e');
+    } catch (e, st) {
+      AppLogger.e('fetch transactions failed', error: e, stackTrace: st);
+      throw mapException(e, st);
     }
   }
 
@@ -72,21 +60,14 @@ class SupabaseTransactionService {
           .eq('id', transactionId)
           .eq('user_id', userId)
           .single();
-
       return Transaction.fromJson(_convertFromSupabase(response));
-    } catch (e) {
-      if (e.toString().contains('No rows found') ||
-          e.toString().contains('multiple (or no) rows returned') ||
-          e.toString().contains('0 rows')) {
-        if (kDebugMode) {
-          print('ℹ️ Transaction not found in server: $transactionId');
-        }
+    } catch (e, st) {
+      final msg = e.toString();
+      if (msg.contains('No rows') || msg.contains('0 rows')) {
         return null;
       }
-      if (kDebugMode) {
-        print('❌ Error fetching transaction from server: $e');
-      }
-      throw Exception('Failed to fetch transaction: $e');
+      AppLogger.e('fetch transaction failed', error: e, stackTrace: st);
+      throw mapException(e, st);
     }
   }
 
@@ -96,12 +77,11 @@ class SupabaseTransactionService {
     CreateTransactionRequest request,
   ) async {
     try {
-      // Validasi dasar sesuai schema: category_id wajib & amount > 0
       if (request.categoryId == null || request.categoryId!.isEmpty) {
-        throw Exception('Category is required');
+        throw const ValidationFailure('Category is required');
       }
       if (request.amount <= 0) {
-        throw Exception('Amount must be greater than 0');
+        throw const ValidationFailure('Amount must be greater than 0');
       }
       final data = {
         'user_id': userId,
@@ -111,16 +91,16 @@ class SupabaseTransactionService {
         'notes': request.notes,
         'date': request.date.toIso8601String().split('T')[0],
       };
-
       final response = await _supabase
           .from('transactions')
           .insert(data)
           .select()
           .single();
-
       return Transaction.fromJson(_convertFromSupabase(response));
-    } catch (e) {
-      throw Exception(_friendlyError('create transaction', e));
+    } catch (e, st) {
+      AppLogger.e('create transaction failed', error: e, stackTrace: st);
+      if (e is Failure) rethrow;
+      throw mapException(e, st);
     }
   }
 
@@ -139,11 +119,10 @@ class SupabaseTransactionService {
       if (request.date != null) data['date'] = request.date!.toIso8601String().split('T')[0];
 
       if (data.isEmpty) {
-        throw Exception('No data to update');
+        throw const ValidationFailure('No data to update');
       }
-
       if (data.containsKey('amount') && (data['amount'] as num) <= 0) {
-        throw Exception('Amount must be greater than 0');
+        throw const ValidationFailure('Amount must be greater than 0');
       }
 
       final response = await _supabase
@@ -153,10 +132,11 @@ class SupabaseTransactionService {
           .eq('user_id', userId)
           .select()
           .single();
-
       return Transaction.fromJson(_convertFromSupabase(response));
-    } catch (e) {
-      throw Exception(_friendlyError('update transaction', e));
+    } catch (e, st) {
+      AppLogger.e('update transaction failed', error: e, stackTrace: st);
+      if (e is Failure) rethrow;
+      throw mapException(e, st);
     }
   }
 
@@ -168,8 +148,9 @@ class SupabaseTransactionService {
           .delete()
           .eq('id', transactionId)
           .eq('user_id', userId);
-    } catch (e) {
-    throw Exception(_friendlyError('delete transaction', e));
+    } catch (e, st) {
+      AppLogger.e('delete transaction failed', error: e, stackTrace: st);
+      throw mapException(e, st);
     }
   }
 
@@ -198,18 +179,4 @@ class SupabaseTransactionService {
     return double.tryParse(value.toString()) ?? 0;
   }
 
-  String _friendlyError(String action, Object e) {
-    final message = e.toString();
-    if (message.contains('foreign key')) {
-      if (message.contains('wallet_id')) return 'Failed to $action: wallet not found';
-      if (message.contains('category_id')) return 'Failed to $action: category not found';
-    }
-    if (message.contains('amount') && message.contains('violates')) {
-      return 'Failed to $action: invalid amount';
-    }
-    if (message.contains('null value')) {
-      return 'Failed to $action: missing required field';
-    }
-    return 'Failed to $action: $e';
-  }
 }

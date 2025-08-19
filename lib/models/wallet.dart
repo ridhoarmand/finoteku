@@ -32,7 +32,6 @@ class Wallet {
       'is_active': isActive,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
-  // Offline flags removed
     };
   }
 

@@ -176,199 +176,35 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     );
   }
 
-  Widget _buildDateSection() {
-    return Card(
-      child: ListTile(
-        leading: const Icon(Icons.calendar_today),
-        title: const Text('Transaction Date'),
-        subtitle: Text(_formatDate(_selectedDate)),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+  Widget _buildDateSection() => _DateSection(
+        date: _selectedDate,
         onTap: _selectDate,
-      ),
-    );
-  }
+      );
 
-  Widget _buildAmountSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16), // Reduced from 20
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Amount', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 4), // Reduced from 8
-            TextFormField(
-              focusNode: _amountFocusNode,
-              controller: _amountController,
-              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                hintText: '0',
-                hintStyle: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
-                ),
-                prefixText: 'Rp ',
-                prefixStyle: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              keyboardType: TextInputType.number,
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: (_) => _unfocus(),
-              onTapOutside: (_) => _unfocus(),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-              ],
-              validator: (value) {
-                if (value?.isEmpty ?? true) {
-                  return 'Please enter an amount';
-                }
-                final amount = double.tryParse(value!);
-                if (amount == null || amount <= 0) {
-                  return 'Please enter a valid amount';
-                }
-                return null;
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget _buildAmountSection() => _AmountSection(
+        controller: _amountController,
+        focusNode: _amountFocusNode,
+        onSubmitted: _unfocus,
+        onTapOutside: _unfocus,
+      );
 
-  Widget _buildCategorySection(String userId) {
-    final categoriesAsync = ref.watch(categoriesProvider(userId));
+  Widget _buildCategorySection(String userId) => _CategorySection(
+        userId: userId,
+        selected: _selectedCategory,
+        onSelect: (c) => setState(() => _selectedCategory = c),
+        openSheet: _selectCategory,
+        ref: ref,
+      );
 
-    return Card(
-      child: Column(
-        children: [
-          ListTile(
-            leading: _selectedCategory != null
-                ? Icon(
-                    IconData(
-                      _selectedCategory!.iconCodePoint ?? Icons.category.codePoint,
-                      fontFamily: 'MaterialIcons',
-                    ),
-                    color: _selectedCategory!.color != null
-                        ? Color(_selectedCategory!.color!)
-                        : null,
-                  )
-                : const Icon(Icons.category),
-            title: Text(_selectedCategory?.name ?? 'Select Category'),
-            subtitle: _selectedCategory != null
-                ? Text(_selectedCategory!.type.name.toUpperCase())
-                : const Text('Choose transaction category'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () => _selectCategory(categoriesAsync.value ?? []),
-          ),
-          if ((_selectedCategory == null) && (categoriesAsync.value?.isEmpty ?? true))
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: () {
-                    if (!mounted) return;
-                    Navigator.of(context).pushNamed('/categories/manage').then((value) {
-                      if (!mounted) return;
-                      if (value == true) {
-                        final user = ref.read(currentUserProvider).value;
-                        if (user != null) {
-                          ref.invalidate(categoriesProvider(user.id));
-                        }
-                      }
-                    });
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text('Create Category'),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
+  Widget _buildWalletSection(String userId) => _WalletSection(
+        userId: userId,
+        selected: _selectedWallet,
+        onSelect: (w) => setState(() => _selectedWallet = w),
+        openSheet: _selectWallet,
+        ref: ref,
+      );
 
-  Widget _buildWalletSection(String userId) {
-    final walletsAsync = ref.watch(activeWalletsProvider(userId));
-
-    return Card(
-      child: Column(
-        children: [
-          ListTile(
-            leading: _selectedWallet != null
-                ? Icon(
-                    _getWalletIcon(_selectedWallet!.icon),
-                    color: Theme.of(context).primaryColor,
-                  )
-                : const Icon(Icons.account_balance_wallet),
-            title: Text(_selectedWallet?.name ?? 'Select Wallet'),
-            subtitle: _selectedWallet != null
-                ? Text(
-                    'Balance: ${CurrencyFormatter.format(_selectedWallet!.balance, _selectedWallet!.currency)}',
-                  )
-                : const Text('Choose wallet for transaction'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () => _selectWallet(walletsAsync.value ?? []),
-          ),
-          if ((_selectedWallet == null) && (walletsAsync.value?.isEmpty ?? true))
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: () {
-                    if (!mounted) return;
-                    Navigator.of(context).pushNamed('/wallets/manage').then((value) {
-                      if (!mounted) return;
-                      if (value == true) {
-                        final user = ref.read(currentUserProvider).value;
-                        if (user != null) {
-                          refreshWalletProviders(ref);
-                        }
-                      }
-                    });
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text('Create Wallet'),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNotesSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12), // Reduced from 16
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Notes (Optional)',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 4), // Reduced from 8
-            TextFormField(
-              controller: _notesController,
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                hintText: 'Add transaction details...',
-              ),
-              maxLines: 3,
-              textCapitalization: TextCapitalization.sentences,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget _buildNotesSection() => _NotesSection(controller: _notesController);
 
   Future<void> _selectDate() async {
   _unfocus();
@@ -467,8 +303,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           date: _selectedDate,
         );
 
-        final transactionService = ref.read(transactionServiceProvider);
-        await transactionService.updateTransaction(
+  final repo = ref.read(transactionRepositoryProvider);
+  await repo.updateTransaction(
           widget.initialTransaction!.id,
           user.id,
           request,
@@ -483,22 +319,15 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           date: _selectedDate,
         );
 
-        final transactionService = ref.read(transactionServiceProvider);
-        await transactionService.createTransaction(user.id, request);
+  final repo = ref.read(transactionRepositoryProvider);
+  await repo.createTransaction(user.id, request);
       }
 
       // Refresh transactions list and wallet balances
-      ref.invalidate(transactionsProvider(user.id));
-      ref.invalidate(
-        filteredTransactionsProvider,
-      ); // Fix: Invalidate filtered transactions
-      ref.invalidate(
-        transactionsSummaryProvider((
-          userId: user.id,
-          startDate: null,
-          endDate: null,
-        )),
-      );
+  refreshTransactionProviders(ref);
+  ref.invalidate(transactionsProvider(user.id));
+  ref.invalidate(filteredTransactionsProvider);
+  ref.invalidate(transactionsSummaryProvider((userId: user.id, startDate: null, endDate: null)));
       // Refresh wallet data to show updated balance
       refreshWalletProviders(ref);
       if (_selectedWallet != null) {
@@ -542,22 +371,131 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   FocusManager.instance.primaryFocus?.unfocus();
   }
 
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    if (date.year == now.year &&
-        date.month == now.month &&
-        date.day == now.day) {
-      return 'Today';
-    } else if (date.year == now.year &&
-        date.month == now.month &&
-        date.day == now.day - 1) {
-      return 'Yesterday';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
-    }
-  }
+}
 
-  IconData _getWalletIcon(String? icon) {
+// --- Extracted Section Widgets ---
+
+class _DateSection extends StatelessWidget {
+  final DateTime date; final VoidCallback onTap;
+  const _DateSection({required this.date, required this.onTap});
+  static String format(DateTime date) {
+    final now = DateTime.now();
+    if (date.year == now.year && date.month == now.month && date.day == now.day) return 'Today';
+    if (date.year == now.year && date.month == now.month && date.day == now.day - 1) return 'Yesterday';
+    return '${date.day}/${date.month}/${date.year}';
+  }
+  @override
+  Widget build(BuildContext context) => Card(
+        child: ListTile(
+          leading: const Icon(Icons.calendar_today),
+          title: const Text('Transaction Date'),
+          subtitle: Text(format(date)),
+          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+          onTap: onTap,
+        ),
+      );
+}
+
+class _AmountSection extends StatelessWidget {
+  final TextEditingController controller; final FocusNode focusNode; final VoidCallback onSubmitted; final VoidCallback onTapOutside;
+  const _AmountSection({required this.controller, required this.focusNode, required this.onSubmitted, required this.onTapOutside});
+  @override
+  Widget build(BuildContext context) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Amount', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 4),
+            TextFormField(
+              focusNode: focusNode,
+              controller: controller,
+              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                hintText: '0',
+                hintStyle: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.grey),
+                prefixText: 'Rp ',
+                prefixStyle: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black87),
+              ),
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => onSubmitted(),
+              onTapOutside: (_) => onTapOutside(),
+              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+              validator: (value) {
+                if (value?.isEmpty ?? true) return 'Please enter an amount';
+                final amount = double.tryParse(value!); if (amount == null || amount <= 0) return 'Please enter a valid amount';
+                return null;
+              },
+            ),
+          ]),
+        ),
+      );
+}
+
+class _NotesSection extends StatelessWidget {
+  final TextEditingController controller; const _NotesSection({required this.controller});
+  @override
+  Widget build(BuildContext context) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Notes (Optional)', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 4),
+            TextFormField(
+              controller: controller,
+              decoration: const InputDecoration(border: InputBorder.none, hintText: 'Add transaction details...'),
+              maxLines: 3,
+              textCapitalization: TextCapitalization.sentences,
+            ),
+          ]),
+        ),
+      );
+}
+
+class _CategorySection extends ConsumerWidget {
+  final String userId; final Category? selected; final void Function(Category?) onSelect; final void Function(List<Category>) openSheet; final WidgetRef ref;
+  const _CategorySection({required this.userId, required this.selected, required this.onSelect, required this.openSheet, required this.ref});
+  @override
+  Widget build(BuildContext context, WidgetRef ref2) {
+    final categoriesAsync = ref.watch(categoriesProvider(userId));
+    final cats = categoriesAsync.value ?? [];
+    return Card(child: Column(children: [
+      ListTile(
+        leading: selected != null
+            ? Icon(IconData(selected!.iconCodePoint ?? Icons.category.codePoint, fontFamily: 'MaterialIcons'), color: selected!.color != null ? Color(selected!.color!) : null)
+            : const Icon(Icons.category),
+        title: Text(selected?.name ?? 'Select Category'),
+        subtitle: selected != null ? Text(selected!.type.name.toUpperCase()) : const Text('Choose transaction category'),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: () => openSheet(cats),
+      ),
+      if ((selected == null) && (cats.isEmpty))
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () {
+                Navigator.of(context).pushNamed('/categories/manage').then((value) {
+                  if (value == true) {
+                    final u = ref.read(currentUserProvider).value; if (u != null) ref.invalidate(categoriesProvider(u.id));
+                  }
+                });
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Create Category'),
+            ),
+          ),
+        ),
+    ]));
+  }
+}
+
+class _WalletSection extends ConsumerWidget {
+  final String userId; final Wallet? selected; final void Function(Wallet?) onSelect; final void Function(List<Wallet>) openSheet; final WidgetRef ref;
+  const _WalletSection({required this.userId, required this.selected, required this.onSelect, required this.openSheet, required this.ref});
+  static IconData iconFor(String? icon) {
     switch (icon) {
       case 'bca':
       case 'bni':
@@ -576,5 +514,41 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       default:
         return Icons.account_balance_wallet;
     }
+  }
+  @override
+  Widget build(BuildContext context, WidgetRef ref2) {
+    final walletsAsync = ref.watch(activeWalletsProvider(userId));
+    final wallets = walletsAsync.value ?? [];
+    return Card(child: Column(children: [
+      ListTile(
+        leading: selected != null
+            ? Icon(iconFor(selected!.icon), color: Theme.of(context).primaryColor)
+            : const Icon(Icons.account_balance_wallet),
+        title: Text(selected?.name ?? 'Select Wallet'),
+        subtitle: selected != null
+            ? Text('Balance: ${CurrencyFormatter.format(selected!.balance, selected!.currency)}')
+            : const Text('Choose wallet for transaction'),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: () => openSheet(wallets),
+      ),
+      if ((selected == null) && wallets.isEmpty)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () {
+                Navigator.of(context).pushNamed('/wallets/manage').then((value) {
+                  if (value == true) {
+                    final u = ref.read(currentUserProvider).value; if (u != null) refreshWalletProviders(ref);
+                  }
+                });
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Create Wallet'),
+            ),
+          ),
+        ),
+    ]));
   }
 }

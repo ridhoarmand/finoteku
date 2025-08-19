@@ -11,56 +11,26 @@ import 'add_transaction_screen.dart';
 class TransactionDetailScreen extends ConsumerWidget {
   final String transactionId;
 
-  const TransactionDetailScreen({
-    super.key,
-    required this.transactionId,
-  });
+  const TransactionDetailScreen({super.key, required this.transactionId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider).value;
 
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: Text('Please login first')),
-      );
+      return const Scaffold(body: Center(child: Text('Please login first')));
     }
 
     final transactionAsync = ref.watch(
-      transactionProvider((
-        transactionId: transactionId,
-        userId: user.id,
-      )),
+      transactionProvider((transactionId: transactionId, userId: user.id)),
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Transaction Details'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () => transactionAsync.whenData((transaction) {
-              if (transaction != null) {
-                _editTransaction(context, ref, transaction);
-              }
-            }),
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: () => transactionAsync.whenData((transaction) {
-              if (transaction != null) {
-                _showDeleteDialog(context, ref, transaction, user.id);
-              }
-            }),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Transaction Details')),
       body: transactionAsync.when(
         data: (transaction) {
           if (transaction == null) {
-            return const Center(
-              child: Text('Transaction not found'),
-            );
+            return const Center(child: Text('Transaction not found'));
           }
           return _buildTransactionDetail(context, ref, transaction, user.id);
         },
@@ -132,7 +102,10 @@ class TransactionDetailScreen extends ConsumerWidget {
                           ),
                         ),
                         Text(
-                          CurrencyFormatter.format(transaction.amount.abs(), 'IDR'),
+                          CurrencyFormatter.format(
+                            transaction.amount.abs(),
+                            'IDR',
+                          ),
                           style: theme.textTheme.headlineSmall?.copyWith(
                             color: isIncome ? Colors.green : Colors.red,
                             fontWeight: FontWeight.bold,
@@ -183,41 +156,45 @@ class TransactionDetailScreen extends ConsumerWidget {
 
                   // Category
                   if (transaction.categoryId != null)
-                    ref.watch(categoryProvider((
-                      categoryId: transaction.categoryId!,
-                      userId: userId,
-                    ))).when(
-                      data: (category) => Column(
-                        children: [
-                          _buildDetailRow(
-                            'Category',
-                            category?.name ?? 'Unknown Category',
-                            _getCategoryIcon(category?.iconCodePoint),
+                    ref
+                        .watch(
+                          categoryProvider((
+                            categoryId: transaction.categoryId!,
+                            userId: userId,
+                          )),
+                        )
+                        .when(
+                          data: (category) => Column(
+                            children: [
+                              _buildDetailRow(
+                                'Category',
+                                category?.name ?? 'Unknown Category',
+                                _getCategoryIcon(category?.iconCodePoint),
+                              ),
+                              const Divider(),
+                            ],
                           ),
-                          const Divider(),
-                        ],
-                      ),
-                      loading: () => Column(
-                        children: [
-                          _buildDetailRow(
-                            'Category',
-                            'Loading...',
-                            Icons.category,
+                          loading: () => Column(
+                            children: [
+                              _buildDetailRow(
+                                'Category',
+                                'Loading...',
+                                Icons.category,
+                              ),
+                              const Divider(),
+                            ],
                           ),
-                          const Divider(),
-                        ],
-                      ),
-                      error: (error, stack) => Column(
-                        children: [
-                          _buildDetailRow(
-                            'Category',
-                            'Error loading category',
-                            Icons.category,
+                          error: (error, stack) => Column(
+                            children: [
+                              _buildDetailRow(
+                                'Category',
+                                'Error loading category',
+                                Icons.category,
+                              ),
+                              const Divider(),
+                            ],
                           ),
-                          const Divider(),
-                        ],
-                      ),
-                    )
+                        )
                   else
                     Column(
                       children: [
@@ -231,41 +208,45 @@ class TransactionDetailScreen extends ConsumerWidget {
                     ),
 
                   // Wallet
-                  ref.watch(walletProvider((
-                    walletId: transaction.walletId,
-                    userId: userId,
-                  ))).when(
-                    data: (wallet) => Column(
-                      children: [
-                        _buildDetailRow(
-                          'Wallet',
-                          wallet?.name ?? 'Unknown Wallet',
-                          _getWalletIcon(wallet?.icon),
+                  ref
+                      .watch(
+                        walletProvider((
+                          walletId: transaction.walletId,
+                          userId: userId,
+                        )),
+                      )
+                      .when(
+                        data: (wallet) => Column(
+                          children: [
+                            _buildDetailRow(
+                              'Wallet',
+                              wallet?.name ?? 'Unknown Wallet',
+                              _getWalletIcon(wallet?.icon),
+                            ),
+                            const Divider(),
+                          ],
                         ),
-                        const Divider(),
-                      ],
-                    ),
-                    loading: () => Column(
-                      children: [
-                        _buildDetailRow(
-                          'Wallet',
-                          'Loading...',
-                          Icons.account_balance_wallet,
+                        loading: () => Column(
+                          children: [
+                            _buildDetailRow(
+                              'Wallet',
+                              'Loading...',
+                              Icons.account_balance_wallet,
+                            ),
+                            const Divider(),
+                          ],
                         ),
-                        const Divider(),
-                      ],
-                    ),
-                    error: (error, stack) => Column(
-                      children: [
-                        _buildDetailRow(
-                          'Wallet',
-                          'Error loading wallet',
-                          Icons.account_balance_wallet,
+                        error: (error, stack) => Column(
+                          children: [
+                            _buildDetailRow(
+                              'Wallet',
+                              'Error loading wallet',
+                              Icons.account_balance_wallet,
+                            ),
+                            const Divider(),
+                          ],
                         ),
-                        const Divider(),
-                      ],
-                    ),
-                  ),
+                      ),
 
                   // Created Date
                   _buildDetailRow(
@@ -302,7 +283,8 @@ class TransactionDetailScreen extends ConsumerWidget {
               const SizedBox(width: 16),
               Expanded(
                 child: FilledButton.icon(
-                  onPressed: () => _showDeleteDialog(context, ref, transaction, userId),
+                  onPressed: () =>
+                      _showDeleteDialog(context, ref, transaction, userId),
                   icon: const Icon(Icons.delete),
                   label: const Text('Delete'),
                   style: FilledButton.styleFrom(
@@ -344,15 +326,18 @@ class TransactionDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _editTransaction(BuildContext context, WidgetRef ref, Transaction transaction) async {
+  void _editTransaction(
+    BuildContext context,
+    WidgetRef ref,
+    Transaction transaction,
+  ) async {
     final result = await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => AddTransactionScreen(
-          initialTransaction: transaction,
-        ),
+        builder: (context) =>
+            AddTransactionScreen(initialTransaction: transaction),
       ),
     );
-    
+
     // If transaction was updated, refresh the data
     if (result == true && context.mounted) {
       // Invalidate providers to ensure fresh data
@@ -405,14 +390,15 @@ class TransactionDetailScreen extends ConsumerWidget {
     String userId,
   ) async {
     try {
-      final transactionService = ref.read(transactionServiceProvider);
-      await transactionService.deleteTransaction(transactionId, userId);
+      final repo = ref.read(transactionRepositoryProvider);
+      await repo.deleteTransaction(transactionId, userId);
 
       // Invalidate related providers to refresh data
+      refreshTransactionProviders(ref);
       ref.invalidate(filteredTransactionsProvider);
       ref.invalidate(transactionsProvider);
       ref.invalidate(transactionProvider);
-      
+
       // Also invalidate wallet providers to update balances
       refreshWalletProviders(ref);
       ref.invalidate(walletProvider);
@@ -440,16 +426,36 @@ class TransactionDetailScreen extends ConsumerWidget {
 
   String _formatDate(DateTime date) {
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 
   String _formatDateTime(DateTime dateTime) {
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${dateTime.day} ${months[dateTime.month - 1]} ${dateTime.year} at ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }

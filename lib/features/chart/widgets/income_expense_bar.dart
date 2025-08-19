@@ -2,7 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/analytics_providers.dart';
-import '../../../utils/format_currency.dart';
+import '../../../utils/currency_formatter.dart';
 
 class IncomeExpenseBarCard extends ConsumerWidget {
   const IncomeExpenseBarCard({super.key});
@@ -36,7 +36,7 @@ class IncomeExpenseBarCard extends ConsumerWidget {
                           getTooltipItem: (group, groupIndex, rod, rodIndex) {
                             final label = group.x == 0 ? 'Income' : 'Expense';
                             return BarTooltipItem(
-                              '$label\n${formatCurrencyIDR(rod.toY)}',
+                              '$label\n${CurrencyFormatter.format(rod.toY, 'IDR')}',
                               TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w600),
                             );
                           },

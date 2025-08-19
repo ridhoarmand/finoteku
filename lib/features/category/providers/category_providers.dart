@@ -2,20 +2,10 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/category.dart';
 import '../services/category_service.dart';
+import '../../../core/state/refresh_token.dart';
 
-// Global refresh notifier untuk trigger refresh semua category providers
-class CategoryRefreshNotifier extends StateNotifier<int> {
-  CategoryRefreshNotifier() : super(0);
-
-  void refresh() {
-    state = state + 1;
-  }
-}
-
-final categoryRefreshProvider =
-    StateNotifierProvider<CategoryRefreshNotifier, int>((ref) {
-      return CategoryRefreshNotifier();
-    });
+// Unified refresh token for categories
+final categoryRefreshProvider = createRefreshTokenProvider();
 
 // Provider untuk CategoryService sudah didefinisikan di file service; gunakan langsung.
 
@@ -24,7 +14,7 @@ void refreshCategoryProviders(WidgetRef ref) {
   if (kDebugMode) {
     print('🔄 Refreshing all category providers...');
   }
-  ref.read(categoryRefreshProvider.notifier).refresh();
+  ref.read(categoryRefreshProvider.notifier).bump();
   if (kDebugMode) {
     print('✅ Category providers refresh triggered');
   }

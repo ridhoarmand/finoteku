@@ -1,4 +1,6 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
+// Removed kDebugMode import (use AppLogger instead)
+import '../../../core/errors/failure.dart';
+import '../../../core/logging/logger.dart';
 import '../../../models/wallet.dart';
 import 'supabase_wallet_service.dart';
 
@@ -11,31 +13,36 @@ class WalletService {
   Future<Wallet> createWallet(String userId, CreateWalletRequest request) async {
     try {
       return await _supabaseWalletService.createWallet(userId, request);
-    } catch (e) {
-      if (kDebugMode) print('❌ Gagal membuat wallet: $e');
-      rethrow;
+    } catch (e, st) {
+      AppLogger.e('Gagal membuat wallet', error: e, stackTrace: st);
+      throw mapException(e, st);
     }
   }
 
   Future<Wallet> updateWallet(String walletId, String userId, UpdateWalletRequest request) async {
     final existing = await _supabaseWalletService.getWallet(walletId, userId);
-    if (existing == null) throw Exception('Wallet tidak ditemukan');
-    if (existing.userId != userId) throw Exception('Tidak berhak');
-    return _supabaseWalletService.updateWallet(walletId, userId, request);
+    if (existing == null) throw NotFoundFailure('Wallet tidak ditemukan');
+    if (existing.userId != userId) throw PermissionFailure('Tidak berhak');
+    try {
+      return await _supabaseWalletService.updateWallet(walletId, userId, request);
+    } catch (e, st) {
+      AppLogger.e('Gagal update wallet', error: e, stackTrace: st);
+      throw mapException(e, st);
+    }
   }
 
   Future<void> deleteWallet(String walletId, String userId) async {
     try {
       await _supabaseWalletService.deleteWallet(walletId, userId);
-    } catch (e) {
-      if (kDebugMode) print('❌ Gagal hapus wallet: $e');
-      rethrow;
+    } catch (e, st) {
+      AppLogger.e('Gagal hapus wallet', error: e, stackTrace: st);
+      throw mapException(e, st);
     }
   }
 
   Future<void> safeDeleteWallet(String walletId, String userId, {String? transferToWalletId}) async {
     if (transferToWalletId != null) {
-      throw Exception('Transfer transaksi antar wallet belum tersedia');
+      throw ValidationFailure('Transfer transaksi antar wallet belum tersedia');
     }
     await deleteWallet(walletId, userId);
   }
@@ -56,7 +63,7 @@ class WalletService {
 
   Future<Wallet> adjustWalletBalance(String walletId, String userId, double amount) async {
     final wallet = await getWalletById(walletId, userId: userId);
-    if (wallet == null) throw Exception('Wallet tidak ditemukan');
+  if (wallet == null) throw NotFoundFailure('Wallet tidak ditemukan');
     return updateWalletBalance(walletId, userId, wallet.balance + amount);
   }
 }

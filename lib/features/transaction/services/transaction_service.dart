@@ -1,4 +1,6 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
+// Removed kDebugMode prints; using AppLogger + Failure.
+import '../../../core/errors/failure.dart';
+import '../../../core/logging/logger.dart';
 import '../../../models/transaction.dart';
 import 'supabase_transaction_service.dart';
 
@@ -12,15 +14,15 @@ class TransactionService {
   Future<Transaction> createTransaction(String userId, CreateTransactionRequest request) async {
     try {
       if (request.categoryId == null || request.categoryId!.isEmpty) {
-        throw Exception('Category is required');
+        throw ValidationFailure('Category is required');
       }
       if (request.amount <= 0) {
-        throw Exception('Amount must be greater than 0');
+        throw ValidationFailure('Amount must be greater than 0');
       }
       return await _supabase.createTransaction(userId, request);
-    } catch (e) {
-      if (kDebugMode) print('❌ Gagal membuat transaksi: $e');
-      rethrow;
+    } catch (e, st) {
+      AppLogger.e('Gagal membuat transaksi', error: e, stackTrace: st);
+      throw mapException(e, st);
     }
   }
 
@@ -28,21 +30,21 @@ class TransactionService {
   Future<Transaction> updateTransaction(String transactionId, String userId, UpdateTransactionRequest request) async {
   final existingTransaction = await _supabase.getTransaction(transactionId, userId);
     if (existingTransaction == null) {
-      throw Exception('Transaction not found');
+      throw NotFoundFailure('Transaction not found');
     }
 
     if (existingTransaction.userId != userId) {
-      throw Exception('Unauthorized');
+      throw PermissionFailure('Unauthorized');
     }
 
     try {
       if (request.amount != null && request.amount! <= 0) {
-        throw Exception('Amount must be greater than 0');
+        throw ValidationFailure('Amount must be greater than 0');
       }
       return await _supabase.updateTransaction(transactionId, userId, request);
-    } catch (e) {
-      if (kDebugMode) print('❌ Gagal update transaksi: $e');
-      rethrow;
+    } catch (e, st) {
+      AppLogger.e('Gagal update transaksi', error: e, stackTrace: st);
+      throw mapException(e, st);
     }
   }
 
@@ -50,14 +52,19 @@ class TransactionService {
   Future<void> deleteTransaction(String transactionId, String userId) async {
   final transaction = await _supabase.getTransaction(transactionId, userId);
     if (transaction == null) {
-      throw Exception('Transaction not found');
+      throw NotFoundFailure('Transaction not found');
     }
 
     if (transaction.userId != userId) {
-      throw Exception('Unauthorized');
+      throw PermissionFailure('Unauthorized');
     }
 
-  await _supabase.deleteTransaction(transactionId, userId);
+  try {
+    await _supabase.deleteTransaction(transactionId, userId);
+  } catch (e, st) {
+    AppLogger.e('Gagal hapus transaksi', error: e, stackTrace: st);
+    throw mapException(e, st);
+  }
   }
 
   // Ambil semua transactions user

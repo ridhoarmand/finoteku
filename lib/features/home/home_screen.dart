@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../utils/currency_formatter.dart';
 import '../../services/supabase_service.dart';
 import '../wallet/providers/wallet_providers.dart';
+import '../../core/state/balance_visibility_provider.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -19,34 +21,56 @@ class HomeScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              Builder(
+                builder: (context) {
+                  String localizedGreeting(DateTime now) {
+                    final hour = now.hour;
+                    if (hour >= 5 && hour <= 10) return 'Selamat Pagi';
+                    if (hour >= 11 && hour <= 14) return 'Selamat Siang';
+                    if (hour >= 15 && hour <= 17) return 'Selamat Sore';
+                    return 'Selamat Malam';
+                  }
+
+                  final greeting = localizedGreeting(DateTime.now());
+                  // Try to get a nicer display name from user metadata if available
+                  final meta = currentUser?.userMetadata ?? {};
+                  final name =
+                      (meta['full_name'] ?? meta['name'] ?? meta['username'])
+                          ?.toString();
+                  final displayName = (name != null && name.trim().isNotEmpty)
+                      ? name.trim()
+                      : (currentUser?.email?.split('@').first ?? 'Pengguna');
+
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Good Morning',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(color: Colors.grey[600]),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            greeting,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(color: Colors.grey[600]),
+                          ),
+                          Text(
+                            displayName,
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
-                      Text(
-                        currentUser?.email?.split('@')[0] ?? 'Welcome back!',
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                      CircleAvatar(
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.1),
+                        child: Icon(
+                          Icons.person,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                       ),
                     ],
-                  ),
-                  CircleAvatar(
-                    backgroundColor: Theme.of(
-                      context,
-                    ).colorScheme.primary.withValues(alpha: 0.1),
-                    child: Icon(
-                      Icons.person,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                ],
+                  );
+                },
               ),
               const SizedBox(height: 24),
 
@@ -57,6 +81,7 @@ class HomeScreen extends ConsumerWidget {
                     final totalBalanceAsync = ref.watch(
                       totalBalanceProvider(userId),
                     );
+                    final isVisible = ref.watch(balanceVisibilityProvider);
 
                     return Container(
                       width: double.infinity,
@@ -81,31 +106,78 @@ class HomeScreen extends ConsumerWidget {
                                 ?.copyWith(color: Colors.white70),
                           ),
                           const SizedBox(height: 8),
-                          totalBalanceAsync.when(
-                            data: (balance) => Text(
-                              'Rp ${_formatCurrency(balance)}',
-                              style: Theme.of(context).textTheme.headlineMedium
-                                  ?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: totalBalanceAsync.when(
+                                  data: (balance) => FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      isVisible
+                                          ? CurrencyFormatter.format(
+                                              balance,
+                                              'IDR',
+                                            )
+                                          : '••••••••',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineMedium
+                                          ?.copyWith(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
                                   ),
-                            ),
-                            loading: () => Text(
-                              'Loading...',
-                              style: Theme.of(context).textTheme.headlineMedium
-                                  ?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
+                                  loading: () => const SizedBox(
+                                    width: 26,
+                                    height: 26,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 3,
+                                      color: Colors.white,
+                                    ),
                                   ),
-                            ),
-                            error: (error, stackTrace) => Text(
-                              'Rp 0',
-                              style: Theme.of(context).textTheme.headlineMedium
-                                  ?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
+                                  error: (error, stackTrace) => Text(
+                                    isVisible
+                                        ? CurrencyFormatter.format(0, 'IDR')
+                                        : '••••••••',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineMedium
+                                        ?.copyWith(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                   ),
-                            ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              InkWell(
+                                borderRadius: BorderRadius.circular(24),
+                                onTap: () {
+                                  final current = ref.read(
+                                    balanceVisibilityProvider,
+                                  );
+                                  ref
+                                          .read(
+                                            balanceVisibilityProvider.notifier,
+                                          )
+                                          .state =
+                                      !current;
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.all(6),
+                                  child: Icon(
+                                    isVisible
+                                        ? Icons.visibility
+                                        : Icons.visibility_off,
+                                    color: Colors.white70,
+                                    size: 24,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -225,18 +297,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  String _formatCurrency(double amount) {
-    // Format angka dengan pemisah ribuan
-    if (amount >= 1000000000) {
-      return '${(amount / 1000000000).toStringAsFixed(1)}B';
-    } else if (amount >= 1000000) {
-      return '${(amount / 1000000).toStringAsFixed(1)}M';
-    } else if (amount >= 1000) {
-      return '${(amount / 1000).toStringAsFixed(1)}K';
-    } else {
-      return amount.toStringAsFixed(0);
-    }
-  }
+  // _formatCurrency removed (use CurrencyFormatter.formatSimple)
 
   Widget _buildQuickActionCard(
     BuildContext context,

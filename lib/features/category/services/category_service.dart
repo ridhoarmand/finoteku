@@ -1,9 +1,10 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../models/category.dart';
 import '../../../services/supabase_service.dart';
+import '../../../core/errors/failure.dart';
+import '../../../core/logging/logger.dart';
 
 /// Provider tunggal CategoryService (online-only, Supabase langsung)
 final categoryServiceProvider = Provider<CategoryService>((ref) {
@@ -32,9 +33,9 @@ class CategoryService {
           .map((j) => Category.fromJson(_convertFromSupabase(j)))
           .toList();
       return includeInactive ? list : list.where((c) => c.isActive).toList();
-    } catch (e) {
-      if (kDebugMode) print('❌ getCategories error: $e');
-      return [];
+    } catch (e, st) {
+      AppLogger.e('getCategories error', error: e, stackTrace: st);
+      throw mapException(e, st);
     }
   }
 
@@ -55,9 +56,9 @@ class CategoryService {
           .map((j) => Category.fromJson(_convertFromSupabase(j)))
           .toList();
       return includeInactive ? list : list.where((c) => c.isActive).toList();
-    } catch (e) {
-      if (kDebugMode) print('❌ getCategoriesByType error: $e');
-      return [];
+    } catch (e, st) {
+      AppLogger.e('getCategoriesByType error', error: e, stackTrace: st);
+      throw mapException(e, st);
     }
   }
 
@@ -74,9 +75,9 @@ class CategoryService {
           .maybeSingle();
       if (response == null) return null;
       return Category.fromJson(_convertFromSupabase(response));
-    } catch (e) {
-      if (kDebugMode) print('❌ getCategoryById error: $e');
-      return null;
+    } catch (e, st) {
+      AppLogger.e('getCategoryById error', error: e, stackTrace: st);
+      throw mapException(e, st);
     }
   }
 
@@ -101,9 +102,9 @@ class CategoryService {
           .select()
           .single();
       return Category.fromJson(_convertFromSupabase(row));
-    } catch (e) {
-      if (kDebugMode) print('❌ createCategory error: $e');
-      return null;
+    } catch (e, st) {
+      AppLogger.e('createCategory error', error: e, stackTrace: st);
+      throw mapException(e, st);
     }
   }
 
@@ -133,9 +134,9 @@ class CategoryService {
           .select()
           .single();
       return Category.fromJson(_convertFromSupabase(row));
-    } catch (e) {
-      if (kDebugMode) print('❌ updateCategory error: $e');
-      return null;
+    } catch (e, st) {
+      AppLogger.e('updateCategory error', error: e, stackTrace: st);
+      throw mapException(e, st);
     }
   }
 
@@ -147,9 +148,9 @@ class CategoryService {
           .eq('id', categoryId)
           .eq('user_id', userId);
       return true;
-    } catch (e) {
-      if (kDebugMode) print('❌ deleteCategory error: $e');
-      return false;
+    } catch (e, st) {
+      AppLogger.e('deleteCategory error', error: e, stackTrace: st);
+      throw mapException(e, st);
     }
   }
 
