@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../utils/currency_formatter.dart';
-import '../../services/supabase_service.dart';
-import '../wallet/providers/wallet_providers.dart';
-import '../../core/state/balance_visibility_provider.dart';
+import 'package:go_router/go_router.dart';
+import '../../../utils/currency_formatter.dart';
+import '../../../services/supabase_service.dart';
+import '../../wallet/providers/wallet_providers.dart';
+import '../../../core/state/balance_visibility_provider.dart';
+import '../../../core/localization/app_localizations.dart';
+import '../widgets/monthly_summary_section.dart';
+import '../widgets/recent_transactions_section.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -23,23 +27,28 @@ class HomeScreen extends ConsumerWidget {
               // Header
               Builder(
                 builder: (context) {
-                  String localizedGreeting(DateTime now) {
+                  String greetingForLocale(DateTime now, String lang) {
                     final hour = now.hour;
-                    if (hour >= 5 && hour <= 10) return 'Selamat Pagi';
-                    if (hour >= 11 && hour <= 14) return 'Selamat Siang';
-                    if (hour >= 15 && hour <= 17) return 'Selamat Sore';
-                    return 'Selamat Malam';
+                    final isMorning = hour >= 5 && hour <= 10;
+                    final isNoon = hour >= 11 && hour <= 14;
+                    final isAfternoon = hour >= 15 && hour <= 17;
+                    if (isMorning) return ref.tr(context, 'greeting_morning');
+                    if (isNoon) return ref.tr(context, 'greeting_afternoon');
+                    if (isAfternoon) return ref.tr(context, 'greeting_evening');
+                    return ref.tr(context, 'greeting_night');
                   }
 
-                  final greeting = localizedGreeting(DateTime.now());
+                  final lang = Localizations.localeOf(context).languageCode;
+                  final greeting = greetingForLocale(DateTime.now(), lang);
                   // Try to get a nicer display name from user metadata if available
                   final meta = currentUser?.userMetadata ?? {};
                   final name =
                       (meta['full_name'] ?? meta['name'] ?? meta['username'])
                           ?.toString();
+                  final fallbackUser = ref.tr(context, 'user_fallback');
                   final displayName = (name != null && name.trim().isNotEmpty)
                       ? name.trim()
-                      : (currentUser?.email?.split('@').first ?? 'Pengguna');
+                      : (currentUser?.email?.split('@').first ?? fallbackUser);
 
                   return Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -72,7 +81,7 @@ class HomeScreen extends ConsumerWidget {
                   );
                 },
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // Balance Card
               if (userId != null)
@@ -101,7 +110,7 @@ class HomeScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Total Balance',
+                            ref.tr(context, 'total_balance'),
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(color: Colors.white70),
                           ),
@@ -130,12 +139,14 @@ class HomeScreen extends ConsumerWidget {
                                           ),
                                     ),
                                   ),
-                                  loading: () => const SizedBox(
-                                    width: 26,
-                                    height: 26,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 3,
-                                      color: Colors.white,
+                                  loading: () => const Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: SizedBox.square(
+                                      dimension: 26,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 3,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
                                   error: (error, stackTrace) => Text(
@@ -203,14 +214,14 @@ class HomeScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Total Balance',
+                        ref.tr(context, 'total_balance'),
                         style: Theme.of(
                           context,
                         ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Please login to see balance',
+                        ref.tr(context, 'login_required_balance'),
                         style: Theme.of(context).textTheme.headlineMedium
                             ?.copyWith(
                               color: Colors.white,
@@ -220,75 +231,58 @@ class HomeScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-              const SizedBox(height: 24),
-
-              // Quick Actions
-              Text(
-                'Quick Actions',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
               const SizedBox(height: 16),
 
+              // Monthly Summary
+              if (userId != null) MonthlySummarySection(userId: userId),
+              if (userId != null) const SizedBox(height: 8),
+
+              // Recent Transactions header + See all
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: _buildQuickActionCard(
-                      context,
-                      'Income',
-                      Icons.trending_up,
-                      Colors.green,
+                  Text(
+                    ref.tr(context, 'recent_transactions'),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildQuickActionCard(
-                      context,
-                      'Expense',
-                      Icons.trending_down,
-                      Colors.red,
-                    ),
+                  TextButton(
+                    onPressed: () => context.go('/transaction'),
+                    child: Text(ref.tr(context, 'see_all')),
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 8),
 
-              // Recent Transactions
-              Text(
-                'Recent Transactions',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-
+              // Recent Transactions list or placeholder
               Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.receipt_long_outlined,
-                        size: 64,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No transactions yet',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(color: Colors.grey[600]),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Start by adding your first transaction',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[500],
+                child: userId == null
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.receipt_long_outlined,
+                              size: 64,
+                              color: Colors.grey[400],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              ref.tr(context, 'login_required_short'),
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(color: Colors.grey[600]),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              ref.tr(context, 'login_required_continue'),
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(color: Colors.grey[500]),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
-                ),
+                      )
+                    : RecentTransactionsSection(userId: userId),
               ),
             ],
           ),
@@ -297,32 +291,5 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  // _formatCurrency removed (use CurrencyFormatter.formatSimple)
-
-  Widget _buildQuickActionCard(
-    BuildContext context,
-    String title,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 32),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-          ),
-        ],
-      ),
-    );
-  }
 }
+ 

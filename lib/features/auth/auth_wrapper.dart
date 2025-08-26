@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'screens/login_screen.dart';
-import '../home/home_screen.dart';
+import '../home/screens/home_screen.dart';
 import 'services/auth_service.dart';
 
 class AuthWrapper extends ConsumerWidget {
