@@ -471,23 +471,7 @@ class _CategorySection extends ConsumerWidget {
         onTap: () => openSheet(cats),
       ),
       if ((selected == null) && (cats.isEmpty))
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () {
-                Navigator.of(context).pushNamed('/categories/manage').then((value) {
-                  if (value == true) {
-                    final u = ref.read(currentUserProvider).value; if (u != null) ref.invalidate(categoriesProvider(u.id));
-                  }
-                });
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Create Category'),
-            ),
-          ),
-        ),
+  const SizedBox.shrink(),
     ]));
   }
 }
@@ -532,23 +516,7 @@ class _WalletSection extends ConsumerWidget {
         onTap: () => openSheet(wallets),
       ),
       if ((selected == null) && wallets.isEmpty)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () {
-                Navigator.of(context).pushNamed('/wallets/manage').then((value) {
-                  if (value == true) {
-                    final u = ref.read(currentUserProvider).value; if (u != null) refreshWalletProviders(ref);
-                  }
-                });
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Create Wallet'),
-            ),
-          ),
-        ),
+  const SizedBox.shrink(),
     ]));
   }
 }

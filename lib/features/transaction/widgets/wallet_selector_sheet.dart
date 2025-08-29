@@ -70,31 +70,21 @@ class WalletSelectorSheet extends StatelessWidget {
     }
 
     if (wallets.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.account_balance_wallet_outlined,
-              size: 64,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No wallets available',
-              style: theme.textTheme.titleMedium?.copyWith(
+      // Show inline add item when empty, plus a small hint
+      return ListView(
+        padding: const EdgeInsets.all(12),
+        children: [
+          ...walletItems,
+          const SizedBox(height: 8),
+          Center(
+            child: Text(
+              'No wallets yet. Create one to continue.',
+              style: theme.textTheme.bodySmall?.copyWith(
                 color: Colors.grey[600],
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Add wallets in settings',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[500],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       );
     }
 
