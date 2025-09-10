@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../../models/wallet.dart';
-import '../../../../utils/wallet_icon_helper.dart';
+import '../../../models/wallet.dart';
+import '../../../utils/wallet_icon_helper.dart';
 
 class WalletFormDialog extends StatefulWidget {
   final String title;

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'add_transaction_screen.dart';
 import 'transaction_detail_screen.dart';
 import '../providers/transaction_providers.dart';
+import '../../../models/ledger_entry.dart';
 import '../../wallet/providers/wallet_providers.dart';
 import '../../category/providers/category_providers.dart';
 import '../../../models/category.dart';
@@ -45,12 +46,11 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     final walletsAsync = ref.watch(activeWalletsProvider(user.id));
     final categoriesAsync = ref.watch(categoriesProvider(user.id));
 
-    // Get filtered transactions based on selected wallet
-    final transactionsAsync = ref.watch(
-      filteredTransactionsProvider((
+    // Gunakan ledger entries agar transfer juga tampil dalam daftar
+    final ledgerAsync = ref.watch(
+      ledgerEntriesProvider((
         userId: user.id,
         walletId: _selectedWalletId,
-        categoryId: null,
         startDate: null,
         endDate: null,
       )),
@@ -78,19 +78,17 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: transactionsAsync.when(
-                data: (transactions) {
+              child: ledgerAsync.when(
+                data: (entries) {
                   return categoriesAsync.when(
                     data: (categories) {
-                      final filteredTransactions = _filterTransactionsBySearch(
-                        transactions,
-                      );
-                      if (filteredTransactions.isEmpty) {
+                      final filtered = _filterLedgerBySearch(entries);
+                      if (filtered.isEmpty) {
                         return _buildEmptyState(context, theme);
                       }
                       final wallets = walletsAsync.valueOrNull ?? [];
-                      return _buildTransactionList(
-                        filteredTransactions,
+                      return _buildLedgerList(
+                        filtered,
                         theme,
                         categories,
                         wallets,
@@ -121,7 +119,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
           if (result == true) {
             final user = ref.read(currentUserProvider).value;
             if (user != null) {
-              ref.invalidate(filteredTransactionsProvider);
+              // filteredTransactionsProvider is a family; rely on refresh triggers
               refreshWalletProviders(ref);
             }
           }
@@ -390,15 +388,13 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     );
   }
 
-  List<dynamic> _filterTransactionsBySearch(List<dynamic> transactions) {
-    if (_searchQuery.isEmpty) return transactions;
-
-    return transactions.where((transaction) {
-      final notes = transaction.notes?.toLowerCase() ?? '';
-      final amount = transaction.amount.toString();
-      final query = _searchQuery.toLowerCase();
-
-      return notes.contains(query) || amount.contains(query);
+  List<LedgerEntry> _filterLedgerBySearch(List<LedgerEntry> entries) {
+    if (_searchQuery.isEmpty) return entries;
+    final q = _searchQuery.toLowerCase();
+    return entries.where((e) {
+      final notes = e.notes?.toLowerCase() ?? '';
+      final amount = e.amount.toString();
+      return notes.contains(q) || amount.contains(q);
     }).toList();
   }
 
@@ -468,7 +464,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
               if (result == true) {
                 final user = ref.read(currentUserProvider).value;
                 if (user != null) {
-                  ref.invalidate(filteredTransactionsProvider);
+                  // filteredTransactionsProvider is a family; rely on refresh triggers
                   refreshWalletProviders(ref);
                 }
               }
@@ -481,8 +477,8 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     );
   }
 
-  Widget _buildTransactionList(
-    List<dynamic> transactions,
+  Widget _buildLedgerList(
+    List<LedgerEntry> entries,
     ThemeData theme,
     List<Category> categories,
     List<Wallet> wallets,
@@ -493,13 +489,13 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     // Build flattened list with date headers
     final items = <_TxListItem>[];
     DateTime? currentDate;
-    for (final tx in transactions) {
-      final txDate = DateTime(tx.date.year, tx.date.month, tx.date.day);
+    for (final e in entries) {
+      final txDate = DateTime(e.date.year, e.date.month, e.date.day);
       if (currentDate == null || !_isSameDay(currentDate, txDate)) {
         currentDate = txDate;
         items.add(_TxListItem.header(txDate));
       }
-      items.add(_TxListItem.transaction(tx));
+      items.add(_TxListItem.entry(e));
     }
 
     return RefreshIndicator(
@@ -507,7 +503,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
         // Refresh all transaction-related providers
         final user = ref.read(currentUserProvider).value;
         if (user != null) {
-          ref.invalidate(filteredTransactionsProvider);
+          // filteredTransactionsProvider is a family; rely on refresh trigger and specific invalidations
           ref.invalidate(transactionsProvider(user.id));
           refreshWalletProviders(ref);
           refreshCategoryProviders(ref);
@@ -531,28 +527,24 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
               ),
             );
           }
-          final transaction = item.transaction!;
-          final category = categoryMap[transaction.categoryId];
-          final wallet = walletMap[transaction.walletId];
-          final isIncome = category?.type == CategoryType.income;
-          final amountFormatted = CurrencyFormatter.format(
-            transaction.amount,
-            'IDR',
-          );
-          final displayAmount = isIncome
-              ? amountFormatted
-              : '-$amountFormatted';
+          final entry = item.entry!;
+          final category = entry.categoryId != null ? categoryMap[entry.categoryId] : null;
+          final wallet = walletMap[entry.walletId];
+          final isPositive = entry.signedAmount >= 0;
+          final amountFormatted = CurrencyFormatter.format(entry.amount, 'IDR');
+          final displayAmount = isPositive ? amountFormatted : '-$amountFormatted';
           return Card(
             margin: const EdgeInsets.only(bottom: 4),
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
               onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        TransactionDetailScreen(transactionId: transaction.id),
-                  ),
-                );
+                if (entry.kind == 'transaction') {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => TransactionDetailScreen(transactionId: entry.entryId),
+                    ),
+                  );
+                }
               },
               child: Padding(
                 padding: const EdgeInsets.symmetric(
@@ -564,26 +556,23 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                   children: [
                     CircleAvatar(
                       backgroundColor: () {
-                        final baseColor = category?.color != null
-                            ? Color(category!.color!)
-                            : (isIncome ? Colors.green : Colors.red);
+            final baseColor = category?.color != null
+              ? Color(category!.color!)
+              : (isPositive ? Colors.green : Colors.red);
                         return baseColor.withValues(alpha: 0.15);
                       }(),
                       child: Icon(
                         () {
                           if (category?.iconCodePoint != null) {
-                            return IconData(
-                              category!.iconCodePoint!,
-                              fontFamily: 'MaterialIcons',
-                            );
+                            return IconData(category!.iconCodePoint!, fontFamily: 'MaterialIcons');
                           }
-                          return isIncome
-                              ? Icons.trending_up
-                              : Icons.trending_down;
+                          if (entry.kind == 'transfer_in') return Icons.call_received;
+                          if (entry.kind == 'transfer_out') return Icons.call_made;
+                          return isPositive ? Icons.trending_up : Icons.trending_down;
                         }(),
                         color: category?.color != null
                             ? Color(category!.color!)
-                            : (isIncome ? Colors.green : Colors.red),
+                            : (isPositive ? Colors.green : Colors.red),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -592,14 +581,13 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            category?.name ?? ref.tr(context, 'uncategorized'),
+                            category?.name ?? _titleForEntry(entry),
                             style: theme.textTheme.titleMedium,
                           ),
                           const SizedBox(height: 2),
-                          if (transaction.notes != null &&
-                              transaction.notes!.trim().isNotEmpty) ...[
+                          if (entry.notes != null && entry.notes!.trim().isNotEmpty) ...[
                             Text(
-                              transaction.notes!,
+                              entry.notes!,
                               style: theme.textTheme.bodySmall,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -622,7 +610,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                         Text(
                           displayAmount,
                           style: theme.textTheme.titleMedium?.copyWith(
-                            color: isIncome ? Colors.green : Colors.red,
+                            color: isPositive ? Colors.green : Colors.red,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -678,14 +666,25 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
 
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
+
+  String _titleForEntry(LedgerEntry e) {
+    switch (e.kind) {
+      case 'transfer_in':
+        return ref.tr(context, 'transfer_in');
+      case 'transfer_out':
+        return ref.tr(context, 'transfer_out');
+      default:
+        return ref.tr(context, 'uncategorized');
+    }
+  }
 }
 
 class _TxListItem {
   final bool isHeader;
   final DateTime? date;
-  final dynamic transaction; // Transaction
+  final LedgerEntry? entry;
 
-  _TxListItem._(this.isHeader, this.date, this.transaction);
+  _TxListItem._(this.isHeader, this.date, this.entry);
   factory _TxListItem.header(DateTime date) => _TxListItem._(true, date, null);
-  factory _TxListItem.transaction(dynamic tx) => _TxListItem._(false, null, tx);
+  factory _TxListItem.entry(LedgerEntry e) => _TxListItem._(false, null, e);
 }

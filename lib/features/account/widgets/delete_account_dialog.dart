@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../services/delete_account_service.dart';
-import '../providers/edit_profile_provider.dart';
-import '../../wallet/providers/wallet_providers.dart';
-import '../../transaction/providers/transaction_providers.dart';
-import '../../category/providers/category_providers.dart';
+// Removed unused provider imports due to simplified invalidation
 import '../../../services/supabase_service.dart';
 
 class DeleteAccountDialog extends ConsumerStatefulWidget {
@@ -326,15 +323,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
       // Invalidate authentication providers to force refresh
       ref.invalidate(currentUserProvider);
       
-      // Also invalidate all user-related providers to ensure clean state
-      ref.invalidate(walletsProvider);
-      ref.invalidate(activeWalletsProvider);
-      ref.invalidate(totalBalanceProvider);
-      ref.invalidate(transactionsProvider);
-      ref.invalidate(categoriesProvider);
-      ref.invalidate(expenseCategoriesProvider);
-      ref.invalidate(incomeCategoriesProvider);
-      ref.invalidate(editProfileProvider);
+  // Also invalidate family instances as needed elsewhere; avoid invalidating families without params
       
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(

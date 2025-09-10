@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import '../../../models/transaction.dart';
 import '../../../models/transaction_summary.dart';
+import '../../../models/ledger_entry.dart';
 import '../services/supabase_transaction_service.dart';
 import '../../../core/state/refresh_token.dart';
 
@@ -78,6 +79,30 @@ final transactionsSummaryProvider = FutureProvider.family<TransactionSummary, ({
       print('❌ Error in transactionsSummaryProvider for user ${params.userId}: $e');
     }
     return const TransactionSummary(income: 0, expense: 0);
+  }
+});
+
+// Provider untuk unified ledger entries (transactions + transfers)
+final ledgerEntriesProvider = FutureProvider.family<List<LedgerEntry>, ({
+  String userId,
+  String? walletId,
+  DateTime? startDate,
+  DateTime? endDate,
+})>((ref, params) async {
+  ref.watch(transactionRefreshTriggerProvider);
+  try {
+    final repo = ref.watch(transactionRepositoryProvider);
+    return await repo.getLedgerEntries(
+      params.userId,
+      walletId: params.walletId,
+      startDate: params.startDate,
+      endDate: params.endDate,
+    );
+  } catch (e) {
+    if (kDebugMode) {
+      print('❌ Error in ledgerEntriesProvider for user ${params.userId}: $e');
+    }
+    return <LedgerEntry>[];
   }
 });
 

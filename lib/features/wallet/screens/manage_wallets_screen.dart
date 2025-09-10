@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/wallet.dart';
 import '../providers/wallet_providers.dart';
 import '../../../services/supabase_service.dart';
-import 'widgets/wallet_card.dart';
-import 'widgets/wallet_empty_state.dart';
-import 'widgets/wallet_form_dialog.dart';
+import '../widgets/wallet_card.dart';
+import '../widgets/wallet_empty_state.dart';
+import '../widgets/wallet_form_dialog.dart';
 
 class ManageWalletsScreen extends ConsumerWidget {
   const ManageWalletsScreen({super.key});
