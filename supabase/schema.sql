@@ -3,10 +3,11 @@
 -- Aplikasi Pencatatan Keuangan Pribadi Sederhana
 -- =============================================
 -- Aktifkan ekstensi UUID (untuk generate id unik)
+-- 0) EXTENSIONS
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- =============================================
--- TIPE KUSTOM (ENUM)
+-- 1) CUSTOM TYPES (ENUM)
 -- =============================================
 DO $$
 BEGIN
@@ -24,7 +25,7 @@ END
 $$;
 
 -- =============================================
--- TABEL-TABEL INTI
+-- 2) CORE TABLES
 -- =============================================
 -- Tabel users (perpanjangan dari auth.users milik Supabase)
 CREATE TABLE IF NOT EXISTS public.users (
@@ -108,38 +109,45 @@ CREATE TABLE IF NOT EXISTS public.transfers (
 );
 
 -- =============================================
--- INDEX (untuk performa query)
+-- 3) INDEXES (performa query)
 -- =============================================
-CREATE INDEX idx_wallets_user_id ON public.wallets(user_id);
+CREATE INDEX IF NOT EXISTS idx_wallets_user_id ON public.wallets(user_id);
 
-CREATE INDEX idx_wallets_active ON public.wallets(user_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_wallets_active ON public.wallets(user_id, is_active);
 
-CREATE INDEX idx_categories_user_id ON public.categories(user_id);
+CREATE INDEX IF NOT EXISTS idx_categories_user_id ON public.categories(user_id);
 
-CREATE INDEX idx_categories_type ON public.categories(user_id, TYPE);
+CREATE INDEX IF NOT EXISTS idx_categories_type ON public.categories(user_id, TYPE);
 
-CREATE INDEX idx_categories_parent_id ON public.categories(parent_id);
+CREATE INDEX IF NOT EXISTS idx_categories_parent_id ON public.categories(parent_id);
 
-CREATE INDEX idx_categories_hidden ON public.categories(user_id, is_hidden);
+CREATE INDEX IF NOT EXISTS idx_categories_hidden ON public.categories(user_id, is_hidden);
 
-CREATE INDEX idx_transactions_user_id ON public.transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON public.transactions(user_id);
 
-CREATE INDEX idx_transactions_wallet_id ON public.transactions(wallet_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_wallet_id ON public.transactions(wallet_id);
 
-CREATE INDEX idx_transactions_category_id ON public.transactions(category_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_category_id ON public.transactions(category_id);
 
-CREATE INDEX idx_transactions_date ON public.transactions(user_id, date);
+CREATE INDEX IF NOT EXISTS idx_transactions_date ON public.transactions(user_id, date);
 
-CREATE INDEX idx_transaction_images_user_id ON public.transaction_images(user_id);
+CREATE INDEX IF NOT EXISTS idx_transaction_images_user_id ON public.transaction_images(user_id);
 
-CREATE INDEX idx_transaction_images_transaction_id ON public.transaction_images(transaction_id);
+CREATE INDEX IF NOT EXISTS idx_transaction_images_transaction_id ON public.transaction_images(transaction_id);
 
-CREATE INDEX idx_transfers_user_id ON public.transfers(user_id);
+CREATE INDEX IF NOT EXISTS idx_transfers_user_id ON public.transfers(user_id);
 
-CREATE INDEX idx_transfers_date ON public.transfers(user_id, date);
+CREATE INDEX IF NOT EXISTS idx_transfers_date ON public.transfers(user_id, date);
 
-CREATE INDEX idx_transfers_wallets ON public.transfers(from_wallet_id, to_wallet_id);
+CREATE INDEX IF NOT EXISTS idx_transfers_wallets ON public.transfers(from_wallet_id, to_wallet_id);
 
+-- (Opsional) Index waktu untuk sort/filter recent data
+CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON public.transactions(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_transfers_created_at ON public.transfers(user_id, created_at);
+
+-- =============================================
+-- 4) GENERIC TRIGGERS
+-- =============================================
 -- Fungsi trigger untuk mengisi kolom updated_at otomatis
 CREATE OR REPLACE FUNCTION public.handle_updated_at() RETURNS TRIGGER AS $$
 BEGIN
@@ -149,28 +157,33 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Tambahkan trigger updated_at ke semua tabel
+DROP TRIGGER IF EXISTS set_updated_at ON public.users;
 CREATE TRIGGER set_updated_at BEFORE
 UPDATE
   ON public.users FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
+DROP TRIGGER IF EXISTS set_updated_at ON public.wallets;
 CREATE TRIGGER set_updated_at BEFORE
 UPDATE
   ON public.wallets FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
+DROP TRIGGER IF EXISTS set_updated_at ON public.categories;
 CREATE TRIGGER set_updated_at BEFORE
 UPDATE
   ON public.categories FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
+DROP TRIGGER IF EXISTS set_updated_at ON public.transactions;
 CREATE TRIGGER set_updated_at BEFORE
 UPDATE
   ON public.transactions FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
+DROP TRIGGER IF EXISTS set_updated_at ON public.transfers;
 CREATE TRIGGER set_updated_at BEFORE
 UPDATE
   ON public.transfers FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
 -- =============================================
--- TRIGGER UNTUK PERBARUI SALDO WALLET
+-- 5) WALLET BALANCE TRIGGERS (berbasis tabel transactions)
 -- =============================================
 CREATE OR REPLACE FUNCTION public.update_wallet_balance() RETURNS TRIGGER AS $$
 DECLARE
@@ -213,32 +226,47 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Pasang trigger agar saldo otomatis ter-update pada INSERT/UPDATE/DELETE transaksi
+DROP TRIGGER IF EXISTS update_wallet_balance_on_transaction_insert ON public.transactions;
 CREATE TRIGGER update_wallet_balance_on_transaction_insert
 AFTER
 INSERT
   ON public.transactions FOR EACH ROW EXECUTE FUNCTION public.update_wallet_balance();
 
+DROP TRIGGER IF EXISTS update_wallet_balance_on_transaction_update ON public.transactions;
 CREATE TRIGGER update_wallet_balance_on_transaction_update
 AFTER
 UPDATE
   ON public.transactions FOR EACH ROW EXECUTE FUNCTION public.update_wallet_balance();
 
+DROP TRIGGER IF EXISTS update_wallet_balance_on_transaction_delete ON public.transactions;
 CREATE TRIGGER update_wallet_balance_on_transaction_delete
 AFTER
   DELETE ON public.transactions FOR EACH ROW EXECUTE FUNCTION public.update_wallet_balance();
 
 -- =============================================
--- FUNGSI REKALKULASI SALDO WALLET
 -- =============================================
 -- Fungsi untuk menghitung ulang saldo 1 wallet dari seluruh transaksinya
 CREATE OR REPLACE FUNCTION public.recalculate_wallet_balance(p_wallet_id UUID, p_user_id UUID) RETURNS DECIMAL(15, 2) AS $$
 DECLARE calculated_balance DECIMAL(15, 2);
+DECLARE tx_balance DECIMAL(15, 2);
+DECLARE transfer_in DECIMAL(15, 2);
+DECLARE transfer_out DECIMAL(15, 2);
 BEGIN
   SELECT COALESCE(SUM(t.amount * CASE c.type WHEN 'expense' THEN -1 ELSE 1 END), 0)
-    INTO calculated_balance
+    INTO tx_balance
   FROM public.transactions t
   JOIN public.categories c ON c.id = t.category_id
   WHERE t.wallet_id = p_wallet_id AND t.user_id = p_user_id;
+
+  SELECT COALESCE(SUM(amount), 0) INTO transfer_in
+  FROM public.transfers tr
+  WHERE tr.to_wallet_id = p_wallet_id AND tr.user_id = p_user_id;
+
+  SELECT COALESCE(SUM(amount), 0) INTO transfer_out
+  FROM public.transfers tr
+  WHERE tr.from_wallet_id = p_wallet_id AND tr.user_id = p_user_id;
+
+  calculated_balance := tx_balance + (transfer_in - transfer_out);
   UPDATE public.wallets
     SET balance = calculated_balance,
         updated_at = TIMEZONE('utc' :: text, NOW())
@@ -258,7 +286,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- =============================================
--- PENANGANAN PERUBAHAN TIPE KATEGORI
+-- 7) CATEGORY TYPE PROTECTIONS
 -- =============================================
 -- Immutability & Proteksi Kategori
 -- Cegah penggantian type kategori jika sudah dipakai oleh transaksi
@@ -277,6 +305,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS prevent_category_type_change_trigger ON public.categories;
 CREATE TRIGGER prevent_category_type_change_trigger
   BEFORE UPDATE ON public.categories
   FOR EACH ROW EXECUTE FUNCTION public.prevent_category_type_change();
@@ -296,10 +325,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS prevent_category_delete_trigger ON public.categories;
 CREATE TRIGGER prevent_category_delete_trigger BEFORE DELETE ON public.categories FOR EACH ROW EXECUTE FUNCTION public.prevent_category_delete();
 
 -- =============================================
--- FUNGSI TRANSFER TRANSAKSI
+-- 8) BULK TRANSFER UTILITIES (migrasi data)
 -- =============================================
 -- Pindahkan semua transaksi dari satu wallet ke wallet lain
 CREATE OR REPLACE FUNCTION public.transfer_transactions_to_wallet(
@@ -356,7 +386,111 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- =============================================
--- FUNGSI PENGHAPUSAN AKUN USER (TERMASUK DATA & FILE)
+-- =============================================
+-- Membuat record di tabel transfers dan dua transaksi (expense di wallet sumber,
+-- income di wallet tujuan). Opsi biaya admin akan dibuat sebagai transaksi expense
+-- terpisah di wallet sumber. Semua operasi berjalan atomik di dalam 1 transaksi.
+-- Catatan: amount & fee selalu positif; tanda +/- ditentukan oleh trigger transaksi
+-- berdasarkan category.type.
+-- Catatan Postgres: parameter tanpa default harus dideklarasikan sebelum parameter yang memiliki default
+CREATE OR REPLACE FUNCTION public.create_wallet_transfer(
+  p_user_id UUID,
+  p_from_wallet_id UUID,
+  p_to_wallet_id UUID,
+  p_amount DECIMAL(15, 2),
+  p_fee DECIMAL(15, 2) DEFAULT 0.00,
+  p_notes TEXT DEFAULT NULL,
+  p_date DATE DEFAULT CURRENT_DATE,
+  p_fee_category_id UUID DEFAULT NULL
+) RETURNS UUID AS $$
+DECLARE
+  v_transfer_id UUID;
+  v_from_owner UUID;
+  v_to_owner UUID;
+  v_fee_type category_type;
+  v_from_balance DECIMAL(15, 2);
+BEGIN
+  -- Validasi dasar
+  IF p_from_wallet_id = p_to_wallet_id THEN
+    RAISE EXCEPTION 'Source and destination wallet must be different';
+  END IF;
+  IF p_amount IS NULL OR p_amount <= 0 THEN
+    RAISE EXCEPTION 'Amount must be greater than 0';
+  END IF;
+  IF p_fee IS NULL THEN
+    p_fee := 0.00;
+  END IF;
+
+  -- Cek kepemilikan wallet
+  SELECT user_id INTO v_from_owner FROM public.wallets WHERE id = p_from_wallet_id;
+  SELECT user_id INTO v_to_owner FROM public.wallets WHERE id = p_to_wallet_id;
+  IF v_from_owner IS NULL OR v_to_owner IS NULL THEN
+    RAISE EXCEPTION 'Wallet not found';
+  END IF;
+  IF v_from_owner != p_user_id OR v_to_owner != p_user_id THEN
+    RAISE EXCEPTION 'Permission denied: wallets do not belong to user';
+  END IF;
+
+  -- Validasi kategori biaya (jika ada)
+  IF p_fee > 0 AND p_fee_category_id IS NOT NULL THEN
+    SELECT type INTO v_fee_type FROM public.categories WHERE id = p_fee_category_id AND user_id = p_user_id;
+    IF v_fee_type IS DISTINCT FROM 'expense' THEN
+      RAISE EXCEPTION 'Fee category must be expense';
+    END IF;
+  END IF;
+
+  -- Cek saldo cukup (opsional hard-stop): sumber harus >= amount + fee
+  SELECT balance INTO v_from_balance FROM public.wallets WHERE id = p_from_wallet_id AND user_id = p_user_id;
+  IF v_from_balance IS NULL THEN
+    RAISE EXCEPTION 'Source wallet not found';
+  END IF;
+  IF v_from_balance < (p_amount + COALESCE(p_fee, 0)) THEN
+    RAISE EXCEPTION 'Insufficient funds in source wallet';
+  END IF;
+
+  -- Buat record transfer
+  INSERT INTO public.transfers (
+    user_id, from_wallet_id, to_wallet_id, amount, fee, notes, date
+  ) VALUES (
+    p_user_id, p_from_wallet_id, p_to_wallet_id, p_amount, p_fee, p_notes, p_date
+  ) RETURNING id INTO v_transfer_id;
+
+  -- Biaya admin (opsional) di wallet sumber sebagai transaksi Expense
+  IF p_fee > 0 THEN
+    IF p_fee_category_id IS NULL THEN
+      RAISE EXCEPTION 'Fee category is required when fee > 0';
+    END IF;
+    INSERT INTO public.transactions (
+      user_id, wallet_id, category_id, amount, notes, date
+    ) VALUES (
+      p_user_id, p_from_wallet_id, p_fee_category_id, p_fee, 'Transfer Fee' || CASE WHEN p_notes IS NOT NULL THEN ' - ' || p_notes ELSE '' END || ' [transfer:' || v_transfer_id || ']', p_date
+    );
+  END IF;
+
+  RETURN v_transfer_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =============================================
+-- 10) AUTH: BOOTSTRAP PROFIL USER PADA SIGNUP
+-- =============================================
+-- Membuat profil di public.users ketika user baru dibuat di auth.users
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.users (id, email, full_name)
+  VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'full_name');
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- =============================================
+-- 11) ACCOUNT CLEANUP (DATA & FILES)
 -- =============================================
 -- Fungsi hapus file storage terkait user
 CREATE OR REPLACE FUNCTION public.cleanup_user_storage_files(user_id_param UUID) RETURNS void AS $$
@@ -402,3 +536,85 @@ BEGIN
   PERFORM public.delete_user_account();
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =============================================
+-- 9.1) TRANSFER BALANCE TRIGGER (amount-only)
+-- =============================================
+CREATE OR REPLACE FUNCTION public.handle_transfer_amount_only()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    UPDATE public.wallets SET balance = balance - NEW.amount WHERE id = NEW.from_wallet_id AND user_id = NEW.user_id;
+    UPDATE public.wallets SET balance = balance + NEW.amount WHERE id = NEW.to_wallet_id AND user_id = NEW.user_id;
+    RETURN NEW;
+  ELSIF TG_OP = 'UPDATE' THEN
+    -- Revert old
+    UPDATE public.wallets SET balance = balance + OLD.amount WHERE id = OLD.from_wallet_id AND user_id = OLD.user_id;
+    UPDATE public.wallets SET balance = balance - OLD.amount WHERE id = OLD.to_wallet_id AND user_id = OLD.user_id;
+    -- Apply new
+    UPDATE public.wallets SET balance = balance - NEW.amount WHERE id = NEW.from_wallet_id AND user_id = NEW.user_id;
+    UPDATE public.wallets SET balance = balance + NEW.amount WHERE id = NEW.to_wallet_id AND user_id = NEW.user_id;
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    UPDATE public.wallets SET balance = balance + OLD.amount WHERE id = OLD.from_wallet_id AND user_id = OLD.user_id;
+    UPDATE public.wallets SET balance = balance - OLD.amount WHERE id = OLD.to_wallet_id AND user_id = OLD.user_id;
+    RETURN OLD;
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS handle_transfer_trigger ON public.transfers;
+CREATE TRIGGER handle_transfer_trigger
+AFTER INSERT OR UPDATE OR DELETE ON public.transfers
+FOR EACH ROW EXECUTE FUNCTION public.handle_transfer_amount_only();
+
+-- =============================================
+-- 9.2) VIEW: Unified ledger entries (transactions + transfers)
+-- Read-only convenience view for client: shows signed amounts per wallet
+-- kind: 'transaction' | 'transfer_out' | 'transfer_in'
+-- Note: entry_id + kind can be used as a composite unique key on the client
+CREATE OR REPLACE VIEW public.ledger_entries AS
+  SELECT
+    t.id AS entry_id,
+    t.user_id,
+    t.wallet_id,
+    t.category_id,
+    (t.amount * CASE c.type WHEN 'expense' THEN -1 ELSE 1 END) AS signed_amount,
+    t.amount AS amount,
+    t.date,
+    t.notes,
+    'transaction'::text AS kind,
+    NULL::uuid AS transfer_id
+  FROM public.transactions t
+  JOIN public.categories c ON c.id = t.category_id
+
+  UNION ALL
+
+  SELECT
+    tr.id AS entry_id,
+    tr.user_id,
+    tr.from_wallet_id AS wallet_id,
+    NULL::uuid AS category_id,
+    (-tr.amount) AS signed_amount,
+    tr.amount AS amount,
+    tr.date,
+    tr.notes,
+    'transfer_out'::text AS kind,
+    tr.id AS transfer_id
+  FROM public.transfers tr
+
+  UNION ALL
+
+  SELECT
+    tr.id AS entry_id,
+    tr.user_id,
+    tr.to_wallet_id AS wallet_id,
+    NULL::uuid AS category_id,
+    tr.amount AS signed_amount,
+    tr.amount AS amount,
+    tr.date,
+    tr.notes,
+    'transfer_in'::text AS kind,
+    tr.id AS transfer_id
+  FROM public.transfers tr;

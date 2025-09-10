@@ -393,15 +393,12 @@ class TransactionDetailScreen extends ConsumerWidget {
       final repo = ref.read(transactionRepositoryProvider);
       await repo.deleteTransaction(transactionId, userId);
 
-      // Invalidate related providers to refresh data
-      refreshTransactionProviders(ref);
-      ref.invalidate(filteredTransactionsProvider);
-      ref.invalidate(transactionsProvider);
-      ref.invalidate(transactionProvider);
+  // Invalidate related providers to refresh data
+  refreshTransactionProviders(ref); // bumps all transaction lists
+  // Family providers require params; rely on refresh trigger instead of raw invalidation
 
-      // Also invalidate wallet providers to update balances
-      refreshWalletProviders(ref);
-      ref.invalidate(walletProvider);
+  // Also refresh wallet providers to update balances
+  refreshWalletProviders(ref);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

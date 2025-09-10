@@ -4,6 +4,7 @@ import '../../../models/transaction.dart';
 import '../../../services/supabase_service.dart';
 import '../../../core/errors/failure.dart';
 import '../../../core/logging/logger.dart';
+import '../../../models/ledger_entry.dart';
 
 // Provider untuk SupabaseTransactionService
 final supabaseTransactionServiceProvider = Provider<SupabaseTransactionService>((ref) {
@@ -47,6 +48,38 @@ class SupabaseTransactionService {
           .toList();
     } catch (e, st) {
       AppLogger.e('fetch transactions failed', error: e, stackTrace: st);
+      throw mapException(e, st);
+    }
+  }
+
+  // Ambil unified ledger entries (transactions + transfers) dari view
+  Future<List<LedgerEntry>> getLedgerEntries(
+    String userId, {
+    String? walletId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    try {
+      var query = _supabase
+          .from('ledger_entries')
+          .select('*')
+          .eq('user_id', userId);
+
+      if (walletId != null) query = query.eq('wallet_id', walletId);
+      if (startDate != null) {
+        query = query.gte('date', startDate.toIso8601String().split('T')[0]);
+      }
+      if (endDate != null) {
+        query = query.lte('date', endDate.toIso8601String().split('T')[0]);
+      }
+
+      final response = await query.order('date', ascending: false);
+      if (response.isEmpty) return [];
+      return (response as List)
+          .map((item) => LedgerEntry.fromJson(item as Map<String, dynamic>))
+          .toList();
+    } catch (e, st) {
+      AppLogger.e('fetch ledger entries failed', error: e, stackTrace: st);
       throw mapException(e, st);
     }
   }

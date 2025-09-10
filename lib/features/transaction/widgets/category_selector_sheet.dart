@@ -100,31 +100,21 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet>
 
   Widget _buildCategoryList(List<Category> categories, CategoryType categoryType) {
     if (categories.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.category_outlined,
-              size: 64,
-              color: Colors.grey[400],
+      // Empty state: show the inline "Add New Category" action as a list item
+      return ListView(
+        padding: const EdgeInsets.all(12),
+        children: [
+          _buildAddNewCategoryItem(categoryType),
+          const SizedBox(height: 8),
+          Center(
+            child: Text(
+              'No categories yet. Create one to continue.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey[600],
+                  ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              'No categories available',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Add categories in settings',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[500],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       );
     }
 
