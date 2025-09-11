@@ -101,20 +101,18 @@ class TransactionService {
       startDate: startDate,
       endDate: endDate,
     );
-
+    // NOTE: Summary di layer service ini menggunakan pendekatan tanda amount
+    // untuk menjaga low-coupling (tanpa memuat kategori). Klasifikasi berbasis
+    // kategori yang akurat tersedia di analytics providers.
     double totalIncome = 0;
     double totalExpense = 0;
-
-    for (final transaction in transactions) {
-      // Perlu load category untuk menentukan apakah income atau expense
-      // Untuk sementara, anggap positive amount = income, negative = expense
-      if (transaction.amount > 0) {
-        totalIncome += transaction.amount;
+    for (final t in transactions) {
+      if (t.amount >= 0) {
+        totalIncome += t.amount;
       } else {
-        totalExpense += transaction.amount.abs();
+        totalExpense += t.amount.abs();
       }
     }
-
     return {
       'income': totalIncome,
       'expense': totalExpense,

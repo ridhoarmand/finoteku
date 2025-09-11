@@ -73,9 +73,6 @@ final totalBalanceProvider = FutureProvider.family<double, String>((ref, userId)
   }
 });
 
-// Provider untuk cleanup duplicate wallets (one-time use)
-// Cleanup wallet duplicate (tidak diperlukan lagi di mode online-only) -> selalu true
-final walletCleanupProvider = FutureProvider.family<bool, String>((ref, userId) async => true);
 
 // Helper function untuk refresh semua wallet providers
 void refreshWalletProviders(WidgetRef ref) {

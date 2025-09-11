@@ -68,7 +68,7 @@ final incomeExpenseSummaryProvider = FutureProvider<IncomeExpenseSummary>((ref) 
   final userId = authState.asData?.value.session?.user.id;
   if (userId == null || txs.isEmpty) return const IncomeExpenseSummary(income: 0, expense: 0);
   // Ambil SEMUA kategori (termasuk yang hidden / non-aktif) agar tidak muncul Unknown jika user sudah mengubah status kategori.
-  final categories = await ref.watch(categoriesProvider(userId).future);
+  final categories = await ref.watch(categoriesAllProvider(userId).future);
   final catMap = {for (final c in categories) c.id: c};
   double income = 0, expense = 0;
   for (final t in txs) {
@@ -103,7 +103,7 @@ final expenseByCategoryProvider = FutureProvider<List<CategorySpending>>((ref) a
   final userId = authState.asData?.value.session?.user.id;
   if (userId == null) return [];
   // Ambil semua kategori (bukan hanya yang aktif) agar transaksi lama tetap terklasifikasi.
-  final allCategories = await ref.watch(categoriesProvider(userId).future);
+  final allCategories = await ref.watch(categoriesAllProvider(userId).future);
   final expenseCats = allCategories.where((c) => c.type == CategoryType.expense).toList();
   final catMap = {for (final c in expenseCats) c.id: c};
 
@@ -134,7 +134,7 @@ final incomeByCategoryProvider = FutureProvider<List<CategorySpending>>((ref) as
   final authState = ref.watch(authStateProvider);
   final userId = authState.asData?.value.session?.user.id;
   if (userId == null) return [];
-  final allCategories = await ref.watch(categoriesProvider(userId).future);
+  final allCategories = await ref.watch(categoriesAllProvider(userId).future);
   final incomeCats = allCategories.where((c) => c.type == CategoryType.income).toList();
   final catMap = {for (final c in incomeCats) c.id: c};
   final map = <String, double>{};
@@ -214,26 +214,48 @@ final monthlyTrendProvider = FutureProvider<List<MonthTrend>>((ref) async {
   final userId = authState.asData?.value.session?.user.id;
   if (userId == null) return [];
   final endRange = ref.watch(currentAnalyticsRangeProvider).end;
+  // Ambil semua transaksi dalam 12 bulan terakhir sekali
+  final startRange = DateTime(endRange.year, endRange.month - 11, 1);
+  final start = DateTime(startRange.year, startRange.month, 1);
+  final end = DateTime(endRange.year, endRange.month + 1, 0);
+
+  final txs = await ref.watch(filteredTransactionsProvider((
+    userId: userId,
+    walletId: null,
+    categoryId: null,
+    startDate: start,
+    endDate: end,
+  )).future);
+
+  // Ambil kategori sekali saja
+  final categories = await ref.watch(categoriesProvider(userId).future);
+  final catMap = {for (final c in categories) c.id: c};
+
+  // Bucket per (year-month)
+  final buckets = <String, ({double inc, double exp})>{};
+  for (final t in txs) {
+    final cid = t.categoryId;
+    if (cid == null) continue; // transaksi tanpa kategori di-skip
+    final cat = catMap[cid];
+    if (cat == null) continue; // kategori hilang
+    final y = t.date.year;
+    final m = t.date.month;
+    final key = '$y-$m';
+    final current = buckets[key] ?? (inc: 0.0, exp: 0.0);
+    if (cat.type == CategoryType.income) {
+      buckets[key] = (inc: current.inc + t.amount, exp: current.exp);
+    } else {
+      buckets[key] = (inc: current.inc, exp: current.exp + t.amount);
+    }
+  }
+
+  // Susun hasil 12 bulan berurutan
   final List<MonthTrend> result = [];
   for (int i = 11; i >= 0; i--) {
     final monthDate = DateTime(endRange.year, endRange.month - i, 1);
-    final start = DateTime(monthDate.year, monthDate.month, 1);
-    final end = DateTime(monthDate.year, monthDate.month + 1, 0);
-    final txs = await ref.watch(filteredTransactionsProvider((userId: userId, walletId: null, categoryId: null, startDate: start, endDate: end)).future);
-    final categories = await ref.watch(categoriesProvider(userId).future);
-    final catMap = {for (final c in categories) c.id: c};
-    double inc = 0, exp = 0;
-    for (final t in txs) {
-      if (t.categoryId == null) continue;
-      final cat = catMap[t.categoryId];
-      if (cat == null) continue;
-      if (cat.type == CategoryType.income) {
-        inc += t.amount;
-      } else {
-        exp += t.amount;
-      }
-    }
-    result.add(MonthTrend(label: _monthShort(monthDate.month), income: inc, expense: exp));
+    final key = '${monthDate.year}-${monthDate.month}';
+    final b = buckets[key] ?? (inc: 0.0, exp: 0.0);
+    result.add(MonthTrend(label: _monthShort(monthDate.month), income: b.inc, expense: b.exp));
   }
   return result;
 });
