@@ -6,17 +6,18 @@ import '../../../services/supabase_service.dart';
 import '../widgets/wallet_card.dart';
 import '../widgets/wallet_empty_state.dart';
 import '../widgets/wallet_form_dialog.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class ManageWalletsScreen extends ConsumerWidget {
   const ManageWalletsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
+  final theme = Theme.of(context);
     final currentUser = ref.watch(currentUserProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Manage Wallets'),
+        title: Text(ref.tr(context, 'manage_wallets')),
         actions: [
           // Sync status indicator removed (online-only architecture)
           IconButton(
@@ -28,8 +29,8 @@ class ManageWalletsScreen extends ConsumerWidget {
                 _showAddWalletDialog(context, ref);
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please wait for authentication to complete'),
+                  SnackBar(
+                    content: Text(ref.tr(context, 'login_required_continue')),
                   ),
                 );
               }
@@ -40,7 +41,7 @@ class ManageWalletsScreen extends ConsumerWidget {
       body: currentUser.when(
         data: (user) {
           if (user == null) {
-            return const Center(child: Text('Please login first'));
+            return Center(child: Text(ref.tr(context, 'login_required_short')));
           }
 
           final walletsAsync = ref.watch(walletsProvider(user.id));
@@ -59,7 +60,7 @@ class ManageWalletsScreen extends ConsumerWidget {
                   itemCount: wallets.length,
                   itemBuilder: (context, index) => WalletCard(
                     wallet: wallets[index],
-                    onTap: () => _showWalletDetails(context, wallets[index]),
+                    onTap: () => _showWalletDetails(context, ref, wallets[index]),
                     onAction: (action) => _handleMenuAction(
                       context,
                       ref,
@@ -82,10 +83,7 @@ class ManageWalletsScreen extends ConsumerWidget {
                     color: theme.colorScheme.error,
                   ),
                   const SizedBox(height: 16),
-                  Text(
-                    'Error loading wallets',
-                    style: theme.textTheme.titleLarge,
-                  ),
+                  Text(ref.tr(context, 'wallet_loading_error'), style: theme.textTheme.titleLarge),
                   const SizedBox(height: 8),
                   Text(
                     error.toString(),
@@ -95,7 +93,7 @@ class ManageWalletsScreen extends ConsumerWidget {
                   const SizedBox(height: 16),
                   FilledButton(
                     onPressed: () => ref.invalidate(walletsProvider(user.id)),
-                    child: const Text('Retry'),
+                    child: Text(ref.tr(context, 'retry')),
                   ),
                 ],
               ),
@@ -113,7 +111,7 @@ class ManageWalletsScreen extends ConsumerWidget {
                 color: theme.colorScheme.error,
               ),
               const SizedBox(height: 16),
-              Text('Authentication Error', style: theme.textTheme.titleLarge),
+              Text(ref.tr(context, 'wallet_auth_error'), style: theme.textTheme.titleLarge),
               const SizedBox(height: 8),
               Text(
                 error.toString(),
@@ -123,7 +121,7 @@ class ManageWalletsScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () => ref.invalidate(currentUserProvider),
-                child: const Text('Retry'),
+                child: Text(ref.tr(context, 'retry')),
               ),
             ],
           ),
@@ -148,6 +146,7 @@ class ManageWalletsScreen extends ConsumerWidget {
         break;
       case 'activate':
       case 'deactivate':
+        // Treat is_active=false as Hidden (not deleted). Toggle visibility.
         final toggled = !wallet.isActive;
         try {
           await repo.updateWallet(
@@ -159,9 +158,9 @@ class ManageWalletsScreen extends ConsumerWidget {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(
-                  toggled ? 'Wallet activated' : 'Wallet deactivated',
-                ),
+                content: Text(toggled
+                    ? ref.tr(context, 'wallet_now_visible')
+                    : ref.tr(context, 'wallet_now_hidden')),
               ),
             );
           }
@@ -185,7 +184,7 @@ class ManageWalletsScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (_) => WalletFormDialog(
-        title: 'Add Wallet',
+        title: ref.tr(context, 'wallet_add'),
         onSave: (request) async {
           try {
             await ref
@@ -209,7 +208,7 @@ class ManageWalletsScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (_) => WalletFormDialog(
-        title: 'Edit Wallet',
+        title: ref.tr(context, 'wallet_edit'),
         initialData: UpdateWalletRequest(
           name: wallet.name,
           balance: wallet.balance,
@@ -244,14 +243,14 @@ class ManageWalletsScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Delete Wallet'),
+        title: Text(ref.tr(context, 'wallet_delete_title')),
         content: Text(
-          'Are you sure you want to delete "${wallet.name}"? This action cannot be undone.',
+          '${ref.tr(context, 'wallet_delete_confirm_prefix')} "${wallet.name}"? ${ref.tr(context, 'wallet_irreversible_action')}',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(ref.tr(context, 'cancel')),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
@@ -266,7 +265,7 @@ class ManageWalletsScreen extends ConsumerWidget {
                 refreshWalletProviders(ref);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Wallet deleted')),
+                    SnackBar(content: Text(ref.tr(context, 'wallet_deleted'))),
                   );
                 }
               } catch (e) {
@@ -280,34 +279,34 @@ class ManageWalletsScreen extends ConsumerWidget {
                 }
               }
             },
-            child: const Text('Delete'),
+            child: Text(ref.tr(context, 'delete')),
           ),
         ],
       ),
     );
   }
 
-  void _showWalletDetails(BuildContext context, Wallet wallet) {
+  void _showWalletDetails(BuildContext context, WidgetRef ref, Wallet wallet) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Wallet Details'),
+        title: Text(ref.tr(context, 'wallet_details_title')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _detailRow('Name', wallet.name),
-            _detailRow('Balance', wallet.balance.toStringAsFixed(2)),
-            _detailRow('Currency', wallet.currency),
-            _detailRow('Status', wallet.isActive ? 'Active' : 'Inactive'),
-            _detailRow('Created', wallet.createdAt.toLocal().toString()),
-            _detailRow('Updated', wallet.updatedAt.toLocal().toString()),
+            _detailRow(ref.tr(context, 'wallet_name_label'), wallet.name),
+            _detailRow(ref.tr(context, 'wallet_balance_label'), wallet.balance.toStringAsFixed(2)),
+            _detailRow(ref.tr(context, 'wallet_currency_label'), wallet.currency),
+            _detailRow(ref.tr(context, 'wallet_status_label'), wallet.isActive ? ref.tr(context, 'wallet_visible') : ref.tr(context, 'wallet_hidden')),
+            _detailRow(ref.tr(context, 'wallet_created_label'), wallet.createdAt.toLocal().toString()),
+            _detailRow(ref.tr(context, 'wallet_updated_label'), wallet.updatedAt.toLocal().toString()),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text(ref.tr(context, 'close')),
           ),
         ],
       ),

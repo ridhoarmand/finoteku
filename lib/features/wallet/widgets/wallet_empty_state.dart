@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/localization/app_localizations.dart';
 
-class WalletEmptyState extends StatelessWidget {
+class WalletEmptyState extends ConsumerWidget {
   final VoidCallback onAdd;
   const WalletEmptyState({super.key, required this.onAdd});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return Center(
       child: Column(
@@ -13,10 +15,10 @@ class WalletEmptyState extends StatelessWidget {
         children: [
           Icon(Icons.account_balance_wallet_outlined, size: 80, color: theme.colorScheme.onSurfaceVariant),
           const SizedBox(height: 24),
-            Text('No Wallets Yet', style: theme.textTheme.headlineSmall),
+            Text(ref.tr(context, 'wallet_no_wallets_title'), style: theme.textTheme.headlineSmall),
           const SizedBox(height: 8),
           Text(
-            'Create your first wallet to start\nmanaging your finances',
+            ref.tr(context, 'wallet_no_wallets_sub'),
             style: theme.textTheme.bodyLarge,
             textAlign: TextAlign.center,
           ),
@@ -24,7 +26,7 @@ class WalletEmptyState extends StatelessWidget {
           FilledButton.icon(
             onPressed: onAdd,
             icon: const Icon(Icons.add),
-            label: const Text('Add Wallet'),
+            label: Text(ref.tr(context, 'wallet_add')),
           ),
         ],
       ),

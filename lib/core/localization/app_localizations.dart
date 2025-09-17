@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'locale_provider.dart';
+// Feature-scoped i18n modules
+import '../../features/category/i18n/strings.dart' as category_i18n;
+import '../../features/wallet/i18n/strings.dart' as wallet_i18n;
+import '../../features/transfer/i18n/strings.dart' as transfer_i18n;
 
 typedef StrMap = Map<String, String>;
 
@@ -93,11 +97,24 @@ final Map<String, StrMap> _strings = {
     'change_password_sub': 'Update your account password',
     'delete_account': 'Delete Account',
     'delete_account_sub': 'Permanently delete your account',
-    'wallet_categories_section': 'Wallet & Categories',
-    'manage_wallets': 'Manage Wallets',
-    'manage_wallets_sub': 'Add, edit, or delete your wallets',
-    'manage_categories': 'Manage Categories',
-    'manage_categories_sub': 'Organize your transaction categories',
+  'wallet_categories_section': 'Wallet & Categories',
+  'manage_wallets': wallet_i18n.walletStringsEn['manage_wallets'] ?? 'Manage Wallets',
+  'manage_categories': category_i18n.categoryStringsEn['manage_categories'] ?? 'Manage Categories',
+    'select_category': 'Select Category',
+    'no_categories_yet_create_one':
+        'No categories yet. Create one to continue.',
+    'add_expense_category': 'Add New Expense Category',
+    'add_income_category': 'Add New Income Category',
+    'create_new_category': 'Create a new category',
+    'missing_parent_category': 'Missing parent category',
+  'manage_categories_sub': category_i18n.categoryStringsEn['manage_categories_sub'] ?? 'Organize your transaction categories',
+    'categories_empty_title': 'No categories yet',
+    'categories_empty_sub': 'Tap + to add your first category',
+    'pull_down_to_refresh': 'Pull down to refresh',
+    'edit': 'Edit',
+    'delete': 'Delete',
+    'category_added_success': 'Category added successfully',
+    'category_updated_success': 'Category updated successfully',
     'support_section': 'Support',
     'help_faq': 'Help & FAQ',
     'help_faq_sub': 'Get help and support',
@@ -120,6 +137,24 @@ final Map<String, StrMap> _strings = {
     'phone_too_short': 'Phone number must be at least 10 digits',
     'dismiss': 'Dismiss',
     'error_loading_user': 'Error loading user data',
+    // Merge feature strings (EN)
+    ...category_i18n.categoryStringsEn,
+    ...wallet_i18n.walletStringsEn,
+    ...transfer_i18n.transferStringsEn,
+    // Generic detail/transaction labels (EN)
+    'transaction_details_title': 'Transaction Details',
+    'transaction_not_found': 'Transaction not found',
+    'details_title': 'Details',
+    'no_notes': 'No notes',
+    'loading_ellipsis': 'Loading...',
+    'error_loading_category': 'Error loading category',
+    'no_category': 'No category',
+    'delete_transaction_title': 'Delete Transaction',
+    'delete_transaction_confirm': 'Are you sure you want to delete this transaction? This action cannot be undone.',
+    'transaction_deleted_successfully': 'Transaction deleted successfully',
+    'error_deleting_transaction': 'Error deleting transaction: {error}',
+    'date_label': 'Date',
+    'category_label': 'Category',
   },
   'id': {
     'greeting_morning': 'Selamat Pagi',
@@ -148,11 +183,26 @@ final Map<String, StrMap> _strings = {
     'change_password_sub': 'Perbarui password akun Anda',
     'delete_account': 'Hapus Akun',
     'delete_account_sub': 'Hapus akun Anda secara permanen',
-    'wallet_categories_section': 'Dompet & Kategori',
-    'manage_wallets': 'Kelola Dompet',
-    'manage_wallets_sub': 'Tambah, ubah, atau hapus dompet Anda',
-    'manage_categories': 'Kelola Kategori',
-    'manage_categories_sub': 'Atur kategori transaksi Anda',
+  'wallet_categories_section': 'Dompet & Kategori',
+    'select_category': 'Pilih Kategori',
+    'no_categories_yet_create_one':
+        'Belum ada kategori. Buat baru untuk lanjut.',
+    'add_expense_category': 'Tambah Kategori Pengeluaran',
+    'add_income_category': 'Tambah Kategori Pemasukan',
+    'create_new_category': 'Buat kategori baru',
+    'missing_parent_category': 'Kategori induk tidak ditemukan',
+  'manage_wallets': wallet_i18n.walletStringsId['manage_wallets'] ?? 'Kelola Dompet',
+  'manage_wallets_sub': wallet_i18n.walletStringsId['manage_wallets_sub'] ?? 'Tambah, ubah, atau hapus dompet Anda',
+  'manage_categories_sub': category_i18n.categoryStringsId['manage_categories_sub'] ?? 'Atur kategori transaksi Anda',
+  // Note: manage_categories key for ID is also provided by feature module to ensure consistency
+  'manage_categories': category_i18n.categoryStringsId['manage_categories'] ?? 'Kelola Kategori',
+    'categories_empty_title': 'Belum ada kategori',
+    'categories_empty_sub': 'Ketuk + untuk menambah kategori pertama',
+    'pull_down_to_refresh': 'Tarik ke bawah untuk memuat ulang',
+    'edit': 'Ubah',
+    'delete': 'Hapus',
+    'category_added_success': 'Kategori berhasil ditambahkan',
+    'category_updated_success': 'Kategori berhasil diperbarui',
     'support_section': 'Bantuan',
     'help_faq': 'Bantuan & FAQ',
     'help_faq_sub': 'Dapatkan bantuan dan dukungan',
@@ -238,6 +288,24 @@ final Map<String, StrMap> _strings = {
     'month_october': 'Oktober',
     'month_november': 'November',
     'month_december': 'Desember',
+    // Merge feature strings (ID)
+    ...category_i18n.categoryStringsId,
+    ...wallet_i18n.walletStringsId,
+    ...transfer_i18n.transferStringsId,
+    // Generic detail/transaction labels (ID)
+    'transaction_details_title': 'Detail Transaksi',
+    'transaction_not_found': 'Transaksi tidak ditemukan',
+    'details_title': 'Detail',
+    'no_notes': 'Tidak ada catatan',
+    'loading_ellipsis': 'Memuat...',
+    'error_loading_category': 'Gagal memuat kategori',
+    'no_category': 'Tanpa kategori',
+    'delete_transaction_title': 'Hapus Transaksi',
+    'delete_transaction_confirm': 'Yakin ingin menghapus transaksi ini? Tindakan ini tidak dapat dibatalkan.',
+    'transaction_deleted_successfully': 'Transaksi berhasil dihapus',
+    'error_deleting_transaction': 'Gagal menghapus transaksi: {error}',
+    'date_label': 'Tanggal',
+    'category_label': 'Kategori',
   },
 };
 

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/wallet.dart';
 import '../../../utils/wallet_icon_helper.dart';
+import '../../../core/localization/app_localizations.dart';
 
-class WalletFormDialog extends StatefulWidget {
+class WalletFormDialog extends ConsumerStatefulWidget {
   final String title;
   final UpdateWalletRequest? initialData;
   final Future<void> Function(dynamic request) onSave; // accepts CreateWalletRequest or UpdateWalletRequest
@@ -15,10 +17,10 @@ class WalletFormDialog extends StatefulWidget {
   });
 
   @override
-  State<WalletFormDialog> createState() => _WalletFormDialogState();
+  ConsumerState<WalletFormDialog> createState() => _WalletFormDialogState();
 }
 
-class _WalletFormDialogState extends State<WalletFormDialog> {
+class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _balanceController = TextEditingController();
@@ -64,29 +66,29 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Wallet Name',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: ref.tr(context, 'wallet_name_label'),
+                  border: const OutlineInputBorder(),
                 ),
-                validator: (value) => (value == null || value.trim().isEmpty)
-                    ? 'Please enter wallet name'
+        validator: (value) => (value == null || value.trim().isEmpty)
+          ? ref.tr(context, 'wallet_name_required')
                     : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _balanceController,
-                decoration: const InputDecoration(
-                  labelText: 'Balance',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: ref.tr(context, 'wallet_balance_label'),
+                  border: const OutlineInputBorder(),
                   prefixText: 'Rp ', // normalize to IDR style
                 ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please enter balance';
+                    return ref.tr(context, 'wallet_balance_required');
                   }
                   if (double.tryParse(value) == null) {
-                    return 'Please enter a valid number';
+                    return ref.tr(context, 'wallet_number_invalid');
                   }
                   return null;
                 },
@@ -94,9 +96,9 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: _selectedCurrency,
-                decoration: const InputDecoration(
-                  labelText: 'Currency',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: ref.tr(context, 'wallet_currency_label'),
+                  border: const OutlineInputBorder(),
                 ),
                 items: _currencies
                     .map((c) => DropdownMenuItem(value: c, child: Text(c)))
@@ -108,7 +110,7 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Selected Icon:',
+                      ref.tr(context, 'wallet_selected_icon'),
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ),
@@ -124,7 +126,7 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
                   const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: _showIconSelectionDialog,
-                    child: const Text('Select Icon'),
+                    child: Text(ref.tr(context, 'wallet_select_icon')),
                   ),
                 ],
               ),
@@ -135,7 +137,7 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
                     value: _isActive,
                     onChanged: (value) => setState(() => _isActive = value ?? true),
                   ),
-                  const Text('Active'),
+                  Text(ref.tr(context, 'wallet_visible')),
                 ],
               ),
             ],
@@ -145,7 +147,7 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
       actions: [
         TextButton(
           onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(ref.tr(context, 'cancel')),
         ),
         FilledButton(
           onPressed: _isLoading ? null : _handleSave,
@@ -155,7 +157,7 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Save'),
+              : Text(ref.tr(context, 'save')),
         ),
       ],
     );
@@ -183,8 +185,8 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
                   children: [
                     Icon(Icons.account_balance_wallet_outlined, color: Theme.of(context).colorScheme.primary),
                     const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text('Select Wallet Icon', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    Expanded(
+                      child: Text(ref.tr(context, 'wallet_select_icon_title'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -216,12 +218,12 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
                         setState(() => _selectedIcon = null);
                         Navigator.of(context).pop();
                       },
-                      child: const Text('Use Default'),
+                      child: Text(ref.tr(context, 'wallet_use_default')),
                     ),
                     const SizedBox(width: 12),
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
+                      child: Text(ref.tr(context, 'cancel')),
                     ),
                   ],
                 ),
@@ -259,7 +261,7 @@ class _WalletFormDialogState extends State<WalletFormDialog> {
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(widget.initialData != null ? 'Wallet updated successfully' : 'Wallet created successfully')),
+          SnackBar(content: Text(widget.initialData != null ? ref.tr(context, 'wallet_updated_success') : ref.tr(context, 'wallet_created_success'))),
         );
       }
     } catch (e) {
