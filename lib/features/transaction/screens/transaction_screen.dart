@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'add_transaction_screen.dart';
 import 'transaction_detail_screen.dart';
 import '../../transfer/screens/transfer_detail_screen.dart';
+import '../../category/theme/category_theme.dart';
 import '../../transfer/services/transfer_service.dart';
 import '../providers/transaction_providers.dart';
 import '../../../models/ledger_entry.dart';
@@ -80,7 +81,8 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
           // Transaction List
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              // Slightly reduce horizontal padding to widen cards similar to Home
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               child: ledgerAsync.when(
                 data: (entries) {
                   return categoriesAsync.when(
@@ -561,9 +563,9 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
             final amount = (a.amount); // both sides share same absolute amount
             final amountFormatted = CurrencyFormatter.format(amount, 'IDR');
             final displayAmount = amountFormatted;
-            final categoryColor = Colors.blue; // neutral color for transfer
+            final categoryColor = CategoryTheme.transfer; // neutral color for transfer
             return Card(
-              margin: const EdgeInsets.only(bottom: 4),
+              margin: const EdgeInsets.only(bottom: 8),
               child: InkWell(
                 borderRadius: BorderRadius.circular(12),
                 onTap: () {
@@ -584,9 +586,9 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                     children: [
                       CircleAvatar(
                         backgroundColor: categoryColor.withValues(alpha: 0.15),
-                        child: const Icon(
+                        child: Icon(
                           Icons.swap_horiz,
-                          color: Colors.blue,
+                          color: CategoryTheme.transfer,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -678,7 +680,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
           final amountFormatted = CurrencyFormatter.format(entry.amount, 'IDR');
           final displayAmount = isPositive ? amountFormatted : '-$amountFormatted';
           return Card(
-            margin: const EdgeInsets.only(bottom: 4),
+            margin: const EdgeInsets.only(bottom: 8),
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
               onTap: () {
@@ -699,12 +701,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     CircleAvatar(
-                      backgroundColor: () {
-            final baseColor = category?.color != null
-              ? Color(category!.color!)
-              : (isPositive ? Colors.green : Colors.red);
-                        return baseColor.withValues(alpha: 0.15);
-                      }(),
+                      backgroundColor: CategoryTheme.bySign(isPositive).withValues(alpha: 0.15),
                       child: Icon(
                         () {
                           if (category?.iconCodePoint != null) {
@@ -714,9 +711,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                           if (entry.kind == 'transfer_out') return Icons.call_made;
                           return isPositive ? Icons.trending_up : Icons.trending_down;
                         }(),
-                        color: category?.color != null
-                            ? Color(category!.color!)
-                            : (isPositive ? Colors.green : Colors.red),
+                        color: CategoryTheme.bySign(isPositive),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -754,7 +749,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                         Text(
                           displayAmount,
                           style: theme.textTheme.titleMedium?.copyWith(
-                            color: isPositive ? Colors.green : Colors.red,
+                            color: CategoryTheme.bySign(isPositive),
                             fontWeight: FontWeight.bold,
                           ),
                         ),
