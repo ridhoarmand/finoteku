@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../models/category.dart';
+import '../../category/theme/category_theme.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class CategorySelectorSheet extends StatefulWidget {
   final List<Category> categories;
@@ -66,21 +69,25 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet>
           // Header
           Padding(
             padding: const EdgeInsets.all(12),
-            child: Text(
-              'Select Category',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
+            child: Consumer(
+              builder: (context, ref, _) => Text(
+                ref.tr(context, 'select_category'),
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
           
           // Tab Bar
-          TabBar(
-            controller: _tabController,
-            tabs: const [
-              Tab(icon: Icon(Icons.trending_down), text: 'Expense'),
-              Tab(icon: Icon(Icons.trending_up), text: 'Income'),
-            ],
+          Consumer(
+            builder: (context, ref, _) => TabBar(
+              controller: _tabController,
+              tabs: [
+                Tab(icon: const Icon(Icons.trending_down), text: ref.tr(context, 'expense')),
+                Tab(icon: const Icon(Icons.trending_up), text: ref.tr(context, 'income')),
+              ],
+            ),
           ),
           
           // Tab Bar View
@@ -107,11 +114,13 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet>
           _buildAddNewCategoryItem(categoryType),
           const SizedBox(height: 8),
           Center(
-            child: Text(
-              'No categories yet. Create one to continue.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
-                  ),
+            child: Consumer(
+              builder: (context, ref, _) => Text(
+                ref.tr(context, 'no_categories_yet_create_one'),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+              ),
             ),
           ),
         ],
@@ -198,19 +207,25 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet>
             size: 16,
           ),
         ),
-        title: Text(
-          'Add New ${isExpense ? 'Expense' : 'Income'} Category',
-          style: theme.textTheme.titleMedium?.copyWith(
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
+        title: Consumer(
+          builder: (context, ref, _) => Text(
+            isExpense
+                ? ref.tr(context, 'add_expense_category')
+                : ref.tr(context, 'add_income_category'),
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
           ),
         ),
-        subtitle: Text(
-          'Create a new category',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.primary.withValues(alpha: 0.7),
-            fontSize: 12,
+        subtitle: Consumer(
+          builder: (context, ref, _) => Text(
+            ref.tr(context, 'create_new_category'),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.primary.withValues(alpha: 0.7),
+              fontSize: 12,
+            ),
           ),
         ),
         trailing: Icon(
@@ -253,9 +268,8 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet>
           )
         : Icons.category;
     
-    Color color = category.color != null 
-        ? Color(category.color!) 
-        : theme.colorScheme.primary;
+  // Standardized color by type
+  Color color = CategoryTheme.forType(category.type);
 
     // Different styling based on hierarchy level
     Widget leadingWidget;
@@ -330,11 +344,13 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet>
           ),
         ),
         subtitle: isOrphan 
-            ? Text(
-                'Missing parent category',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: Colors.orange,
-                  fontStyle: FontStyle.italic,
+            ? Consumer(
+                builder: (context, ref, _) => Text(
+                  ref.tr(context, 'missing_parent_category'),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.orange,
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
               )
             : isParent
@@ -342,8 +358,8 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet>
                     category.type.name.toUpperCase(),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: category.type == CategoryType.expense 
-                          ? Colors.red 
-                          : Colors.green,
+                          ? CategoryTheme.expense 
+                          : CategoryTheme.income,
                       fontWeight: FontWeight.bold,
                     ),
                   )

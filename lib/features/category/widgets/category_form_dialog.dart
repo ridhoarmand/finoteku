@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/category.dart';
 import '../../../utils/category_icon_helper.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../providers/category_providers.dart';
+import '../data/category_suggestions.dart';
 import '../../../services/supabase_service.dart';
+import '../theme/category_theme.dart';
 
 class CategoryFormDialog extends ConsumerStatefulWidget {
   final String title;
@@ -34,53 +37,11 @@ class CategoryFormDialog extends ConsumerStatefulWidget {
 
 class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
   late TextEditingController _nameController;
-  Color _selectedColor = Colors.blue;
   IconData? _selectedIcon;
   String? _selectedParentId;
+  String? _selectedParentName; // keep name for icon/suggestion context
 
-  final List<Color> _availableColors = [
-    // Red variations
-    const Color(0xFFE53E3E), // Red
-    const Color(0xFFFF6B6B), // Light Red
-    const Color(0xFFFF4757), // Coral Red
-    const Color(0xFFD63031), // Dark Red
-    // Orange variations
-    const Color(0xFFFF7F00), // Orange
-    const Color(0xFFFF9500), // Light Orange
-    const Color(0xFFE17055), // Burnt Orange
-    const Color(0xFFFF6348), // Orange Red
-    // Yellow variations
-    const Color(0xFFFFD93D), // Yellow
-    const Color(0xFFFFC312), // Golden Yellow
-    const Color(0xFFFFDA79), // Light Yellow
-    const Color(0xFFF39C12), // Orange Yellow
-    // Green variations
-    const Color(0xFF00B894), // Green
-    const Color(0xFF55A3FF), // Light Green
-    const Color(0xFF26de81), // Mint Green
-    const Color(0xFF00a085), // Dark Green
-    // Blue variations
-    const Color(0xFF3742FA), // Blue
-    const Color(0xFF70A1FF), // Light Blue
-    const Color(0xFF5352ED), // Purple Blue
-    const Color(0xFF2F3542), // Dark Blue
-    // Purple variations
-    const Color(0xFF8E44AD), // Purple
-    const Color(0xFFA55EEA), // Light Purple
-    const Color(0xFF6C5CE7), // Violet
-    const Color(0xFF2D3436), // Dark Purple
-    // Pink variations
-    const Color(0xFFE91E63), // Pink
-    const Color(0xFFFF6B9D), // Light Pink
-    const Color(0xFFE84393), // Rose Pink
-    const Color(0xFFD63031), // Deep Pink
-    // Additional colors
-    const Color(0xFF00CEC9), // Teal
-    const Color(0xFF636E72), // Grey
-    const Color(0xFF2D3436), // Dark Grey
-    const Color(0xFFFFFFFF), // White
-    const Color(0xFF000000), // Black
-  ];
+  // Color palette removed
 
   @override
   void initState() {
@@ -88,8 +49,7 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
     _nameController = TextEditingController(text: widget.initialName ?? '');
     _selectedIcon = widget.initialIcon;
     _selectedParentId = widget.initialParentId;
-    // Initialize color with initial color or default blue
-    _selectedColor = widget.initialColor ?? Colors.blue;
+  // Parent name is resolved lazily when dropdown loads
   }
 
   @override
@@ -110,10 +70,7 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () {
-          // Dismiss keyboard when tapping outside text fields
-          FocusScope.of(context).unfocus();
-        },
+        onTap: () => FocusScope.of(context).unfocus(),
         child: Container(
           width: double.maxFinite,
           constraints: BoxConstraints(
@@ -129,14 +86,6 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
               // Header
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.9),
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
-                  ),
-                ),
                 child: Row(
                   children: [
                     Icon(
@@ -149,9 +98,10 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
                     Expanded(
                       child: Text(
                         widget.title,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleLarge
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -169,12 +119,16 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
                       TextField(
                         controller: _nameController,
                         decoration: InputDecoration(
-                          labelText: 'Category Name',
+                          labelText: ref.tr(context, 'category_name_label'),
                           border: const OutlineInputBorder(),
                         ),
                         textCapitalization: TextCapitalization.words,
                         maxLength: 50,
                       ),
+                      // Saran Kategori (ringkas)
+                      _buildSuggestionChips(context),
+                      const SizedBox(height: 8),
+
                       // Parent Category Selection
                       _buildParentSelectionSection(context),
                       const SizedBox(height: 20),
@@ -211,24 +165,23 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
                   children: [
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
+                      child: Text(ref.tr(context, 'cancel')),
                     ),
                     const SizedBox(width: 12),
                     FilledButton(
                       onPressed: _nameController.text.trim().isEmpty
                           ? null
                           : () {
+                              final autoColor = CategoryTheme.forType(widget.categoryType);
                               widget.onSave(
                                 _nameController.text.trim(),
-                                _selectedColor,
-                                _selectedIcon ??
-                                    Icons
-                                        .category, // Use default if none selected
+                                autoColor,
+                                _selectedIcon ?? Icons.category,
                                 _selectedParentId,
                               );
                               Navigator.of(context).pop();
                             },
-                      child: const Text('Save'),
+                      child: Text(ref.tr(context, 'save')),
                     ),
                   ],
                 ),
@@ -237,6 +190,34 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSuggestionChips(BuildContext context) {
+    final suggestions = CategorySuggestions.forType(widget.categoryType);
+    if (suggestions.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header dihilangkan agar ringkas
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (final s in suggestions.take(6))
+              ActionChip(
+                label: Text(s),
+                onPressed: () {
+                  setState(() {
+                    _nameController.text = s;
+                    _selectedIcon = CategoryIconHelper.getIconForCategory(s);
+                  });
+                },
+              ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -252,9 +233,9 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
               color: Theme.of(context).colorScheme.primary,
             ),
             const SizedBox(width: 8),
-            const Text(
-              'Select Icon',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+            Text(
+              ref.tr(context, 'select_icon'),
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
             ),
           ],
         ),
@@ -279,21 +260,24 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
               Row(
                 children: [
                   Text(
-                    'Preview: ',
+                    '${ref.tr(context, 'preview')}: ',
                     style: TextStyle(color: Colors.grey[600], fontSize: 14),
                   ),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: _selectedColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: CategoryIconHelper.buildCategoryIcon(
-                      _selectedIcon ?? Icons.category,
-                      size: 24,
-                      color: _selectedColor,
-                    ),
-                  ),
+                  Builder(builder: (context) {
+                    final previewColor = CategoryTheme.forType(widget.categoryType);
+                    return Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: previewColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: CategoryIconHelper.buildCategoryIcon(
+                        _selectedIcon ?? Icons.category,
+                        size: 24,
+                        color: previewColor,
+                      ),
+                    );
+                  }),
                   const SizedBox(width: 12),
                   if (_selectedIcon != null)
                     TextButton.icon(
@@ -303,7 +287,7 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
                         });
                       },
                       icon: const Icon(Icons.refresh, size: 16),
-                      label: const Text('Reset'),
+                      label: Text(ref.tr(context, 'reset')),
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -344,114 +328,8 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
     );
   }
 
-  Widget _buildColorSection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(
-              Icons.color_lens_outlined,
-              size: 16,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              'Select Color',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-            ),
-            const Spacer(),
-            Text(
-              'Swipe →',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[500],
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Theme.of(
-              context,
-            ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Theme.of(
-                context,
-              ).colorScheme.outline.withValues(alpha: 0.2),
-            ),
-          ),
-          child: SizedBox(
-            height: 40, // Fixed height for horizontal scroll
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _availableColors.map((color) {
-                  final isSelected = color == _selectedColor;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedColor = color;
-                        });
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: color,
-                          shape: BoxShape.circle,
-                          border: isSelected
-                              ? Border.all(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface,
-                                  width: 3,
-                                )
-                              : Border.all(
-                                  color: Colors.grey.shade300,
-                                  width: 1,
-                                ),
-                          boxShadow: isSelected
-                              ? [
-                                  BoxShadow(
-                                    color: color.withValues(alpha: 0.5),
-                                    blurRadius: 8,
-                                    spreadRadius: 2,
-                                  ),
-                                ]
-                              : [
-                                  BoxShadow(
-                                    color: Colors.grey.withValues(alpha: 0.2),
-                                    blurRadius: 2,
-                                    spreadRadius: 0,
-                                  ),
-                                ],
-                        ),
-                        child: isSelected
-                            ? Icon(
-                                Icons.check,
-                                color: _getContrastColor(color),
-                                size: 20,
-                              )
-                            : null,
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  // Color selector removed
+  Widget _buildColorSection(BuildContext context) => const SizedBox.shrink();
 
   Widget _buildParentSelectionSection(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
@@ -467,17 +345,16 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
               color: Theme.of(context).colorScheme.primary,
             ),
             const SizedBox(width: 8),
-            const Text(
-              'Parent Category',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+            Text(
+              ref.tr(context, 'parent_category'),
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
             ),
             const SizedBox(width: 4),
             IconButton(
               icon: Icon(Icons.info_outline, size: 16, color: Colors.grey[600]),
               padding: EdgeInsets.zero,
               constraints: BoxConstraints(minWidth: 24, minHeight: 24),
-              tooltip:
-                  'Select a parent to create a sub-category, or leave empty for main category',
+              tooltip: ref.tr(context, 'parent_info_tooltip'),
               onPressed: () {
                 _showParentCategoryInfo(context);
               },
@@ -523,13 +400,13 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
                   initialValue: _selectedParentId,
                   isExpanded: true, // Fix overflow
                   decoration: InputDecoration(
-                    labelText: 'Parent Category (Optional)',
+                    labelText: ref.tr(context, 'parent_category_optional'),
                     border: const OutlineInputBorder(),
                   ),
                   items: [
-                    const DropdownMenuItem<String?>(
+                    DropdownMenuItem<String?>(
                       value: null,
-                      child: Text('None (Main Category)'),
+                      child: Text(ref.tr(context, 'none_main_category')),
                     ),
                     ...parentCategories.map((category) {
                       return DropdownMenuItem<String?>(
@@ -563,6 +440,21 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
                   onChanged: (value) {
                     setState(() {
                       _selectedParentId = value;
+                        // Update selected parent name for suggestions/icon inheritance
+                        if (value == null) {
+                          _selectedParentName = null;
+                        } else {
+                          final found = parentCategories.firstWhere(
+                            (c) => c.id == value,
+                            orElse: () => parentCategories.first,
+                          );
+                          _selectedParentName = found.name;
+                          // If user hasn't chosen an icon, inherit from parent name
+                          _selectedIcon = CategoryIconHelper.inheritIcon(
+                            childIcon: _selectedIcon,
+                            parentName: _selectedParentName!,
+                          );
+                        }
                     });
                   },
                 );
@@ -571,28 +463,24 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
                 items: [],
                 onChanged: null,
                 decoration: InputDecoration(
-                  labelText: 'Loading...',
+                  labelText: ref.tr(context, 'loading'),
                   border: OutlineInputBorder(),
                 ),
               ),
               error: (error, stack) => Text(
-                'Error loading parent categories',
+                ref.tr(context, 'error_loading_parent_categories'),
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             );
           },
           loading: () => const CircularProgressIndicator(),
-          error: (error, stack) => Text('Error: $error'),
+          error: (error, stack) => Text(ref.tr(context, 'error_loading_user')),
         ),
       ],
     );
   }
 
-  Color _getContrastColor(Color backgroundColor) {
-    // Calculate contrast color (white or black) based on background
-    final luminance = backgroundColor.computeLuminance();
-    return luminance > 0.5 ? Colors.black : Colors.white;
-  }
+  // Contrast helper removed (no longer used)
 
   void _showParentCategoryInfo(BuildContext context) {
     showDialog(
@@ -606,26 +494,26 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
               size: 20,
             ),
             const SizedBox(width: 8),
-            const Text('Parent Category'),
+            Text(ref.tr(context, 'parent_info_title')),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Parent categories help organize your finances hierarchically:',
-              style: TextStyle(fontWeight: FontWeight.w500),
+            Text(
+              ref.tr(context, 'parent_info_desc'),
+              style: const TextStyle(fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 12),
             _buildInfoItem(
-              '🏠 Main Category',
-              'Select "None" to create a main category that can have sub-categories',
+              ref.tr(context, 'main_category'),
+              ref.tr(context, 'main_category_desc'),
             ),
             const SizedBox(height: 8),
             _buildInfoItem(
-              '📁 Sub-category',
-              'Select a parent to create a sub-category under it',
+              ref.tr(context, 'sub_category'),
+              ref.tr(context, 'sub_category_desc'),
             ),
             const SizedBox(height: 12),
             Container(
@@ -639,16 +527,16 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Example:',
+                    ref.tr(context, 'example'),
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       color: Colors.blue[700],
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text('🍽️ Food (Main Category)'),
-                  const Text('  └── 🍕 Fast Food (Sub-category)'),
-                  const Text('  └── 🥗 Groceries (Sub-category)'),
+                  Text(ref.tr(context, 'example_food_main')),
+                  Text(ref.tr(context, 'example_fast_food_sub')),
+                  Text(ref.tr(context, 'example_groceries_sub')),
                 ],
               ),
             ),
@@ -657,7 +545,7 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Got it!'),
+            child: Text(ref.tr(context, 'got_it')),
           ),
         ],
       ),
