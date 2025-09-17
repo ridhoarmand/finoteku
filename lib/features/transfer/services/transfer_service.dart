@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/errors/failure.dart';
 import 'supabase_transfer_service.dart';
 import '../models/transfer_models.dart';
+import '../models/transfer.dart';
 
 final transferServiceProvider = Provider<TransferService>((ref) {
   final supa = ref.watch(supabaseTransferServiceProvider);
@@ -22,4 +23,6 @@ class TransferService {
     final id = await _remote.createWalletTransfer(userId, req);
     return id;
   }
+
+  Future<Transfer?> getById(String userId, String transferId) => _remote.getTransferById(userId, transferId);
 }
