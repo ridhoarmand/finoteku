@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'add_transaction_screen.dart';
 import 'transaction_detail_screen.dart';
+import '../../transfer/screens/transfer_detail_screen.dart';
+import '../../transfer/services/transfer_service.dart';
 import '../providers/transaction_providers.dart';
 import '../../../models/ledger_entry.dart';
 import '../../wallet/providers/wallet_providers.dart';
@@ -43,7 +45,8 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
       );
     }
 
-    final walletsAsync = ref.watch(activeWalletsProvider(user.id));
+  final walletsAsync = ref.watch(activeWalletsProvider(user.id));
+  final allWalletsAsync = ref.watch(walletsProvider(user.id));
     final categoriesAsync = ref.watch(categoriesProvider(user.id));
 
     // Gunakan ledger entries agar transfer juga tampil dalam daftar
@@ -86,7 +89,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                       if (filtered.isEmpty) {
                         return _buildEmptyState(context, theme);
                       }
-                      final wallets = walletsAsync.valueOrNull ?? [];
+                      final wallets = allWalletsAsync.valueOrNull ?? walletsAsync.valueOrNull ?? [];
                       return _buildLedgerList(
                         filtered,
                         theme,
@@ -488,6 +491,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
 
     // Build flattened list with date headers
     final items = <_TxListItem>[];
+    final processedTransferIds = <String>{};
     DateTime? currentDate;
     for (final e in entries) {
       final txDate = DateTime(e.date.year, e.date.month, e.date.day);
@@ -495,7 +499,25 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
         currentDate = txDate;
         items.add(_TxListItem.header(txDate));
       }
-      items.add(_TxListItem.entry(e));
+      // Group transfer_in/out into a single visual item per transferId
+      if ((e.kind == 'transfer_in' || e.kind == 'transfer_out') && e.transferId != null) {
+        if (processedTransferIds.contains(e.transferId)) {
+          // already added a card for this transfer
+          continue;
+        }
+        // Try to find counterpart in current list (may be missing if filtered by wallet)
+        final counterpart = entries.firstWhere(
+          (x) => x.transferId == e.transferId && x.entryId != e.entryId,
+          orElse: () => e,
+        );
+        // Mark as processed
+        processedTransferIds.add(e.transferId!);
+        // Create a synthetic entry to render a single card; we reuse the existing entry but
+        // mark via a wrapper item type to customize UI later in the builder.
+        items.add(_TxListItem.transfer(e, counterpart != e ? counterpart : null));
+      } else {
+        items.add(_TxListItem.entry(e));
+      }
     }
 
     return RefreshIndicator(
@@ -523,6 +545,128 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                   fontWeight: FontWeight.w600,
                   color: theme.colorScheme.primary,
                   letterSpacing: 0.3,
+                ),
+              ),
+            );
+          }
+          // Handle unified transfer card separately
+          if (item.isTransfer) {
+            final a = item.entry!; // one side
+            final b = item.counterpart; // other side (may be null when filtered)
+            // Determine from/to wallets
+            LedgerEntry? outEntry = a.signedAmount < 0 ? a : (b != null && b.signedAmount < 0 ? b : null);
+            LedgerEntry? inEntry = a.signedAmount >= 0 ? a : (b != null && b.signedAmount >= 0 ? b : null);
+            final fromName = outEntry != null ? (walletMap[outEntry.walletId]?.name ?? '-') : null;
+            final toName = inEntry != null ? (walletMap[inEntry.walletId]?.name ?? '-') : null;
+            final amount = (a.amount); // both sides share same absolute amount
+            final amountFormatted = CurrencyFormatter.format(amount, 'IDR');
+            final displayAmount = amountFormatted;
+            final categoryColor = Colors.blue; // neutral color for transfer
+            return Card(
+              margin: const EdgeInsets.only(bottom: 4),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  // Open transfer detail
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => TransferDetailScreen(transferId: a.transferId!),
+                    ),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: categoryColor.withValues(alpha: 0.15),
+                        child: const Icon(
+                          Icons.swap_horiz,
+                          color: Colors.blue,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Title: from -> to. If counterpart missing, resolve via a small fetch.
+                            Builder(builder: (context) {
+                              if (fromName != null && toName != null) {
+                                return Text(
+                                  '$fromName -> $toName',
+                                  style: theme.textTheme.titleMedium,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                );
+                              }
+                              // counterpart not found (likely due to wallet filter), fetch transfer to resolve wallet names
+                              final user = ref.read(currentUserProvider).value;
+                              if (user == null) {
+                                return Text(
+                                  ref.tr(context, 'transfer'),
+                                  style: theme.textTheme.titleMedium,
+                                );
+                              }
+                              return FutureBuilder(
+                                future: ref.read(transferServiceProvider).getById(user.id, a.transferId!),
+                                builder: (context, snap) {
+                                  if (snap.connectionState != ConnectionState.done) {
+                                    return Text(
+                                      ref.tr(context, 'transfer'),
+                                      style: theme.textTheme.titleMedium,
+                                    );
+                                  }
+                                  final tr = snap.data as dynamic; // Transfer
+                                  if (tr == null) {
+                                    return Text(
+                                      ref.tr(context, 'transfer'),
+                                      style: theme.textTheme.titleMedium,
+                                    );
+                                  }
+                                  final from = walletMap[tr.fromWalletId]?.name ?? '-';
+                                  final to = walletMap[tr.toWalletId]?.name ?? '-';
+                                  return Text(
+                                    '$from -> $to',
+                                    style: theme.textTheme.titleMedium,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  );
+                                },
+                              );
+                            }),
+                            const SizedBox(height: 2),
+                            // Subtitle: notes
+                            if ((a.notes ?? b?.notes ?? '').trim().isNotEmpty)
+                              Text(
+                                (a.notes ?? b?.notes)!,
+                                style: theme.textTheme.bodySmall,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const SizedBox(height: 2),
+                          Text(
+                            displayAmount,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: theme.colorScheme.onSurface,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -683,8 +827,11 @@ class _TxListItem {
   final bool isHeader;
   final DateTime? date;
   final LedgerEntry? entry;
+  final bool isTransfer;
+  final LedgerEntry? counterpart;
 
-  _TxListItem._(this.isHeader, this.date, this.entry);
-  factory _TxListItem.header(DateTime date) => _TxListItem._(true, date, null);
-  factory _TxListItem.entry(LedgerEntry e) => _TxListItem._(false, null, e);
+  _TxListItem._(this.isHeader, this.date, this.entry, this.isTransfer, this.counterpart);
+  factory _TxListItem.header(DateTime date) => _TxListItem._(true, date, null, false, null);
+  factory _TxListItem.entry(LedgerEntry e) => _TxListItem._(false, null, e, false, null);
+  factory _TxListItem.transfer(LedgerEntry a, LedgerEntry? b) => _TxListItem._(false, null, a, true, b);
 }
