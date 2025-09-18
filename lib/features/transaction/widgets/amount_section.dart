@@ -55,11 +55,13 @@ class AmountSection extends ConsumerWidget {
               FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
             ],
             validator: (value) {
-              if (value?.isEmpty ?? true)
+              if (value?.isEmpty ?? true) {
                 return ref.tr(context, 'amount_validation_empty');
+              }
               final amount = double.tryParse(value!);
-              if (amount == null || amount <= 0)
+              if (amount == null || amount <= 0) {
                 return ref.tr(context, 'amount_validation_invalid');
+              }
               return null;
             },
           ),
