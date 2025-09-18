@@ -5,9 +5,11 @@ import '../../../utils/currency_formatter.dart';
 import '../../category/providers/category_providers.dart';
 import '../../transaction/providers/transaction_providers.dart';
 import '../../wallet/providers/wallet_providers.dart';
-import '../../../models/category.dart';
+import '../../../models/ledger_entry.dart';
 import '../../category/theme/category_theme.dart';
 import '../../transaction/screens/transaction_detail_screen.dart';
+import '../../transfer/screens/transfer_detail_screen.dart';
+import '../../transaction/widgets/ledger_transfer_card.dart';
 
 class RecentTransactionsSection extends ConsumerWidget {
   final String userId;
@@ -15,9 +17,9 @@ class RecentTransactionsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final recentAsync = ref.watch(recentTransactionsProvider(userId));
+    final recentAsync = ref.watch(recentActivitiesProvider(userId));
     final categoriesAsync = ref.watch(categoriesProvider(userId));
-    final walletsAsync = ref.watch(activeWalletsProvider(userId));
+    final walletsAsync = ref.watch(walletsProvider(userId)); // Use all wallets for transfers
 
     final theme = Theme.of(context);
 
@@ -31,8 +33,8 @@ class RecentTransactionsSection extends ConsumerWidget {
           style: theme.textTheme.bodyMedium,
         ),
       ),
-      data: (txs) {
-        if (txs.isEmpty) {
+      data: (entries) {
+        if (entries.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -95,16 +97,16 @@ class RecentTransactionsSection extends ConsumerWidget {
                   return '$weekdayName, ${date.day} $monthName ${date.year}';
                 }
 
-                final sorted = [...txs]..sort((a, b) => b.date.compareTo(a.date));
+                final sorted = [...entries]..sort((a, b) => b.date.compareTo(a.date));
                 final List<_HomeListItem> items = [];
                 DateTime? lastHeader;
-                for (final tx in sorted) {
-                  final d = DateTime(tx.date.year, tx.date.month, tx.date.day);
+                for (final entry in sorted) {
+                  final d = DateTime(entry.date.year, entry.date.month, entry.date.day);
                   if (lastHeader == null || !isSameDay(d, lastHeader)) {
                     items.add(_HomeListItem.header(d));
                     lastHeader = d;
                   }
-                  items.add(_HomeListItem.transaction(tx));
+                  items.add(_HomeListItem.entry(entry));
                 }
 
                 return ListView.builder(
@@ -136,94 +138,116 @@ class RecentTransactionsSection extends ConsumerWidget {
                       );
                     }
 
-                    final tx = item.transaction;
-                    final category = categoryMap[tx.categoryId];
-                    final wallet = walletMap[tx.walletId];
-                    final isIncome = category?.type == CategoryType.income;
-                    final amountFormatted = CurrencyFormatter.format(tx.amount, 'IDR');
-                    final displayAmount = isIncome == true ? amountFormatted : '-$amountFormatted';
-
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      elevation: 0.5,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: theme.dividerColor.withValues(alpha: 0.2)),
-                      ),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () {
+                    final entry = item.entry as LedgerEntry;
+                    
+                    // Check if this is a transfer
+                    if (entry.transferId != null) {
+                      // Gunakan LedgerTransferCard yang sudah diperbaiki
+                      return LedgerTransferCard(
+                        a: entry,
+                        counterpart: null, // Tidak perlu counterpart untuk recent transactions
+                        walletMap: walletMap,
+                        theme: theme,
+                        userId: userId,
+                        onTap: (transferId) {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (context) => TransactionDetailScreen(transactionId: tx.id),
+                              builder: (context) => TransferDetailScreen(transferId: transferId),
                             ),
                           );
                         },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              CircleAvatar(
-                                backgroundColor: (isIncome == true ? CategoryTheme.income : CategoryTheme.expense)
-                                    .withValues(alpha: 0.12),
-                                child: Icon(
-                                  () {
-                                    if (category?.iconCodePoint != null) {
-                                      return IconData(category!.iconCodePoint!, fontFamily: 'MaterialIcons');
-                                    }
-                                    return isIncome == true ? Icons.trending_up : Icons.trending_down;
-                                  }(),
-                                  color: isIncome == true ? CategoryTheme.income : CategoryTheme.expense,
-                                ),
+                        currency: 'IDR',
+                      );
+                    } else {
+                      // This is a regular transaction
+                      final category = categoryMap[entry.categoryId];
+                      final wallet = walletMap[entry.walletId];
+                      final isIncome = entry.signedAmount >= 0;
+                      final amountFormatted = CurrencyFormatter.format(entry.amount, 'IDR');
+                      final displayAmount = isIncome ? amountFormatted : '-$amountFormatted';
+
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        elevation: 0.5,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: theme.dividerColor.withValues(alpha: 0.2)),
+                        ),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => TransactionDetailScreen(transactionId: entry.entryId),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: (isIncome ? CategoryTheme.income : CategoryTheme.expense)
+                                      .withValues(alpha: 0.12),
+                                  child: Icon(
+                                    () {
+                                      if (category?.iconCodePoint != null) {
+                                        return IconData(category!.iconCodePoint!, fontFamily: 'MaterialIcons');
+                                      }
+                                      return isIncome ? Icons.trending_up : Icons.trending_down;
+                                    }(),
+                                    color: isIncome ? CategoryTheme.income : CategoryTheme.expense,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        category?.name ?? ref.tr(context, 'uncategorized'),
+                                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      if (entry.notes != null && entry.notes!.trim().isNotEmpty)
+                                        Text(
+                                          entry.notes!,
+                                          style: theme.textTheme.bodySmall?.copyWith(
+                                            color: theme.colorScheme.onSurfaceVariant,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
-                                      category?.name ?? ref.tr(context, 'uncategorized'),
-                                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                                      wallet?.name ?? ref.tr(context, 'wallet_label'),
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant,
+                                      ),
                                     ),
                                     const SizedBox(height: 2),
-                                    if (tx.notes != null && tx.notes!.trim().isNotEmpty)
-                                      Text(
-                                        tx.notes!,
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          color: theme.colorScheme.onSurfaceVariant,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                    Text(
+                                      displayAmount,
+                                      style: theme.textTheme.titleMedium?.copyWith(
+                                        color: isIncome ? CategoryTheme.income : CategoryTheme.expense,
+                                        fontWeight: FontWeight.bold,
                                       ),
+                                    ),
                                   ],
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    wallet?.name ?? ref.tr(context, 'wallet_label'),
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    displayAmount,
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      color: isIncome == true ? CategoryTheme.income : CategoryTheme.expense,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    );
+                      );
+                    }
                   },
                 );
               },
@@ -238,8 +262,8 @@ class RecentTransactionsSection extends ConsumerWidget {
 class _HomeListItem {
   final bool isHeader;
   final DateTime? date;
-  final dynamic transaction;
-  _HomeListItem._(this.isHeader, this.date, this.transaction);
+  final LedgerEntry? entry;
+  _HomeListItem._(this.isHeader, this.date, this.entry);
   factory _HomeListItem.header(DateTime date) => _HomeListItem._(true, date, null);
-  factory _HomeListItem.transaction(dynamic tx) => _HomeListItem._(false, null, tx);
+  factory _HomeListItem.entry(LedgerEntry entry) => _HomeListItem._(false, null, entry);
 }
