@@ -96,8 +96,14 @@ class MonthlySummarySection extends ConsumerWidget {
         ),
       ),
       child: const SizedBox(
-        height: 24,
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        height: 80,
+        child: Center(
+          child: SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
       ),
     );
   }

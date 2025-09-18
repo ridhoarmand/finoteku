@@ -8,6 +8,7 @@ import '../../../core/state/balance_visibility_provider.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../widgets/monthly_summary_section.dart';
 import '../widgets/recent_transactions_section.dart';
+import '../../../widgets/user_avatar_widget.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -53,28 +54,33 @@ class HomeScreen extends ConsumerWidget {
                   return Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            greeting,
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(color: Colors.grey[600]),
-                          ),
-                          Text(
-                            displayName,
-                            style: Theme.of(context).textTheme.headlineSmall
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      CircleAvatar(
-                        backgroundColor: Theme.of(
-                          context,
-                        ).colorScheme.primary.withValues(alpha: 0.1),
-                        child: Icon(
-                          Icons.person,
-                          color: Theme.of(context).colorScheme.primary,
+                      Expanded(
+                        child: Row(
+                          children: [
+                            UserAvatarWidget(
+                              user: currentUser,
+                              radius: 24,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    greeting,
+                                    style: Theme.of(context).textTheme.titleMedium
+                                        ?.copyWith(color: Colors.grey[600]),
+                                  ),
+                                  Text(
+                                    displayName,
+                                    style: Theme.of(context).textTheme.headlineSmall
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
