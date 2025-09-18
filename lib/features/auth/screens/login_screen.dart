@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import '../services/auth_service.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -29,16 +30,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final shouldExit = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Exit App'),
-        content: const Text('Are you sure you want to exit the app?'),
+        title: Text(ref.tr(context, 'exit_app_title')),
+        content: Text(ref.tr(context, 'exit_app_message')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(ref.tr(context, 'cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Exit'),
+            child: Text(ref.tr(context, 'exit')),
           ),
         ],
       ),
@@ -49,17 +50,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   String _getErrorMessage(String errorString) {
     // Parse Supabase error messages to user-friendly messages
     if (errorString.contains('Invalid login credentials')) {
-      return 'Invalid email or password. Please check your credentials and try again.';
+      return ref.tr(context, 'invalid_email_password');
     } else if (errorString.contains('Email not confirmed')) {
       return 'Please check your email and confirm your account before signing in.';
     } else if (errorString.contains('Too many requests')) {
       return 'Too many login attempts. Please wait a few minutes and try again.';
     } else if (errorString.contains('Network')) {
-      return 'Network error. Please check your connection and try again.';
+      return ref.tr(context, 'network_error');
     } else if (errorString.contains('timeout')) {
       return 'Request timeout. Please try again.';
     } else {
-      return 'Login failed. Please try again.';
+      return ref.tr(context, 'unknown_error');
     }
   }
 
@@ -92,7 +93,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
             action: SnackBarAction(
-              label: 'Dismiss',
+              label: ref.tr(context, 'dismiss'),
               textColor: Colors.white,
               onPressed: () {
                 ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -131,9 +132,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             padding: const EdgeInsets.all(24.0),
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                minHeight: MediaQuery.of(context).size.height - 
-                           MediaQuery.of(context).viewPadding.top -
-                           MediaQuery.of(context).viewPadding.bottom - 48,
+                minHeight:
+                    MediaQuery.of(context).size.height -
+                    MediaQuery.of(context).viewPadding.top -
+                    MediaQuery.of(context).viewPadding.bottom -
+                    48,
               ),
               child: IntrinsicHeight(
                 child: AutofillGroup(
@@ -147,7 +150,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         SizedBox(
                           height: 100,
                           width: 100,
-                          child: Image.asset('assets/icon.png', fit: BoxFit.cover),
+                          child: Image.asset(
+                            'assets/icon.png',
+                            fit: BoxFit.cover,
+                          ),
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -171,21 +177,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         // Email Field
                         TextFormField(
                           controller: _emailController,
-                          decoration: const InputDecoration(
-                            labelText: 'Email',
-                            prefixIcon: Icon(Icons.email),
-                            border: OutlineInputBorder(),
+                          decoration: InputDecoration(
+                            labelText: ref.tr(context, 'email_label'),
+                            prefixIcon: const Icon(Icons.email),
+                            border: const OutlineInputBorder(),
                           ),
                           keyboardType: TextInputType.emailAddress,
                           autofillHints: const [AutofillHints.email],
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Please enter your email';
+                              return ref.tr(context, 'email_required');
                             }
                             if (!RegExp(
                               r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
                             ).hasMatch(value)) {
-                              return 'Please enter a valid email';
+                              return ref.tr(context, 'email_invalid');
                             }
                             return null;
                           },
@@ -196,7 +202,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         TextFormField(
                           controller: _passwordController,
                           decoration: InputDecoration(
-                            labelText: 'Password',
+                            labelText: ref.tr(context, 'password_label'),
                             prefixIcon: const Icon(Icons.lock),
                             suffixIcon: IconButton(
                               icon: Icon(
@@ -216,10 +222,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           autofillHints: const [AutofillHints.password],
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Please enter your password';
+                              return ref.tr(context, 'password_required');
                             }
                             if (value.length < 6) {
-                              return 'Password must be at least 6 characters';
+                              return ref.tr(context, 'password_min_length');
                             }
                             return null;
                           },
@@ -233,12 +239,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ? const SizedBox(
                                   height: 16,
                                   width: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 )
-                              : const Text('Login'),
+                              : Text(ref.tr(context, 'login_button')),
                         ),
                         const Spacer(),
-                        
+
                         // Forgot Password
                         Column(
                           children: [
@@ -246,7 +254,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               onPressed: () {
                                 context.go('/login/forgot-password');
                               },
-                              child: const Text('Forgot Password?'),
+                              child: Text(ref.tr(context, 'forgot_password')),
                             ),
 
                             // Sign Up Link
@@ -254,27 +262,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               onPressed: _isLoading
                                   ? null
                                   : () => context.go('/login/register'),
-                              child: const Text('Create New Account'),
+                              child: Text(ref.tr(context, 'create_new_account')),
                             ),
                           ],
                         ),
-                        
-                        // Development Note
-                        if (theme.brightness == Brightness.light)
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'Development Mode: You can create a new account or use test credentials',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
+                        const SizedBox(height: 16),
                       ],
                     ),
                   ),

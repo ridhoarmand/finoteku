@@ -5,6 +5,7 @@ import '../../../services/supabase_service.dart';
 import '../../../utils/currency_formatter.dart';
 import '../../category/theme/category_theme.dart';
 import '../../wallet/providers/wallet_providers.dart';
+import '../../transaction/providers/transaction_providers.dart'; // Tambahkan untuk refreshTransactionProviders
 import '../models/transfer.dart';
 import '../services/transfer_service.dart';
 import '../../transaction/screens/add_transaction_screen.dart';
@@ -75,7 +76,7 @@ class TransferDetailScreen extends ConsumerWidget {
     String userId,
   ) {
     final theme = Theme.of(context);
-    final walletsAsync = ref.watch(activeWalletsProvider(userId));
+    final walletsAsync = ref.watch(walletsProvider(userId)); // Use all wallets for transfers
 
     return walletsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -260,6 +261,8 @@ class TransferDetailScreen extends ConsumerWidget {
       if (user != null) {
         ref.invalidate(transferByIdProvider((userId: user.id, transferId: transfer.id)));
         refreshWalletProviders(ref);
+        // Refresh transaction providers untuk update ledger entries
+        refreshTransactionProviders(ref);
       }
     }
   }
@@ -291,6 +294,8 @@ class TransferDetailScreen extends ConsumerWidget {
                 
                 // Refresh wallet providers
                 refreshWalletProviders(ref);
+                // Refresh transaction providers untuk update ledger entries
+                refreshTransactionProviders(ref);
                 
                 // Pop detail screen
                 if (Navigator.of(outerContext).canPop()) {

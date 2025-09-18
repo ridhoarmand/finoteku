@@ -32,6 +32,16 @@ const Map<String, String> categoryStringsEn = {
   // Edit titles
   'edit_expense_category': 'Edit Expense Category',
   'edit_income_category': 'Edit Income Category',
+  // Additional category strings from core
+  'no_categories_yet_create_one': 'No categories yet. Create one to continue.',
+  'add_expense_category': 'Add New Expense Category',
+  'add_income_category': 'Add New Income Category',
+  'create_new_category': 'Create a new category',
+  'missing_parent_category': 'Missing parent category',
+  'categories_empty_title': 'No categories yet',
+  'categories_empty_sub': 'Tap + to add your first category',
+  'category_added_success': 'Category added successfully',
+  'category_updated_success': 'Category updated successfully',
 };
 
 const Map<String, String> categoryStringsId = {
@@ -58,11 +68,21 @@ const Map<String, String> categoryStringsId = {
   'main_category': 'Kategori Utama',
   'sub_category': 'Sub-kategori',
   'example': 'Contoh:',
-  'example_food_main': '🍽️ Makan & Minum (Kategori Utama)',
+  'example_food_main': '🍽️ Makanan (Kategori Utama)',
   'example_fast_food_sub': '  └── 🍕 Makanan Cepat Saji (Sub-kategori)',
-  'example_groceries_sub': '  └── 🥗 Belanja Harian (Sub-kategori)',
+  'example_groceries_sub': '  └── 🥗 Bahan Makanan (Sub-kategori)',
   'got_it': 'Mengerti!',
   // Edit titles
   'edit_expense_category': 'Ubah Kategori Pengeluaran',
   'edit_income_category': 'Ubah Kategori Pemasukan',
+  // Additional category strings from core
+  'no_categories_yet_create_one': 'Belum ada kategori. Buat baru untuk lanjut.',
+  'add_expense_category': 'Tambah Kategori Pengeluaran',
+  'add_income_category': 'Tambah Kategori Pemasukan',
+  'create_new_category': 'Buat kategori baru',
+  'missing_parent_category': 'Kategori induk tidak ditemukan',
+  'categories_empty_title': 'Belum ada kategori',
+  'categories_empty_sub': 'Ketuk + untuk menambah kategori pertama',
+  'category_added_success': 'Kategori berhasil ditambahkan',
+  'category_updated_success': 'Kategori berhasil diperbarui',
 };

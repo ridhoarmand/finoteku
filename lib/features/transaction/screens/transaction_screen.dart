@@ -84,27 +84,30 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: ledgerAsync.when(
                 data: (entries) {
-                  return categoriesAsync.when(
-                    data: (categories) {
-                      final filtered = _filterLedgerBySearch(entries);
-                      if (filtered.isEmpty) {
-                        return _buildEmptyState(context, theme);
-                      }
-                      final wallets =
-                          allWalletsAsync.valueOrNull ??
-                          walletsAsync.valueOrNull ??
-                          [];
-                      return _buildLedgerList(
-                        filtered,
-                        theme,
-                        categories,
-                        wallets,
+                  return allWalletsAsync.when(
+                    data: (allWallets) {
+                      return categoriesAsync.when(
+                        data: (categories) {
+                          final filtered = _filterLedgerBySearch(entries);
+                          if (filtered.isEmpty) {
+                            return _buildEmptyState(context, theme);
+                          }
+                          return _buildLedgerList(
+                            filtered,
+                            theme,
+                            categories,
+                            allWallets,
+                            user.id, // Tambahkan userId
+                          );
+                        },
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
+                        error: (error, stack) =>
+                            _buildErrorState(error, user.id, theme),
                       );
                     },
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (error, stack) =>
-                        _buildErrorState(error, user.id, theme),
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (error, stack) => _buildErrorState(error, user.id, theme),
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -269,7 +272,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
           border: Border.all(color: Colors.white24, width: 1),
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String?>(
               value: _selectedWalletId,
@@ -437,8 +440,6 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     );
   }
 
-  // _getWalletIcon removed (icons not shown in compact dropdown)
-
   Widget _buildEmptyState(BuildContext context, ThemeData theme) {
     return Center(
       child: Column(
@@ -491,6 +492,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     ThemeData theme,
     List<Category> categories,
     List<Wallet> wallets,
+    String userId, // Tambahkan parameter userId
   ) {
     final categoryMap = {for (final c in categories) c.id: c};
     final walletMap = {for (final w in wallets) w.id: w};
@@ -567,6 +569,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
               counterpart: b,
               walletMap: walletMap,
               theme: theme,
+              userId: userId, // Gunakan parameter userId
               onTap: (id) {
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -578,7 +581,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
             );
           }
           final entry = item.entry!;
-      final category = entry.categoryId != null
+          final category = entry.categoryId != null
               ? categoryMap[entry.categoryId]
               : null;
           final wallet = walletMap[entry.walletId];
@@ -591,7 +594,8 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
               if (entry.kind == 'transaction') {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (context) => TransactionDetailScreen(transactionId: entry.entryId),
+                    builder: (context) =>
+                        TransactionDetailScreen(transactionId: entry.entryId),
                   ),
                 );
               }

@@ -11,7 +11,6 @@ import 'theme/theme_provider.dart';
 import 'services/supabase_service.dart';
 import 'features/notification/services/notification_service.dart';
 import 'utils/environment.dart';
-import 'widgets/app_initializer.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -74,21 +73,19 @@ class MyApp extends ConsumerWidget {
   final router = ref.watch(routerProvider);
   final localeState = ref.watch(appLocaleProvider);
 
-    return AppInitializer(
-      child: MaterialApp.router(
-        title: Environment.appName,
-        theme: AppTheme.light,
-        darkTheme: AppTheme.dark,
-        themeMode: themeMode,
-        routerConfig: router,
-        locale: localeState.effectiveLocale,
-        supportedLocales: const [Locale('en'), Locale('id')],
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-      ),
+    return MaterialApp.router(
+      title: Environment.appName,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: themeMode,
+      routerConfig: router,
+      locale: localeState.effectiveLocale,
+      supportedLocales: const [Locale('en'), Locale('id')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
     );
   }
 }
