@@ -9,6 +9,7 @@ import '../../category/providers/category_providers.dart';
 import '../../wallet/providers/wallet_providers.dart';
 import '../../../services/supabase_service.dart';
 import '../../../utils/currency_formatter.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../widgets/category_selector_sheet.dart';
 import '../widgets/wallet_selector_sheet.dart';
 import '../widgets/date_section.dart';
@@ -17,6 +18,8 @@ import '../widgets/notes_section.dart';
 import '../../transfer/services/transfer_service.dart';
 import '../../transfer/models/transfer_models.dart';
 import '../../transfer/models/transfer.dart' as transfer_model;
+import '../../transfer/screens/transfer_detail_screen.dart'; // Import untuk transferByIdProvider
+import '../widgets/ledger_transfer_card.dart'; // Import untuk transferDataProvider
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
   final Transaction? initialTransaction;
@@ -164,15 +167,15 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     final user = ref.watch(currentUserProvider).value;
 
     if (user == null) {
-      return const Scaffold(body: Center(child: Text('Please login first')));
+      return Scaffold(body: Center(child: Text(ref.tr(context, 'login_required_short'))));
     }
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
           widget.initialTransfer != null
-              ? 'Edit Transfer'
-              : (widget.initialTransaction != null ? 'Edit Transaction' : 'Add Transaction'),
+              ? ref.tr(context, 'edit_transfer_title')
+              : (widget.initialTransaction != null ? ref.tr(context, 'edit_transaction_title') : ref.tr(context, 'add_transaction_title')),
         ),
       ),
       body: GestureDetector(
@@ -236,8 +239,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       )
                     : Text(
                         widget.initialTransfer != null
-                            ? 'Update Transfer'
-                            : (widget.initialTransaction != null ? 'Update Transaction' : 'Add Transaction'),
+                            ? ref.tr(context, 'update_transfer_button')
+                            : (widget.initialTransaction != null ? ref.tr(context, 'update_transaction_button') : ref.tr(context, 'add_transaction_button')),
                       ),
               ),
             ],
@@ -279,9 +282,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
   Widget _buildTransferToggle() => Card(
         child: SwitchListTile(
-          title: const Text('Transfer antar wallet saya'),
+          title: Text(ref.tr(context, 'transfer_internal_title')),
           subtitle:
-              const Text('Pindahkan saldo antar wallet (opsional biaya admin)'),
+              Text(ref.tr(context, 'transfer_internal_subtitle')),
           value: _isTransfer,
           onChanged: widget.initialTransfer != null
               ? null // disabled when editing an existing transfer
@@ -447,7 +450,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     if (_selectedWallet == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Please select a wallet')));
+      ).showSnackBar(SnackBar(content: Text(ref.tr(context, 'please_select_wallet'))));
       return;
     }
 
@@ -467,12 +470,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         // Handle transfer flow
         if (_toWallet == null) {
           ScaffoldMessenger.of(context)
-              .showSnackBar(const SnackBar(content: Text('Pilih wallet tujuan')));
+              .showSnackBar(SnackBar(content: Text(ref.tr(context, 'please_select_destination_wallet'))));
           return;
         }
         if (_selectedWallet!.id == _toWallet!.id) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Wallet sumber & tujuan tidak boleh sama')));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(ref.tr(context, 'source_destination_same_error'))));
           return;
         }
         final feeText = _feeController.text.trim();
@@ -532,7 +535,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         // Create new transaction
         if (_selectedCategory == null) {
           ScaffoldMessenger.of(context)
-              .showSnackBar(const SnackBar(content: Text('Please select a category')));
+              .showSnackBar(SnackBar(content: Text(ref.tr(context, 'please_select_category'))));
           return;
         }
         final request = CreateTransactionRequest(
@@ -548,17 +551,35 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       }
 
     // Refresh transactions list and wallet balances
-  refreshTransactionProviders(ref);
-  ref.invalidate(transactionsProvider(user.id));
-  // filteredTransactionsProvider is a family; rely on refresh trigger to update all instances
-  ref.invalidate(transactionsSummaryProvider((userId: user.id, startDate: null, endDate: null)));
-      // Refresh wallet data to show updated balance
-      refreshWalletProviders(ref);
-      if (_selectedWallet != null) {
+    refreshTransactionProviders(ref);
+    ref.invalidate(transactionsProvider(user.id));
+    // filteredTransactionsProvider is a family; rely on refresh trigger to update all instances
+    ref.invalidate(transactionsSummaryProvider((userId: user.id, startDate: null, endDate: null)));
+    // Refresh wallet data to show updated balance
+    refreshWalletProviders(ref);
+    if (_selectedWallet != null) {
+      ref.invalidate(
+        walletProvider((walletId: _selectedWallet!.id, userId: user.id)),
+      );
+    }
+    
+    // For transfers, also invalidate the destination wallet and specific transfer provider
+    if (_isTransfer && _toWallet != null) {
+      ref.invalidate(
+        walletProvider((walletId: _toWallet!.id, userId: user.id)),
+      );
+      
+      // If updating existing transfer, invalidate its detail provider
+      if (widget.initialTransfer != null) {
         ref.invalidate(
-          walletProvider((walletId: _selectedWallet!.id, userId: user.id)),
+          transferByIdProvider((userId: user.id, transferId: widget.initialTransfer!.id)),
+        );
+        // Also invalidate transferDataProvider used in LedgerTransferCard
+        ref.invalidate(
+          transferDataProvider((userId: user.id, transferId: widget.initialTransfer!.id)),
         );
       }
+    }
 
       if (mounted) {
         Navigator.pop(context, true); // Return true to indicate success
@@ -566,10 +587,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           SnackBar(
             content: Text(
               widget.initialTransfer != null
-                  ? 'Transfer updated successfully'
+                  ? ref.tr(context, 'transfer_updated_successfully')
                   : (widget.initialTransaction != null
-                      ? 'Transaction updated successfully'
-                      : 'Transaction added successfully'),
+                      ? ref.tr(context, 'transaction_updated_successfully')
+                      : ref.tr(context, 'transaction_added_successfully')),
             ),
           ),
         );
@@ -613,8 +634,8 @@ class _CategorySection extends ConsumerWidget {
         leading: selected != null
             ? Icon(IconData(selected!.iconCodePoint ?? Icons.category.codePoint, fontFamily: 'MaterialIcons'), color: selected!.color != null ? Color(selected!.color!) : null)
             : const Icon(Icons.category),
-        title: Text(selected?.name ?? 'Select Category'),
-        subtitle: selected != null ? Text(selected!.type.name.toUpperCase()) : const Text('Choose transaction category'),
+        title: Text(selected?.name ?? ref.tr(context, 'select_category_title')),
+        subtitle: selected != null ? Text(selected!.type.name.toUpperCase()) : Text(ref.tr(context, 'choose_transaction_category')),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
         onTap: () => openSheet(cats),
       ),
