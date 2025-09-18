@@ -25,9 +25,15 @@ class AddTransactionScreen extends ConsumerStatefulWidget {
   final Transaction? initialTransaction;
   final transfer_model.Transfer? initialTransfer;
 
-  const AddTransactionScreen({super.key, this.initialTransaction, this.initialTransfer})
-      : assert((initialTransaction != null) ^ (initialTransfer != null) || (initialTransaction == null && initialTransfer == null),
-            'Provide either initialTransaction or initialTransfer (or neither for create)');
+  const AddTransactionScreen({
+    super.key,
+    this.initialTransaction,
+    this.initialTransfer,
+  }) : assert(
+         (initialTransaction != null) ^ (initialTransfer != null) ||
+             (initialTransaction == null && initialTransfer == null),
+         'Provide either initialTransaction or initialTransfer (or neither for create)',
+       );
 
   @override
   ConsumerState<AddTransactionScreen> createState() =>
@@ -157,8 +163,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   void dispose() {
     _amountController.dispose();
     _notesController.dispose();
-  _amountFocusNode.dispose();
-  _feeController.dispose();
+    _amountFocusNode.dispose();
+    _feeController.dispose();
     super.dispose();
   }
 
@@ -167,7 +173,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     final user = ref.watch(currentUserProvider).value;
 
     if (user == null) {
-      return Scaffold(body: Center(child: Text(ref.tr(context, 'login_required_short'))));
+      return Scaffold(
+        body: Center(child: Text(ref.tr(context, 'login_required_short'))),
+      );
     }
 
     return Scaffold(
@@ -175,7 +183,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         title: Text(
           widget.initialTransfer != null
               ? ref.tr(context, 'edit_transfer_title')
-              : (widget.initialTransaction != null ? ref.tr(context, 'edit_transaction_title') : ref.tr(context, 'add_transaction_title')),
+              : (widget.initialTransaction != null
+                    ? ref.tr(context, 'edit_transaction_title')
+                    : ref.tr(context, 'add_transaction_title')),
         ),
       ),
       body: GestureDetector(
@@ -240,7 +250,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     : Text(
                         widget.initialTransfer != null
                             ? ref.tr(context, 'update_transfer_button')
-                            : (widget.initialTransaction != null ? ref.tr(context, 'update_transaction_button') : ref.tr(context, 'add_transaction_button')),
+                            : (widget.initialTransaction != null
+                                  ? ref.tr(context, 'update_transaction_button')
+                                  : ref.tr(context, 'add_transaction_button')),
                       ),
               ),
             ],
@@ -250,66 +262,63 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     );
   }
 
-  Widget _buildDateSection() => DateSection(
-        date: _selectedDate,
-        onTap: _selectDate,
-      );
+  Widget _buildDateSection() =>
+      DateSection(date: _selectedDate, onTap: _selectDate);
 
   Widget _buildAmountSection() => AmountSection(
-        controller: _amountController,
-        focusNode: _amountFocusNode,
-        onSubmitted: _unfocus,
-        onTapOutside: _unfocus,
-      );
+    controller: _amountController,
+    focusNode: _amountFocusNode,
+    onSubmitted: _unfocus,
+    onTapOutside: _unfocus,
+  );
 
   Widget _buildCategorySection(String userId) => _CategorySection(
-        userId: userId,
-        selected: _selectedCategory,
-        onSelect: (c) => setState(() => _selectedCategory = c),
-        openSheet: _selectCategory,
-        ref: ref,
-      );
+    userId: userId,
+    selected: _selectedCategory,
+    onSelect: (c) => setState(() => _selectedCategory = c),
+    openSheet: _selectCategory,
+    ref: ref,
+  );
 
   Widget _buildWalletSection(String userId) => _WalletSection(
-        userId: userId,
-        selected: _selectedWallet,
-        onSelect: (w) => setState(() => _selectedWallet = w),
-        openSheet: _selectWallet,
-        ref: ref,
-      );
+    userId: userId,
+    selected: _selectedWallet,
+    onSelect: (w) => setState(() => _selectedWallet = w),
+    openSheet: _selectWallet,
+    ref: ref,
+  );
 
   Widget _buildNotesSection() => NotesSection(controller: _notesController);
 
   Widget _buildTransferToggle() => Card(
-        child: SwitchListTile(
-          title: Text(ref.tr(context, 'transfer_internal_title')),
-          subtitle:
-              Text(ref.tr(context, 'transfer_internal_subtitle')),
-          value: _isTransfer,
-          onChanged: widget.initialTransfer != null
-              ? null // disabled when editing an existing transfer
-              : (v) {
-                  setState(() {
-                    _isTransfer = v;
-                    if (v) {
-                      _selectedCategory = null; // hide category in transfer mode
-                    } else {
-                      _toWallet = null;
-                      _feeCategory = null;
-                      _feeController.clear();
-                    }
-                  });
-                },
-        ),
-      );
+    child: SwitchListTile(
+      title: Text(ref.tr(context, 'transfer_internal_title')),
+      subtitle: Text(ref.tr(context, 'transfer_internal_subtitle')),
+      value: _isTransfer,
+      onChanged: widget.initialTransfer != null
+          ? null // disabled when editing an existing transfer
+          : (v) {
+              setState(() {
+                _isTransfer = v;
+                if (v) {
+                  _selectedCategory = null; // hide category in transfer mode
+                } else {
+                  _toWallet = null;
+                  _feeCategory = null;
+                  _feeController.clear();
+                }
+              });
+            },
+    ),
+  );
 
   Widget _buildToWalletSection(String userId) => _WalletSection(
-        userId: userId,
-        selected: _toWallet,
-        onSelect: (w) => setState(() => _toWallet = w),
-        openSheet: _selectToWallet,
-        ref: ref,
-      );
+    userId: userId,
+    selected: _toWallet,
+    onSelect: (w) => setState(() => _toWallet = w),
+    openSheet: _selectToWallet,
+    ref: ref,
+  );
 
   Widget _buildFeeSection(String userId) {
     final categoriesAsync = ref.watch(categoriesProvider(userId));
@@ -320,22 +329,28 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Biaya Admin (opsional)',
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              ref.tr(context, 'fee_title'),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 6),
             TextFormField(
               controller: _feeController,
               keyboardType: TextInputType.number,
               inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
               ],
-              decoration: const InputDecoration(hintText: '0.00'),
+              decoration: InputDecoration(
+                hintText: ref.tr(context, 'fee_hint'),
+              ),
             ),
             const SizedBox(height: 6),
             ListTile(
               leading: const Icon(Icons.receipt_long),
-              title: Text(_feeCategory?.name ?? 'Kategori Biaya (Expense)'),
-              subtitle: const Text('Diperlukan jika biaya > 0'),
+              title: Text(
+                _feeCategory?.name ?? ref.tr(context, 'fee_category_title'),
+              ),
+              subtitle: Text(ref.tr(context, 'fee_category_subtitle')),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () => _selectFeeCategory(cats),
             ),
@@ -346,7 +361,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   Future<void> _selectDate() async {
-  _unfocus();
+    _unfocus();
     final date = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
@@ -362,7 +377,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   void _selectCategory(List<Category> categories) {
-  _unfocus();
+    _unfocus();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -378,13 +393,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             ref.invalidate(categoriesProvider(user.id));
           }
         },
-  rootContext: this.context,
+        rootContext: this.context,
       ),
     );
   }
 
   void _selectWallet(List<Wallet> wallets) {
-  _unfocus();
+    _unfocus();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -397,7 +412,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           Navigator.pop(context);
           refreshWalletProviders(ref);
         },
-  rootContext: this.context,
+        rootContext: this.context,
       ),
     );
   }
@@ -444,13 +459,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   Future<void> _saveTransaction() async {
-  _unfocus();
+    _unfocus();
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedWallet == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(ref.tr(context, 'please_select_wallet'))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(ref.tr(context, 'please_select_wallet'))),
+      );
       return;
     }
 
@@ -463,19 +478,27 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       final amount = double.parse(_amountController.text);
       final notes = _notesController.text.trim();
 
-  // Amount always stored as positive; category.type determines sign in analytics & wallet triggers
-  final finalAmount = amount.abs();
+      // Amount always stored as positive; category.type determines sign in analytics & wallet triggers
+      final finalAmount = amount.abs();
 
       if (_isTransfer) {
         // Handle transfer flow
         if (_toWallet == null) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(ref.tr(context, 'please_select_destination_wallet'))));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                ref.tr(context, 'please_select_destination_wallet'),
+              ),
+            ),
+          );
           return;
         }
         if (_selectedWallet!.id == _toWallet!.id) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(ref.tr(context, 'source_destination_same_error'))));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(ref.tr(context, 'source_destination_same_error')),
+            ),
+          );
           return;
         }
         final feeText = _feeController.text.trim();
@@ -494,12 +517,19 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             notes: notes.isEmpty ? null : notes,
             date: _selectedDate,
             // If previously no fee and user adds fee now, pass category
-            feeCategoryId: (widget.initialTransfer!.fee == 0 && fee > 0) ? _feeCategory?.id : null,
+            feeCategoryId: (widget.initialTransfer!.fee == 0 && fee > 0)
+                ? _feeCategory?.id
+                : null,
           );
         } else {
-          if (fee > 0 && (_feeCategory == null || _feeCategory!.type != CategoryType.expense)) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('Kategori biaya (Expense) diperlukan jika biaya > 0')));
+          if (fee > 0 &&
+              (_feeCategory == null ||
+                  _feeCategory!.type != CategoryType.expense)) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(ref.tr(context, 'fee_category_required_error')),
+              ),
+            );
             return;
           }
           await transferSvc.transferBetweenWallets(
@@ -525,8 +555,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           date: _selectedDate,
         );
 
-  final repo = ref.read(transactionRepositoryProvider);
-  await repo.updateTransaction(
+        final repo = ref.read(transactionRepositoryProvider);
+        await repo.updateTransaction(
           widget.initialTransaction!.id,
           user.id,
           request,
@@ -534,8 +564,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       } else {
         // Create new transaction
         if (_selectedCategory == null) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(ref.tr(context, 'please_select_category'))));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(ref.tr(context, 'please_select_category'))),
+          );
           return;
         }
         final request = CreateTransactionRequest(
@@ -546,40 +577,52 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           date: _selectedDate,
         );
 
-  final repo = ref.read(transactionRepositoryProvider);
-  await repo.createTransaction(user.id, request);
+        final repo = ref.read(transactionRepositoryProvider);
+        await repo.createTransaction(user.id, request);
       }
 
-    // Refresh transactions list and wallet balances
-    refreshTransactionProviders(ref);
-    ref.invalidate(transactionsProvider(user.id));
-    // filteredTransactionsProvider is a family; rely on refresh trigger to update all instances
-    ref.invalidate(transactionsSummaryProvider((userId: user.id, startDate: null, endDate: null)));
-    // Refresh wallet data to show updated balance
-    refreshWalletProviders(ref);
-    if (_selectedWallet != null) {
+      // Refresh transactions list and wallet balances
+      refreshTransactionProviders(ref);
+      ref.invalidate(transactionsProvider(user.id));
+      // filteredTransactionsProvider is a family; rely on refresh trigger to update all instances
       ref.invalidate(
-        walletProvider((walletId: _selectedWallet!.id, userId: user.id)),
+        transactionsSummaryProvider((
+          userId: user.id,
+          startDate: null,
+          endDate: null,
+        )),
       );
-    }
-    
-    // For transfers, also invalidate the destination wallet and specific transfer provider
-    if (_isTransfer && _toWallet != null) {
-      ref.invalidate(
-        walletProvider((walletId: _toWallet!.id, userId: user.id)),
-      );
-      
-      // If updating existing transfer, invalidate its detail provider
-      if (widget.initialTransfer != null) {
+      // Refresh wallet data to show updated balance
+      refreshWalletProviders(ref);
+      if (_selectedWallet != null) {
         ref.invalidate(
-          transferByIdProvider((userId: user.id, transferId: widget.initialTransfer!.id)),
-        );
-        // Also invalidate transferDataProvider used in LedgerTransferCard
-        ref.invalidate(
-          transferDataProvider((userId: user.id, transferId: widget.initialTransfer!.id)),
+          walletProvider((walletId: _selectedWallet!.id, userId: user.id)),
         );
       }
-    }
+
+      // For transfers, also invalidate the destination wallet and specific transfer provider
+      if (_isTransfer && _toWallet != null) {
+        ref.invalidate(
+          walletProvider((walletId: _toWallet!.id, userId: user.id)),
+        );
+
+        // If updating existing transfer, invalidate its detail provider
+        if (widget.initialTransfer != null) {
+          ref.invalidate(
+            transferByIdProvider((
+              userId: user.id,
+              transferId: widget.initialTransfer!.id,
+            )),
+          );
+          // Also invalidate transferDataProvider used in LedgerTransferCard
+          ref.invalidate(
+            transferDataProvider((
+              userId: user.id,
+              transferId: widget.initialTransfer!.id,
+            )),
+          );
+        }
+      }
 
       if (mounted) {
         Navigator.pop(context, true); // Return true to indicate success
@@ -589,8 +632,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               widget.initialTransfer != null
                   ? ref.tr(context, 'transfer_updated_successfully')
                   : (widget.initialTransaction != null
-                      ? ref.tr(context, 'transaction_updated_successfully')
-                      : ref.tr(context, 'transaction_added_successfully')),
+                        ? ref.tr(context, 'transaction_updated_successfully')
+                        : ref.tr(context, 'transaction_added_successfully')),
             ),
           ),
         );
@@ -614,40 +657,74 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   void _unfocus() {
-  // Always try to unfocus to dismiss keyboard
-  FocusManager.instance.primaryFocus?.unfocus();
+    // Always try to unfocus to dismiss keyboard
+    FocusManager.instance.primaryFocus?.unfocus();
   }
-
 }
 
 // --- Extracted Section Widgets ---
 
 class _CategorySection extends ConsumerWidget {
-  final String userId; final Category? selected; final void Function(Category?) onSelect; final void Function(List<Category>) openSheet; final WidgetRef ref;
-  const _CategorySection({required this.userId, required this.selected, required this.onSelect, required this.openSheet, required this.ref});
+  final String userId;
+  final Category? selected;
+  final void Function(Category?) onSelect;
+  final void Function(List<Category>) openSheet;
+  final WidgetRef ref;
+  const _CategorySection({
+    required this.userId,
+    required this.selected,
+    required this.onSelect,
+    required this.openSheet,
+    required this.ref,
+  });
   @override
   Widget build(BuildContext context, WidgetRef ref2) {
     final categoriesAsync = ref.watch(categoriesProvider(userId));
     final cats = categoriesAsync.value ?? [];
-    return Card(child: Column(children: [
-      ListTile(
-        leading: selected != null
-            ? Icon(IconData(selected!.iconCodePoint ?? Icons.category.codePoint, fontFamily: 'MaterialIcons'), color: selected!.color != null ? Color(selected!.color!) : null)
-            : const Icon(Icons.category),
-        title: Text(selected?.name ?? ref.tr(context, 'select_category_title')),
-        subtitle: selected != null ? Text(selected!.type.name.toUpperCase()) : Text(ref.tr(context, 'choose_transaction_category')),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: () => openSheet(cats),
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            leading: selected != null
+                ? Icon(
+                    IconData(
+                      selected!.iconCodePoint ?? Icons.category.codePoint,
+                      fontFamily: 'MaterialIcons',
+                    ),
+                    color: selected!.color != null
+                        ? Color(selected!.color!)
+                        : null,
+                  )
+                : const Icon(Icons.category),
+            title: Text(
+              selected?.name ?? ref.tr(context, 'select_category_title'),
+            ),
+            subtitle: selected != null
+                ? Text(selected!.type.name.toUpperCase())
+                : Text(ref.tr(context, 'choose_transaction_category')),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () => openSheet(cats),
+          ),
+          if ((selected == null) && (cats.isEmpty)) const SizedBox.shrink(),
+        ],
       ),
-      if ((selected == null) && (cats.isEmpty))
-  const SizedBox.shrink(),
-    ]));
+    );
   }
 }
 
 class _WalletSection extends ConsumerWidget {
-  final String userId; final Wallet? selected; final void Function(Wallet?) onSelect; final void Function(List<Wallet>) openSheet; final WidgetRef ref;
-  const _WalletSection({required this.userId, required this.selected, required this.onSelect, required this.openSheet, required this.ref});
+  final String userId;
+  final Wallet? selected;
+  final void Function(Wallet?) onSelect;
+  final void Function(List<Wallet>) openSheet;
+  final WidgetRef ref;
+  const _WalletSection({
+    required this.userId,
+    required this.selected,
+    required this.onSelect,
+    required this.openSheet,
+    required this.ref,
+  });
   static IconData iconFor(String? icon) {
     switch (icon) {
       case 'bca':
@@ -668,24 +745,35 @@ class _WalletSection extends ConsumerWidget {
         return Icons.account_balance_wallet;
     }
   }
+
   @override
   Widget build(BuildContext context, WidgetRef ref2) {
     final walletsAsync = ref.watch(activeWalletsProvider(userId));
     final wallets = walletsAsync.value ?? [];
-    return Card(child: Column(children: [
-      ListTile(
-        leading: selected != null
-            ? Icon(iconFor(selected!.icon), color: Theme.of(context).primaryColor)
-            : const Icon(Icons.account_balance_wallet),
-        title: Text(selected?.name ?? 'Select Wallet'),
-        subtitle: selected != null
-            ? Text('Balance: ${CurrencyFormatter.format(selected!.balance, selected!.currency)}')
-            : const Text('Choose wallet for transaction'),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: () => openSheet(wallets),
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            leading: selected != null
+                ? Icon(
+                    iconFor(selected!.icon),
+                    color: Theme.of(context).primaryColor,
+                  )
+                : const Icon(Icons.account_balance_wallet),
+            title: Text(
+              selected?.name ?? ref.tr(context, 'select_wallet_title'),
+            ),
+            subtitle: selected != null
+                ? Text(
+                    '${ref.tr(context, 'wallet_balance_prefix')}${CurrencyFormatter.format(selected!.balance, selected!.currency)}',
+                  )
+                : Text(ref.tr(context, 'choose_wallet_subtitle')),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () => openSheet(wallets),
+          ),
+          if ((selected == null) && wallets.isEmpty) const SizedBox.shrink(),
+        ],
       ),
-      if ((selected == null) && wallets.isEmpty)
-  const SizedBox.shrink(),
-    ]));
+    );
   }
 }
