@@ -120,8 +120,7 @@ class SupabaseCategoryService {
         'name': request.name,
         'type': request.type.name,
         'parent_id': request.parentId,
-        'icon_code_point': request.iconCodePoint,
-        'color': request.color,
+  'icon_code_point': request.iconCodePoint,
         'is_active': true,
       };
 
@@ -149,8 +148,7 @@ class SupabaseCategoryService {
       if (request.type != null) data['type'] = request.type!.name;
       if (request.parentId != null) data['parent_id'] = request.parentId;
       if (request.iconCodePoint != null) data['icon_code_point'] = request.iconCodePoint;
-      if (request.color != null) data['color'] = request.color;
-      if (request.isActive != null) data['is_active'] = request.isActive;
+      if (request.isHidden != null) data['is_hidden'] = request.isHidden;
 
       if (data.isEmpty) {
         throw Exception('No data to update');
@@ -193,11 +191,9 @@ class SupabaseCategoryService {
       'type': data['type'],
       'parent_id': data['parent_id'],
       'icon_code_point': data['icon_code_point'],
-      'color': data['color'],
-      'is_active': data['is_active'],
+      'is_hidden': data['is_hidden'],
       'created_at': data['created_at'],
       'updated_at': data['updated_at'],
-  'is_hidden': data['is_hidden'],
     };
   }
 

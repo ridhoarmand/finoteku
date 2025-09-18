@@ -11,13 +11,20 @@ import '../../../services/supabase_service.dart';
 import '../../../utils/currency_formatter.dart';
 import '../widgets/category_selector_sheet.dart';
 import '../widgets/wallet_selector_sheet.dart';
+import '../widgets/date_section.dart';
+import '../widgets/amount_section.dart';
+import '../widgets/notes_section.dart';
 import '../../transfer/services/transfer_service.dart';
 import '../../transfer/models/transfer_models.dart';
+import '../../transfer/models/transfer.dart' as transfer_model;
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
   final Transaction? initialTransaction;
+  final transfer_model.Transfer? initialTransfer;
 
-  const AddTransactionScreen({super.key, this.initialTransaction});
+  const AddTransactionScreen({super.key, this.initialTransaction, this.initialTransfer})
+      : assert((initialTransaction != null) ^ (initialTransfer != null) || (initialTransaction == null && initialTransfer == null),
+            'Provide either initialTransaction or initialTransfer (or neither for create)');
 
   @override
   ConsumerState<AddTransactionScreen> createState() =>
@@ -49,9 +56,20 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       _amountController.text = transaction.amount.abs().toString();
       _notesController.text = transaction.notes ?? '';
       _selectedDate = transaction.date;
-
+      _isTransfer = false;
       // Load category and wallet from IDs will be done in didChangeDependencies
       // after the provider is available
+    }
+
+    // If editing existing transfer, populate fields
+    if (widget.initialTransfer != null) {
+      final tr = widget.initialTransfer!;
+      _isTransfer = true;
+      _amountController.text = tr.amount.abs().toString();
+      _feeController.text = tr.fee.abs().toString();
+      _notesController.text = tr.notes ?? '';
+      _selectedDate = tr.date;
+      // Wallets will be assigned in didChangeDependencies
     }
   }
 
@@ -64,6 +82,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         _selectedCategory == null &&
         _selectedWallet == null) {
       _loadInitialData();
+    }
+
+    // Load wallets for editing transfer
+    if (widget.initialTransfer != null &&
+        _selectedWallet == null &&
+        _toWallet == null) {
+      _loadInitialTransferData();
     }
   }
 
@@ -101,6 +126,30 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     }
   }
 
+  Future<void> _loadInitialTransferData() async {
+    final user = ref.read(currentUserProvider).value;
+    if (user == null) return;
+    final tr = widget.initialTransfer!;
+
+    final walletsAsync = ref.read(activeWalletsProvider(user.id));
+    final wallets = walletsAsync.value ?? [];
+    Wallet? from;
+    Wallet? to;
+    try {
+      from = wallets.firstWhere((w) => w.id == tr.fromWalletId);
+    } catch (_) {}
+    try {
+      to = wallets.firstWhere((w) => w.id == tr.toWalletId);
+    } catch (_) {}
+
+    if (mounted) {
+      setState(() {
+        _selectedWallet = from;
+        _toWallet = to;
+      });
+    }
+  }
+
   @override
   void dispose() {
     _amountController.dispose();
@@ -121,9 +170,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.initialTransaction != null
-              ? 'Edit Transaction'
-              : 'Add Transaction',
+          widget.initialTransfer != null
+              ? 'Edit Transfer'
+              : (widget.initialTransaction != null ? 'Edit Transaction' : 'Add Transaction'),
         ),
       ),
       body: GestureDetector(
@@ -186,9 +235,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         ),
                       )
                     : Text(
-                        widget.initialTransaction != null
-                            ? 'Update Transaction'
-                            : 'Add Transaction',
+                        widget.initialTransfer != null
+                            ? 'Update Transfer'
+                            : (widget.initialTransaction != null ? 'Update Transaction' : 'Add Transaction'),
                       ),
               ),
             ],
@@ -198,12 +247,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     );
   }
 
-  Widget _buildDateSection() => _DateSection(
+  Widget _buildDateSection() => DateSection(
         date: _selectedDate,
         onTap: _selectDate,
       );
 
-  Widget _buildAmountSection() => _AmountSection(
+  Widget _buildAmountSection() => AmountSection(
         controller: _amountController,
         focusNode: _amountFocusNode,
         onSubmitted: _unfocus,
@@ -226,7 +275,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         ref: ref,
       );
 
-  Widget _buildNotesSection() => _NotesSection(controller: _notesController);
+  Widget _buildNotesSection() => NotesSection(controller: _notesController);
 
   Widget _buildTransferToggle() => Card(
         child: SwitchListTile(
@@ -234,18 +283,20 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           subtitle:
               const Text('Pindahkan saldo antar wallet (opsional biaya admin)'),
           value: _isTransfer,
-          onChanged: (v) {
-            setState(() {
-              _isTransfer = v;
-              if (v) {
-                _selectedCategory = null; // hide category in transfer mode
-              } else {
-                _toWallet = null;
-                _feeCategory = null;
-                _feeController.clear();
-              }
-            });
-          },
+          onChanged: widget.initialTransfer != null
+              ? null // disabled when editing an existing transfer
+              : (v) {
+                  setState(() {
+                    _isTransfer = v;
+                    if (v) {
+                      _selectedCategory = null; // hide category in transfer mode
+                    } else {
+                      _toWallet = null;
+                      _feeCategory = null;
+                      _feeController.clear();
+                    }
+                  });
+                },
         ),
       );
 
@@ -426,25 +477,41 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         }
         final feeText = _feeController.text.trim();
         final fee = feeText.isEmpty ? 0.0 : double.tryParse(feeText) ?? 0.0;
-        if (fee > 0 && (_feeCategory == null || _feeCategory!.type != CategoryType.expense)) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Kategori biaya (Expense) diperlukan jika biaya > 0')));
-          return;
-        }
         final userId = ref.read(currentUserProvider).value!.id;
         final transferSvc = ref.read(transferServiceProvider);
-        await transferSvc.transferBetweenWallets(
-          userId,
-          CreateWalletTransferRequest(
+        if (widget.initialTransfer != null) {
+          // Update existing transfer (no fee category change supported in update)
+          await transferSvc.update(
+            userId,
+            widget.initialTransfer!.id,
             fromWalletId: _selectedWallet!.id,
             toWalletId: _toWallet!.id,
             amount: finalAmount,
             fee: fee.abs(),
             notes: notes.isEmpty ? null : notes,
             date: _selectedDate,
-            feeCategoryId: _feeCategory?.id,
-          ),
-        );
+            // If previously no fee and user adds fee now, pass category
+            feeCategoryId: (widget.initialTransfer!.fee == 0 && fee > 0) ? _feeCategory?.id : null,
+          );
+        } else {
+          if (fee > 0 && (_feeCategory == null || _feeCategory!.type != CategoryType.expense)) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('Kategori biaya (Expense) diperlukan jika biaya > 0')));
+            return;
+          }
+          await transferSvc.transferBetweenWallets(
+            userId,
+            CreateWalletTransferRequest(
+              fromWalletId: _selectedWallet!.id,
+              toWalletId: _toWallet!.id,
+              amount: finalAmount,
+              fee: fee.abs(),
+              notes: notes.isEmpty ? null : notes,
+              date: _selectedDate,
+              feeCategoryId: _feeCategory?.id,
+            ),
+          );
+        }
       } else if (widget.initialTransaction != null) {
         // Update existing transaction
         final request = UpdateTransactionRequest(
@@ -498,9 +565,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              widget.initialTransaction != null
-                  ? 'Transaction updated successfully'
-                  : 'Transaction added successfully',
+              widget.initialTransfer != null
+                  ? 'Transfer updated successfully'
+                  : (widget.initialTransaction != null
+                      ? 'Transaction updated successfully'
+                      : 'Transaction added successfully'),
             ),
           ),
         );
@@ -531,84 +600,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 }
 
 // --- Extracted Section Widgets ---
-
-class _DateSection extends StatelessWidget {
-  final DateTime date; final VoidCallback onTap;
-  const _DateSection({required this.date, required this.onTap});
-  static String format(DateTime date) {
-    final now = DateTime.now();
-    if (date.year == now.year && date.month == now.month && date.day == now.day) return 'Today';
-    if (date.year == now.year && date.month == now.month && date.day == now.day - 1) return 'Yesterday';
-    return '${date.day}/${date.month}/${date.year}';
-  }
-  @override
-  Widget build(BuildContext context) => Card(
-        child: ListTile(
-          leading: const Icon(Icons.calendar_today),
-          title: const Text('Transaction Date'),
-          subtitle: Text(format(date)),
-          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-          onTap: onTap,
-        ),
-      );
-}
-
-class _AmountSection extends StatelessWidget {
-  final TextEditingController controller; final FocusNode focusNode; final VoidCallback onSubmitted; final VoidCallback onTapOutside;
-  const _AmountSection({required this.controller, required this.focusNode, required this.onSubmitted, required this.onTapOutside});
-  @override
-  Widget build(BuildContext context) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Amount', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 4),
-            TextFormField(
-              focusNode: focusNode,
-              controller: controller,
-              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                hintText: '0',
-                hintStyle: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.grey),
-                prefixText: 'Rp ',
-                prefixStyle: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black87),
-              ),
-              keyboardType: TextInputType.number,
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: (_) => onSubmitted(),
-              onTapOutside: (_) => onTapOutside(),
-              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
-              validator: (value) {
-                if (value?.isEmpty ?? true) return 'Please enter an amount';
-                final amount = double.tryParse(value!); if (amount == null || amount <= 0) return 'Please enter a valid amount';
-                return null;
-              },
-            ),
-          ]),
-        ),
-      );
-}
-
-class _NotesSection extends StatelessWidget {
-  final TextEditingController controller; const _NotesSection({required this.controller});
-  @override
-  Widget build(BuildContext context) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Notes (Optional)', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 4),
-            TextFormField(
-              controller: controller,
-              decoration: const InputDecoration(border: InputBorder.none, hintText: 'Add transaction details...'),
-              maxLines: 3,
-              textCapitalization: TextCapitalization.sentences,
-            ),
-          ]),
-        ),
-      );
-}
 
 class _CategorySection extends ConsumerWidget {
   final String userId; final Category? selected; final void Function(Category?) onSelect; final void Function(List<Category>) openSheet; final WidgetRef ref;

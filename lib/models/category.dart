@@ -7,8 +7,8 @@ class Category {
   final CategoryType type;
   final String? parentId;
   final int? iconCodePoint; // Nullable sesuai kolom
-  final int? color; // Nullable sesuai kolom
-  final bool isActive;
+  // color removed from DB; keep nullable for backward compatibility but unused
+  final int? color; // Deprecated
   final bool isHidden; // Kolom baru di skema
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -21,7 +21,6 @@ class Category {
     this.parentId,
     this.iconCodePoint,
     this.color,
-    this.isActive = true,
     this.isHidden = false,
     required this.createdAt,
     required this.updatedAt,
@@ -35,8 +34,7 @@ class Category {
       'type': type.name,
       'parent_id': parentId,
       'icon_code_point': iconCodePoint,
-      'color': color,
-      'is_active': isActive,
+  // 'color': color, // deprecated/removed
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
   'is_hidden': isHidden,
@@ -51,8 +49,7 @@ class Category {
       type: CategoryType.values.byName(json['type'] as String),
       parentId: json['parent_id'] as String?,
       iconCodePoint: json['icon_code_point'] as int?,
-      color: json['color'] as int?,
-      isActive: json['is_active'] as bool? ?? true,
+  color: null, // color column removed
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
   isHidden: json['is_hidden'] as bool? ?? false,
@@ -66,8 +63,7 @@ class Category {
     CategoryType? type,
     String? parentId,
     int? iconCodePoint,
-    int? color,
-    bool? isActive,
+  int? color,
     bool? isHidden,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -79,8 +75,7 @@ class Category {
       type: type ?? this.type,
       parentId: parentId ?? this.parentId,
       iconCodePoint: iconCodePoint ?? this.iconCodePoint,
-      color: color ?? this.color,
-      isActive: isActive ?? this.isActive,
+  color: this.color, // ignore updates to color
       isHidden: isHidden ?? this.isHidden,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -107,14 +102,15 @@ class CreateCategoryRequest {
   final CategoryType type;
   final String? parentId;
   final int? iconCodePoint;
-  final int? color;
+  // color removed
+  final int? color; // deprecated
 
   const CreateCategoryRequest({
     required this.name,
     required this.type,
     this.parentId,
     this.iconCodePoint,
-    this.color,
+  this.color,
   });
 
   Map<String, dynamic> toJson() {
@@ -123,7 +119,7 @@ class CreateCategoryRequest {
       'type': type.name,
       'parent_id': parentId,
       'icon_code_point': iconCodePoint,
-      'color': color,
+      // 'color': color, // deprecated
     };
   }
 }
@@ -133,8 +129,9 @@ class UpdateCategoryRequest {
   final CategoryType? type;
   final String? parentId;
   final int? iconCodePoint;
-  final int? color;
-  final bool? isActive;
+  // color removed
+  final int? color; // deprecated
+  final bool? isHidden;
 
   const UpdateCategoryRequest({
     this.name,
@@ -142,7 +139,7 @@ class UpdateCategoryRequest {
     this.parentId,
     this.iconCodePoint,
     this.color,
-    this.isActive,
+    this.isHidden,
   });
 
   Map<String, dynamic> toJson() {
@@ -151,8 +148,8 @@ class UpdateCategoryRequest {
     if (type != null) result['type'] = type!.name;
     if (parentId != null) result['parent_id'] = parentId;
     if (iconCodePoint != null) result['icon_code_point'] = iconCodePoint;
-    if (color != null) result['color'] = color;
-    if (isActive != null) result['is_active'] = isActive;
+  // if (color != null) result['color'] = color; // deprecated
+    if (isHidden != null) result['is_hidden'] = isHidden;
     return result;
   }
 }

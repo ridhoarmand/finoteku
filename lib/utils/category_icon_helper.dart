@@ -13,7 +13,7 @@ class CategoryIconHelper {
     'dividend': Icons.account_balance,
     'rental': Icons.home,
     'side_hustle': Icons.handyman,
-    
+
     // Expense Categories
     'food': Icons.restaurant,
     'dining': Icons.restaurant,
@@ -42,6 +42,42 @@ class CategoryIconHelper {
     'repairs': Icons.build,
     'tax': Icons.gavel,
     'others': Icons.more_horiz,
+
+    // Common child/sub-category hints (partial matches)
+    'sarapan': Icons.free_breakfast,
+    'makan siang': Icons.lunch_dining,
+    'makan malam': Icons.dinner_dining,
+    'kopi': Icons.coffee,
+    'camilan': Icons.icecream,
+    'pesan antar': Icons.delivery_dining,
+    'sayur': Icons.grass,
+    'buah': Icons.apple,
+    'vitamin': Icons.medication,
+    'dokter': Icons.local_hospital,
+    'vaksin': Icons.vaccines,
+    'tiket': Icons.airplane_ticket,
+    'hotel': Icons.hotel,
+    'oleh-oleh': Icons.card_giftcard,
+    'bioskop': Icons.movie,
+    'game': Icons.sports_esports,
+    'musik': Icons.music_note,
+    'event': Icons.event,
+    'skincare': Icons.spa,
+    'haircut': Icons.cut,
+    'salon': Icons.brush,
+    'gym': Icons.fitness_center,
+    'grooming': Icons.cut,
+    'makanan': Icons.pets,
+    'buku': Icons.book,
+    'kursus': Icons.school,
+    'uang sekolah': Icons.school,
+    'biaya admin': Icons.receipt_long,
+    'biaya transfer': Icons.swap_horiz,
+    'pajak': Icons.gavel,
+    'netflix': Icons.subscriptions,
+    'spotify': Icons.music_note,
+    'icloud': Icons.cloud,
+    'youtube': Icons.ondemand_video,
   };
 
   // Available icons for selection (combination of Material + additional icons)
@@ -78,7 +114,7 @@ class CategoryIconHelper {
     Icons.star,
     Icons.account_balance,
     Icons.handyman,
-    
+
     // Additional useful icons
     Icons.coffee,
     Icons.fastfood,
@@ -114,21 +150,30 @@ class CategoryIconHelper {
   // Get icon for category name (auto-detection)
   static IconData getIconForCategory(String categoryName) {
     final lowerName = categoryName.toLowerCase();
-    
+
     // Direct match first
     if (_categoryIcons.containsKey(lowerName)) {
       return _categoryIcons[lowerName]!;
     }
-    
+
     // Partial match
     for (final entry in _categoryIcons.entries) {
       if (lowerName.contains(entry.key)) {
         return entry.value;
       }
     }
-    
+
     // Default icon
     return Icons.category;
+  }
+
+  // Inherit icon from parent if child has no explicit icon selection
+  static IconData inheritIcon({
+    required IconData? childIcon,
+    required String parentName,
+  }) {
+    if (childIcon != null) return childIcon;
+    return getIconForCategory(parentName);
   }
 
   // Get icon from stored icon data (from database)
@@ -175,7 +220,7 @@ class CategoryIconHelper {
             itemBuilder: (context, index) {
               final icon = availableIcons[index];
               final isSelected = selectedIcon?.codePoint == icon.codePoint;
-              
+
               return GestureDetector(
                 onTap: () => onIconSelected(icon),
                 child: Container(
@@ -188,7 +233,9 @@ class CategoryIconHelper {
                     ),
                     borderRadius: BorderRadius.circular(8),
                     color: isSelected
-                        ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+                        ? Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.1)
                         : null,
                   ),
                   child: Icon(
@@ -215,23 +262,15 @@ class CategoryIconHelper {
     Color? backgroundColor,
   }) {
     final displayIcon = icon ?? Icons.category;
-    
+
     if (backgroundColor != null) {
       return CircleAvatar(
         backgroundColor: backgroundColor,
         radius: size,
-        child: Icon(
-          displayIcon,
-          size: size * 0.6,
-          color: color,
-        ),
+        child: Icon(displayIcon, size: size * 0.6, color: color),
       );
     }
-    
-    return Icon(
-      displayIcon,
-      size: size,
-      color: color,
-    );
+
+    return Icon(displayIcon, size: size, color: color);
   }
 }

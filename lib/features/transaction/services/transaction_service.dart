@@ -41,7 +41,18 @@ class TransactionService {
       if (request.amount != null && request.amount! <= 0) {
         throw ValidationFailure('Amount must be greater than 0');
       }
-      return await _supabase.updateTransaction(transactionId, userId, request);
+      final oldWalletId = existingTransaction.walletId;
+      final updated = await _supabase.updateTransaction(transactionId, userId, request);
+      // Ensure balances consistent when wallet/category/amount change
+      final newWalletId = request.walletId ?? oldWalletId;
+      // Recalculate both old and new wallets if wallet changed; else just the wallet
+      if (newWalletId != oldWalletId) {
+        await _supabase.recalcWalletBalance(oldWalletId, userId);
+        await _supabase.recalcWalletBalance(newWalletId, userId);
+      } else {
+        await _supabase.recalcWalletBalance(newWalletId, userId);
+      }
+      return updated;
     } catch (e, st) {
       AppLogger.e('Gagal update transaksi', error: e, stackTrace: st);
       throw mapException(e, st);
@@ -101,20 +112,18 @@ class TransactionService {
       startDate: startDate,
       endDate: endDate,
     );
-
+    // NOTE: Summary di layer service ini menggunakan pendekatan tanda amount
+    // untuk menjaga low-coupling (tanpa memuat kategori). Klasifikasi berbasis
+    // kategori yang akurat tersedia di analytics providers.
     double totalIncome = 0;
     double totalExpense = 0;
-
-    for (final transaction in transactions) {
-      // Perlu load category untuk menentukan apakah income atau expense
-      // Untuk sementara, anggap positive amount = income, negative = expense
-      if (transaction.amount > 0) {
-        totalIncome += transaction.amount;
+    for (final t in transactions) {
+      if (t.amount >= 0) {
+        totalIncome += t.amount;
       } else {
-        totalExpense += transaction.amount.abs();
+        totalExpense += t.amount.abs();
       }
     }
-
     return {
       'income': totalIncome,
       'expense': totalExpense,

@@ -30,13 +30,34 @@ final categoriesProvider = FutureProvider.family<List<Category>, String>((
   return categoryService.getCategories(userId);
 });
 
+// Peta kategori by ID agar tidak perlu mem-build map berulang kali
+final categoriesMapProvider = FutureProvider.family<Map<String, Category>, String>((ref, userId) async {
+  ref.watch(categoryRefreshProvider);
+  final list = await ref.watch(categoriesProvider(userId).future);
+  return {for (final c in list) c.id: c};
+});
+
+// Semua kategori (termasuk non-aktif/hidden) – berguna untuk klasifikasi historis
+final categoriesAllProvider = FutureProvider.family<List<Category>, String>((ref, userId) async {
+  ref.watch(categoryRefreshProvider);
+  final svc = ref.watch(categoryServiceProvider);
+  return svc.getCategories(userId, includeInactive: true);
+});
+
+// Peta semua kategori
+final categoriesAllMapProvider = FutureProvider.family<Map<String, Category>, String>((ref, userId) async {
+  ref.watch(categoryRefreshProvider);
+  final list = await ref.watch(categoriesAllProvider(userId).future);
+  return {for (final c in list) c.id: c};
+});
+
 // Provider untuk categories by type
 final categoriesByTypeProvider =
     FutureProvider.family<List<Category>, ({String userId, CategoryType type})>(
       (ref, params) async {
         ref.watch(categoryRefreshProvider);
         final all = await ref.watch(categoriesProvider(params.userId).future);
-        return all.where((c) => c.type == params.type && c.isActive).toList();
+        return all.where((c) => c.type == params.type && !c.isHidden).toList();
       },
     );
 
@@ -84,7 +105,7 @@ final activeCategoriesProvider = FutureProvider.family<List<Category>, String>((
 ) async {
   ref.watch(categoryRefreshProvider);
   final categories = await ref.watch(categoriesProvider(userId).future);
-  return categories.where((c) => c.isActive).toList();
+  return categories.where((c) => !c.isHidden).toList();
 });
 
 // Template-related providers dihapus karena konsep template/offline sudah dihilangkan.

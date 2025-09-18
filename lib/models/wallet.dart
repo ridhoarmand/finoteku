@@ -5,7 +5,7 @@ class Wallet {
   final double balance;
   final String currency;
   final String? icon; // Icon path
-  final bool isActive;
+  final bool isHidden;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -16,7 +16,7 @@ class Wallet {
     required this.balance,
     this.currency = 'IDR',
     this.icon,
-    this.isActive = true,
+    this.isHidden = false,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -29,7 +29,7 @@ class Wallet {
       'balance': balance,
       'currency': currency,
       'icon': icon,
-      'is_active': isActive,
+      'is_hidden': isHidden,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -43,7 +43,7 @@ class Wallet {
       balance: (json['balance'] as num).toDouble(),
       currency: json['currency'] as String? ?? 'IDR',
       icon: json['icon'] as String?,
-      isActive: json['is_active'] as bool? ?? true,
+      isHidden: json['is_hidden'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -56,7 +56,7 @@ class Wallet {
     double? balance,
     String? currency,
     String? icon,
-    bool? isActive,
+    bool? isHidden,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -67,7 +67,7 @@ class Wallet {
       balance: balance ?? this.balance,
       currency: currency ?? this.currency,
       icon: icon ?? this.icon,
-      isActive: isActive ?? this.isActive,
+      isHidden: isHidden ?? this.isHidden,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -116,14 +116,14 @@ class UpdateWalletRequest {
   final double? balance;
   final String? currency;
   final String? icon;
-  final bool? isActive;
+  final bool? isHidden;
 
   const UpdateWalletRequest({
     this.name,
     this.balance,
     this.currency,
     this.icon,
-    this.isActive,
+    this.isHidden,
   });
 
   Map<String, dynamic> toJson() {
@@ -132,7 +132,7 @@ class UpdateWalletRequest {
     if (balance != null) result['balance'] = balance;
     if (currency != null) result['currency'] = currency;
     if (icon != null) result['icon'] = icon;
-    if (isActive != null) result['is_active'] = isActive;
+    if (isHidden != null) result['is_hidden'] = isHidden;
     return result;
   }
 }

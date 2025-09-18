@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS public.wallets (
   currency TEXT NOT NULL DEFAULT 'IDR',
   icon TEXT,
   -- Lokasi ikon (assets banks/*.svg atau ewallets/*.svg)
-  is_active BOOLEAN DEFAULT TRUE,
+  is_hidden BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc' :: text, NOW()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc' :: text, NOW()) NOT NULL
 );
@@ -61,10 +61,6 @@ CREATE TABLE IF NOT EXISTS public.categories (
   parent_id UUID REFERENCES public.categories(id) ON DELETE CASCADE,
   icon_code_point BIGINT,
   -- Menyimpan codePoint Material Icon (untuk ikon kustom)
-  color BIGINT,
-  -- Menyimpan warna dalam integer ARGB
-  is_active BOOLEAN DEFAULT TRUE,
-  -- Menandai kategori masih aktif dipakai (soft disable)
   is_hidden BOOLEAN DEFAULT false,
   -- Disembunyikan dari picker tetapi tetap dihitung dalam analitik
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc' :: text, NOW()) NOT NULL,
@@ -113,7 +109,7 @@ CREATE TABLE IF NOT EXISTS public.transfers (
 -- =============================================
 CREATE INDEX IF NOT EXISTS idx_wallets_user_id ON public.wallets(user_id);
 
-CREATE INDEX IF NOT EXISTS idx_wallets_active ON public.wallets(user_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_wallets_hidden ON public.wallets(user_id, is_hidden);
 
 CREATE INDEX IF NOT EXISTS idx_categories_user_id ON public.categories(user_id);
 
@@ -251,26 +247,34 @@ DECLARE calculated_balance DECIMAL(15, 2);
 DECLARE tx_balance DECIMAL(15, 2);
 DECLARE transfer_in DECIMAL(15, 2);
 DECLARE transfer_out DECIMAL(15, 2);
+DECLARE transfer_fee DECIMAL(15, 2);
 BEGIN
+  -- Hitung saldo dari semua transaksi normal (income/expense)
   SELECT COALESCE(SUM(t.amount * CASE c.type WHEN 'expense' THEN -1 ELSE 1 END), 0)
     INTO tx_balance
   FROM public.transactions t
   JOIN public.categories c ON c.id = t.category_id
   WHERE t.wallet_id = p_wallet_id AND t.user_id = p_user_id;
 
+  -- Hitung transfer masuk ke wallet ini
   SELECT COALESCE(SUM(amount), 0) INTO transfer_in
   FROM public.transfers tr
   WHERE tr.to_wallet_id = p_wallet_id AND tr.user_id = p_user_id;
 
+  -- Hitung transfer keluar dari wallet ini (termasuk fee yang sudah dipotong via trigger transaksi)
   SELECT COALESCE(SUM(amount), 0) INTO transfer_out
   FROM public.transfers tr
   WHERE tr.from_wallet_id = p_wallet_id AND tr.user_id = p_user_id;
 
-  calculated_balance := tx_balance + (transfer_in - transfer_out);
+  -- Saldo final = transaksi normal + transfer masuk - transfer keluar
+  -- (fee sudah dihitung sebagai expense transaction terpisah)
+  calculated_balance := tx_balance + transfer_in - transfer_out;
+  
   UPDATE public.wallets
     SET balance = calculated_balance,
         updated_at = TIMEZONE('utc' :: text, NOW())
   WHERE id = p_wallet_id AND user_id = p_user_id;
+  
   RETURN calculated_balance;
 END;
 $$ LANGUAGE plpgsql;
@@ -471,6 +475,126 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Update existing wallet transfer atomically and sync fee expense transaction
+CREATE OR REPLACE FUNCTION public.update_wallet_transfer(
+  p_user_id UUID,
+  p_transfer_id UUID,
+  p_from_wallet_id UUID DEFAULT NULL,
+  p_to_wallet_id UUID DEFAULT NULL,
+  p_amount DECIMAL(15, 2) DEFAULT NULL,
+  p_fee DECIMAL(15, 2) DEFAULT NULL,
+  p_notes TEXT DEFAULT NULL,
+  p_date DATE DEFAULT NULL,
+  p_fee_category_id UUID DEFAULT NULL
+) RETURNS UUID AS $$
+DECLARE
+  v_old RECORD;
+  v_new_from UUID;
+  v_new_to UUID;
+  v_new_amount DECIMAL(15, 2);
+  v_new_fee DECIMAL(15, 2);
+  v_new_notes TEXT;
+  v_new_date DATE;
+  v_fee_tx RECORD;
+  v_fee_type category_type;
+BEGIN
+  SELECT * INTO v_old FROM public.transfers WHERE id = p_transfer_id AND user_id = p_user_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Transfer not found';
+  END IF;
+
+  v_new_from := COALESCE(p_from_wallet_id, v_old.from_wallet_id);
+  v_new_to := COALESCE(p_to_wallet_id, v_old.to_wallet_id);
+  v_new_amount := COALESCE(p_amount, v_old.amount);
+  v_new_fee := COALESCE(p_fee, v_old.fee);
+  v_new_notes := COALESCE(p_notes, v_old.notes);
+  v_new_date := COALESCE(p_date, v_old.date);
+
+  IF v_new_from = v_new_to THEN
+    RAISE EXCEPTION 'Source and destination wallet must be different';
+  END IF;
+  IF v_new_amount IS NULL OR v_new_amount <= 0 THEN
+    RAISE EXCEPTION 'Amount must be greater than 0';
+  END IF;
+  IF v_new_fee IS NULL THEN v_new_fee := 0.00; END IF;
+
+  -- Update transfer row (triggers will handle balance movements for amount/from/to changes)
+  UPDATE public.transfers
+    SET from_wallet_id = v_new_from,
+        to_wallet_id = v_new_to,
+        amount = v_new_amount,
+        fee = v_new_fee,
+        notes = v_new_notes,
+        date = v_new_date,
+        updated_at = TIMEZONE('utc' :: text, NOW())
+  WHERE id = p_transfer_id AND user_id = p_user_id;
+
+  -- Fee transaction handling remains the same as before
+  -- Handle fee expense transaction linked by marker [transfer:<id>] in notes
+  SELECT t.* INTO v_fee_tx
+  FROM public.transactions t
+  WHERE t.user_id = p_user_id
+    AND t.notes LIKE ('%' || '[transfer:' || p_transfer_id || ']')
+  ORDER BY t.created_at DESC
+  LIMIT 1;
+
+  IF v_old.fee > 0 AND v_new_fee > 0 THEN
+    -- Update existing fee transaction (amount/date/wallet/notes)
+    UPDATE public.transactions
+      SET amount = v_new_fee,
+          wallet_id = v_new_from,
+          notes = ('Transfer Fee' || CASE WHEN v_new_notes IS NOT NULL THEN ' - ' || v_new_notes ELSE '' END || ' [transfer:' || p_transfer_id || ']'),
+          date = v_new_date,
+          updated_at = TIMEZONE('utc' :: text, NOW())
+    WHERE id = v_fee_tx.id AND user_id = p_user_id;
+  ELSIF v_old.fee > 0 AND v_new_fee = 0 THEN
+    -- Remove fee transaction
+    DELETE FROM public.transactions WHERE id = v_fee_tx.id AND user_id = p_user_id;
+  ELSIF v_old.fee = 0 AND v_new_fee > 0 THEN
+    -- Need fee category to create new expense
+    IF p_fee_category_id IS NULL THEN
+      RAISE EXCEPTION 'Fee category is required when adding a new fee';
+    END IF;
+    SELECT type INTO v_fee_type FROM public.categories WHERE id = p_fee_category_id AND user_id = p_user_id;
+    IF v_fee_type IS DISTINCT FROM 'expense' THEN
+      RAISE EXCEPTION 'Fee category must be expense';
+    END IF;
+    INSERT INTO public.transactions (user_id, wallet_id, category_id, amount, notes, date)
+    VALUES (p_user_id, v_new_from, p_fee_category_id, v_new_fee,
+            'Transfer Fee' || CASE WHEN v_new_notes IS NOT NULL THEN ' - ' || v_new_notes ELSE '' END || ' [transfer:' || p_transfer_id || ']',
+            v_new_date);
+  END IF;
+
+  -- The improved trigger handles balance updates correctly, no manual recalculation needed
+  RETURN p_transfer_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Delete wallet transfer atomically: remove linked fee transaction(s) and let triggers handle balance
+CREATE OR REPLACE FUNCTION public.delete_wallet_transfer(
+  p_user_id UUID,
+  p_transfer_id UUID
+) RETURNS VOID AS $$
+DECLARE
+  v_old RECORD;
+BEGIN
+  SELECT * INTO v_old FROM public.transfers WHERE id = p_transfer_id AND user_id = p_user_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Transfer not found';
+  END IF;
+
+  -- Remove fee transactions linked to this transfer via marker in notes
+  DELETE FROM public.transactions
+  WHERE user_id = p_user_id
+    AND notes LIKE ('%' || '[transfer:' || p_transfer_id || ']');
+
+  -- Delete the transfer row (trigger will handle balance adjustments)
+  DELETE FROM public.transfers WHERE id = p_transfer_id AND user_id = p_user_id;
+
+  -- No manual recalculation needed - the trigger handles balance updates correctly
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- =============================================
 -- 10) AUTH: BOOTSTRAP PROFIL USER PADA SIGNUP
 -- =============================================
@@ -548,12 +672,24 @@ BEGIN
     UPDATE public.wallets SET balance = balance + NEW.amount WHERE id = NEW.to_wallet_id AND user_id = NEW.user_id;
     RETURN NEW;
   ELSIF TG_OP = 'UPDATE' THEN
-    -- Revert old
-    UPDATE public.wallets SET balance = balance + OLD.amount WHERE id = OLD.from_wallet_id AND user_id = OLD.user_id;
-    UPDATE public.wallets SET balance = balance - OLD.amount WHERE id = OLD.to_wallet_id AND user_id = OLD.user_id;
-    -- Apply new
-    UPDATE public.wallets SET balance = balance - NEW.amount WHERE id = NEW.from_wallet_id AND user_id = NEW.user_id;
-    UPDATE public.wallets SET balance = balance + NEW.amount WHERE id = NEW.to_wallet_id AND user_id = NEW.user_id;
+    -- Handle wallet changes properly
+    -- Only revert from wallets that are actually changing
+    IF OLD.from_wallet_id != NEW.from_wallet_id THEN
+      UPDATE public.wallets SET balance = balance + OLD.amount WHERE id = OLD.from_wallet_id AND user_id = OLD.user_id;
+      UPDATE public.wallets SET balance = balance - NEW.amount WHERE id = NEW.from_wallet_id AND user_id = NEW.user_id;
+    ELSIF OLD.amount != NEW.amount THEN
+      -- Same from wallet, but amount changed
+      UPDATE public.wallets SET balance = balance + (OLD.amount - NEW.amount) WHERE id = OLD.from_wallet_id AND user_id = OLD.user_id;
+    END IF;
+    
+    IF OLD.to_wallet_id != NEW.to_wallet_id THEN
+      UPDATE public.wallets SET balance = balance - OLD.amount WHERE id = OLD.to_wallet_id AND user_id = OLD.user_id;
+      UPDATE public.wallets SET balance = balance + NEW.amount WHERE id = NEW.to_wallet_id AND user_id = NEW.user_id;
+    ELSIF OLD.amount != NEW.amount THEN
+      -- Same to wallet, but amount changed
+      UPDATE public.wallets SET balance = balance + (NEW.amount - OLD.amount) WHERE id = OLD.to_wallet_id AND user_id = OLD.user_id;
+    END IF;
+    
     RETURN NEW;
   ELSIF TG_OP = 'DELETE' THEN
     UPDATE public.wallets SET balance = balance + OLD.amount WHERE id = OLD.from_wallet_id AND user_id = OLD.user_id;

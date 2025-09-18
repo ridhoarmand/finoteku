@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/category_providers.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../services/category_service.dart'; // for categoryServiceProvider
 import '../../../services/supabase_service.dart';
 import '../../../models/category.dart';
 import '../../../utils/category_icon_helper.dart';
+import '../../category/theme/category_theme.dart';
 import '../widgets/category_form_dialog.dart';
 import '../widgets/category_delete_dialog.dart';
 
@@ -36,12 +38,12 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Manage Categories'),
+  title: Text(ref.tr(context, 'manage_categories')),
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.trending_down), text: 'Expense'),
-            Tab(icon: Icon(Icons.trending_up), text: 'Income'),
+          tabs: [
+            Tab(icon: const Icon(Icons.trending_down), text: ref.tr(context, 'expense')),
+            Tab(icon: const Icon(Icons.trending_up), text: ref.tr(context, 'income')),
           ],
         ),
         actions: [
@@ -69,7 +71,9 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
     showDialog(
       context: context,
       builder: (context) => CategoryFormDialog(
-        title: 'Add ${isExpense ? 'Expense' : 'Income'} Category',
+        title: isExpense
+            ? ref.tr(context, 'add_expense_category')
+            : ref.tr(context, 'add_income_category'),
         categoryType: categoryType,
         onSave: (name, color, icon, parentId) {
           _handleAddCategory(categoryType, name, color, icon, parentId);
@@ -101,17 +105,18 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
         iconCodePoint: icon != null
             ? CategoryIconHelper.getCodePointFromIcon(icon)
             : null,
-  // Using value for ARGB int; if migrating to Color.toARGB32() adjust here.
-  // ignore: deprecated_member_use
-  color: color.value,
+        // color removed
       );
 
       await categoryService.createCategory(userId, request);
       if (mounted) {
         // Refresh all categories providers first so UI updates immediately
         refreshCategoryProviders(ref);
+        // Explicitly invalidate provider families to force rebuild now
+        ref.invalidate(categoriesProvider(userId));
+        ref.invalidate(categoriesByTypeProvider((userId: userId, type: type)));
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$name category added successfully')),
+          SnackBar(content: Text(ref.tr(context, 'category_added_success'))),
         );
         // Return success flag if this screen was pushed expecting a result
         if (Navigator.canPop(context)) {
@@ -175,7 +180,7 @@ class CategoryListTab extends ConsumerWidget {
                         type: categoryType,
                       )),
                     ),
-                    child: const Text('Retry'),
+                    child: Text(ref.tr(context, 'retry')),
                   ),
                 ],
               ),
@@ -211,21 +216,21 @@ class CategoryListTab extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No categories yet',
+                    ref.tr(context, 'categories_empty_title'),
                     style: Theme.of(
                       context,
                     ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Tap + to add your first category',
+                    ref.tr(context, 'categories_empty_sub'),
                     style: Theme.of(
                       context,
                     ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Pull down to refresh',
+                    ref.tr(context, 'pull_down_to_refresh'),
                     style: Theme.of(
                       context,
                     ).textTheme.bodySmall?.copyWith(color: Colors.grey[400]),
@@ -316,9 +321,8 @@ class CategoryListTab extends ConsumerWidget {
         : CategoryIconHelper.getIconForCategory(category.name);
 
     // Use color from database if available, otherwise use default
-    Color color = category.color != null
-        ? Color(category.color!)
-        : Theme.of(context).colorScheme.primary;
+  // Standardized color by type (ignore stored color)
+  final Color color = CategoryTheme.forType(category.type);
 
     // Different styling based on hierarchy level
     Widget leadingWidget;
@@ -419,25 +423,25 @@ class CategoryListTab extends ConsumerWidget {
             }
           },
           itemBuilder: (context) => [
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'edit',
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.edit, size: 18),
                   SizedBox(width: 12),
-                  Text('Edit'),
+                  Text(ref.tr(context, 'edit')),
                 ],
               ),
             ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'delete',
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.delete, size: 18, color: Colors.red),
                   SizedBox(width: 12),
-                  Text('Delete', style: TextStyle(color: Colors.red)),
+                  Text(ref.tr(context, 'delete'), style: const TextStyle(color: Colors.red)),
                 ],
               ),
             ),
@@ -470,7 +474,9 @@ class CategoryListTab extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => CategoryFormDialog(
-        title: 'Edit ${category.type.name} Category',
+    title: category.type == CategoryType.expense
+      ? ref.tr(context, 'edit_expense_category')
+      : ref.tr(context, 'edit_income_category'),
         categoryType: category.type,
         initialName: category.name,
         initialParentId: category.parentId,
@@ -478,7 +484,8 @@ class CategoryListTab extends ConsumerWidget {
         initialIcon: category.iconCodePoint != null
             ? CategoryIconHelper.getIconFromCodePoint(category.iconCodePoint)
             : null,
-        initialColor: category.color != null ? Color(category.color!) : null,
+  // initialColor is ignored by dialog (auto by type)
+  initialColor: null,
         onSave: (name, color, icon, parentId) {
           _handleEditCategory(
             context,
@@ -525,11 +532,14 @@ class CategoryListTab extends ConsumerWidget {
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${category.name} updated successfully')),
+          SnackBar(content: Text(ref.tr(context, 'category_updated_success'))),
         );
 
         // Refresh all categories providers
         refreshCategoryProviders(ref);
+        // Explicitly invalidate provider families to force rebuild now
+        ref.invalidate(categoriesProvider(userId));
+        ref.invalidate(categoriesByTypeProvider((userId: userId, type: category.type)));
       }
     } catch (e) {
       if (context.mounted) {

@@ -69,7 +69,7 @@ class SupabaseWalletService {
         'balance': request.initialBalance,
         'currency': request.currency,
         'icon': request.icon,
-        'is_active': true,
+        'is_hidden': false,
       };
 
       final response = await _supabase
@@ -97,7 +97,7 @@ class SupabaseWalletService {
       if (request.balance != null) data['balance'] = request.balance;
       if (request.currency != null) data['currency'] = request.currency;
       if (request.icon != null) data['icon'] = request.icon;
-      if (request.isActive != null) data['is_active'] = request.isActive;
+      if (request.isHidden != null) data['is_hidden'] = request.isHidden;
 
       if (data.isEmpty) {
         throw Exception('No data to update');
@@ -144,7 +144,7 @@ class SupabaseWalletService {
       'balance': data['balance'],
       'currency': data['currency'],
       'icon': data['icon'],
-      'is_active': data['is_active'],
+      'is_hidden': data['is_hidden'],
       'created_at': data['created_at'],
       'updated_at': data['updated_at'],
     };

@@ -187,6 +187,19 @@ class SupabaseTransactionService {
     }
   }
 
+  // Recalculate a single wallet balance using server-side function
+  Future<void> recalcWalletBalance(String walletId, String userId) async {
+    try {
+      await _supabase.rpc('recalculate_wallet_balance', params: {
+        'p_wallet_id': walletId,
+        'p_user_id': userId,
+      });
+    } catch (e, st) {
+      AppLogger.e('recalc wallet balance failed', error: e, stackTrace: st);
+      throw mapException(e, st);
+    }
+  }
+
   // Legacy sync methods removed (online-only architecture)
 
   // Convert dari format Supabase ke format aplikasi
