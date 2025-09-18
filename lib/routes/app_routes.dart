@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
@@ -23,24 +24,49 @@ import '../features/onboarding/providers/onboarding_provider.dart';
 import '../features/onboarding/providers/language_preference_provider.dart';
 import '../widgets/main_shell.dart';
 
-final routerProvider = Provider<GoRouter>((ref) {
+// Router state provider that combines all necessary states
+final routerStateProvider = Provider<RouterState>((ref) {
   final authState = ref.watch(authStateProvider);
   final hasSeenOnboarding = ref.watch(onboardingProvider);
   final hasLanguagePreference = ref.watch(hasLanguagePreferenceProvider);
+
+  return RouterState(
+    authState: authState,
+    hasSeenOnboarding: hasSeenOnboarding,
+    hasLanguagePreference: hasLanguagePreference,
+  );
+});
+
+class RouterState {
+  final AsyncValue<AuthState> authState;
+  final bool hasSeenOnboarding;
+  final AsyncValue<bool> hasLanguagePreference;
+
+  const RouterState({
+    required this.authState,
+    required this.hasSeenOnboarding,
+    required this.hasLanguagePreference,
+  });
+}
+
+final routerProvider = Provider<GoRouter>((ref) {
+  // Keep router instance alive to prevent recreations
+  ref.keepAlive();
 
   return GoRouter(
     initialLocation: '/',
     debugLogDiagnostics: true,
     redirect: (context, state) {
       final location = state.matchedLocation;
+      final routerState = ref.read(routerStateProvider);
 
       // Allow splash screen to always load
       if (location == '/') return null;
 
       // Handle loading states for both auth and language preference
-      return authState.when(
+      return routerState.authState.when(
         data: (auth) {
-          return hasLanguagePreference.when(
+          return routerState.hasLanguagePreference.when(
             data: (hasLangPref) {
               final isAuthenticated = auth.session != null;
 
@@ -50,7 +76,9 @@ final routerProvider = Provider<GoRouter>((ref) {
               }
 
               // If language is set but onboarding not seen, show onboarding
-              if (hasLangPref && !hasSeenOnboarding && location != '/onboarding') {
+              if (hasLangPref &&
+                  !routerState.hasSeenOnboarding &&
+                  location != '/onboarding') {
                 return '/onboarding';
               }
 
@@ -70,18 +98,23 @@ final routerProvider = Provider<GoRouter>((ref) {
               }
 
               // If authenticated and trying to access auth routes, redirect to home
-              if (isAuthenticated && isPublicRoute && location != '/onboarding' && location != '/language-selection') {
+              if (isAuthenticated &&
+                  isPublicRoute &&
+                  location != '/onboarding' &&
+                  location != '/language-selection') {
                 return '/home';
               }
 
               return null;
             },
             loading: () => null, // Allow navigation during loading
-            error: (error, stackTrace) => '/language-selection', // Default to language selection on error
+            error: (error, stackTrace) =>
+                '/language-selection', // Default to language selection on error
           );
         },
         loading: () => null, // Allow navigation during loading
-        error: (error, stackTrace) => '/login', // Redirect to login on auth error
+        error: (error, stackTrace) =>
+            '/login', // Redirect to login on auth error
       );
     },
     routes: [

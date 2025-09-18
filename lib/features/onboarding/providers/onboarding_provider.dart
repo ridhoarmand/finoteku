@@ -4,21 +4,29 @@ import 'package:shared_preferences/shared_preferences.dart';
 final onboardingProvider = StateNotifierProvider<OnboardingNotifier, bool>((
   ref,
 ) {
+  // Keep provider alive to prevent multiple loads
+  ref.keepAlive();
   return OnboardingNotifier();
 });
 
 class OnboardingNotifier extends StateNotifier<bool> {
   OnboardingNotifier() : super(false) {
-    _loadOnboardingStatus();
+    // Defer async operation to avoid blocking constructor
+    Future.microtask(() => _loadOnboardingStatus());
   }
 
   Future<void> _loadOnboardingStatus() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      state = prefs.getBool('hasSeenOnboarding') ?? false;
+      // Check if widget is still mounted before updating state
+      if (mounted) {
+        state = prefs.getBool('hasSeenOnboarding') ?? false;
+      }
     } catch (e) {
       // If error loading preferences, assume first time user
-      state = false;
+      if (mounted) {
+        state = false;
+      }
     }
   }
 

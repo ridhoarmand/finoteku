@@ -9,17 +9,16 @@ import 'core/localization/locale_provider.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_provider.dart';
 import 'services/supabase_service.dart';
-import 'features/notification/services/notification_service.dart';
 import 'utils/environment.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize timezone database
+  // Initialize timezone database (light operation)
   tz.initializeTimeZones();
   tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
 
-  // Initialize environment variables from .env file
+  // Initialize environment variables first (must be sequential)
   await Environment.initialize();
 
   // Validate environment configuration
@@ -31,9 +30,11 @@ void main() async {
   }
 
   // Print configuration in debug mode
-  Environment.printConfig();
+  if (kDebugMode) {
+    Environment.printConfig();
+  }
 
-  // Initialize Supabase with environment variables
+  // Initialize Supabase after environment is loaded
   try {
     await SupabaseService.initialize(
       url: Environment.supabaseUrl,
@@ -50,17 +51,6 @@ void main() async {
     // Continue anyway for demo purposes
   }
 
-  // Initialize notification service on startup (non-blocking)
-  NotificationService.initialize().then((_) {
-    if (kDebugMode) {
-      print('🔔 Notification service initialized successfully');
-    }
-  }).catchError((error) {
-    if (kDebugMode) {
-      print('⚠️ Error initializing notification service: $error');
-    }
-  });
-
   runApp(ProviderScope(child: MyApp()));
 }
 
@@ -69,9 +59,9 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-  final themeMode = ref.watch(themeModeProvider);
-  final router = ref.watch(routerProvider);
-  final localeState = ref.watch(appLocaleProvider);
+    final themeMode = ref.watch(themeModeProvider);
+    final router = ref.watch(routerProvider);
+    final localeState = ref.watch(appLocaleProvider);
 
     return MaterialApp.router(
       title: Environment.appName,

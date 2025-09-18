@@ -13,7 +13,8 @@ class SupabaseService {
     await Supabase.initialize(
       url: url,
       anonKey: anonKey,
-      debug: false, // Set to true for debugging
+      debug: true, // Set to true for debugging
+      authOptions: FlutterAuthClientOptions(detectSessionInUri: false),
     );
     _client = Supabase.instance.client;
   }
