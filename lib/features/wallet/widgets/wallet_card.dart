@@ -25,14 +25,14 @@ class WalletCard extends ConsumerWidget {
       child: ListTile(
         leading: CircleAvatar(
           radius: 24,
-          backgroundColor: wallet.isActive
+          backgroundColor: !wallet.isHidden
               ? theme.colorScheme.primary.withValues(alpha: 0.1)
               : theme.colorScheme.outline.withValues(alpha: 0.1),
           child: WalletIconHelper.buildIcon(
             wallet.icon,
             size: 36,
             color: wallet.icon == null || wallet.icon!.isEmpty
-                ? (wallet.isActive
+                ? (!wallet.isHidden
                     ? theme.colorScheme.primary
                     : theme.colorScheme.onSurfaceVariant)
                 : null,
@@ -41,7 +41,7 @@ class WalletCard extends ConsumerWidget {
         title: Text(
           wallet.name,
           style: theme.textTheme.titleMedium?.copyWith(
-            color: wallet.isActive ? null : theme.colorScheme.onSurfaceVariant,
+            color: !wallet.isHidden ? null : theme.colorScheme.onSurfaceVariant,
           ),
         ),
         subtitle: Column(
@@ -57,7 +57,7 @@ class WalletCard extends ConsumerWidget {
               ),
             ),
             Text('${ref.tr(context, 'wallet_currency_label')}: ${wallet.currency}', style: theme.textTheme.bodySmall),
-            if (!wallet.isActive)
+            if (wallet.isHidden)
               Text(ref.tr(context, 'wallet_hidden'), style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
           ],
         ),
@@ -69,12 +69,12 @@ class WalletCard extends ConsumerWidget {
               child: Row(children: [const Icon(Icons.edit), const SizedBox(width: 8), Text(ref.tr(context, 'edit'))]),
             ),
             PopupMenuItem(
-              value: wallet.isActive ? 'deactivate' : 'activate',
+              value: !wallet.isHidden ? 'deactivate' : 'activate',
               child: Row(
                 children: [
-                  Icon(wallet.isActive ? Icons.visibility_off : Icons.visibility),
+                  Icon(!wallet.isHidden ? Icons.visibility_off : Icons.visibility),
                   const SizedBox(width: 8),
-                  Text(wallet.isActive ? ref.tr(context, 'wallet_hide') : ref.tr(context, 'wallet_unhide')),
+                  Text(!wallet.isHidden ? ref.tr(context, 'wallet_hide') : ref.tr(context, 'wallet_unhide')),
                 ],
               ),
             ),

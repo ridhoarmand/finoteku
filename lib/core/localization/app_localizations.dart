@@ -5,6 +5,7 @@ import 'locale_provider.dart';
 import '../../features/category/i18n/strings.dart' as category_i18n;
 import '../../features/wallet/i18n/strings.dart' as wallet_i18n;
 import '../../features/transfer/i18n/strings.dart' as transfer_i18n;
+import '../../features/transaction/i18n/strings.dart' as transaction_i18n;
 
 typedef StrMap = Map<String, String>;
 
@@ -137,10 +138,11 @@ final Map<String, StrMap> _strings = {
     'phone_too_short': 'Phone number must be at least 10 digits',
     'dismiss': 'Dismiss',
     'error_loading_user': 'Error loading user data',
-    // Merge feature strings (EN)
+  // Merge feature strings (EN)
     ...category_i18n.categoryStringsEn,
     ...wallet_i18n.walletStringsEn,
     ...transfer_i18n.transferStringsEn,
+  ...transaction_i18n.transactionStringsEn,
     // Generic detail/transaction labels (EN)
     'transaction_details_title': 'Transaction Details',
     'transaction_not_found': 'Transaction not found',
@@ -288,10 +290,11 @@ final Map<String, StrMap> _strings = {
     'month_october': 'Oktober',
     'month_november': 'November',
     'month_december': 'Desember',
-    // Merge feature strings (ID)
+  // Merge feature strings (ID)
     ...category_i18n.categoryStringsId,
     ...wallet_i18n.walletStringsId,
     ...transfer_i18n.transferStringsId,
+  ...transaction_i18n.transactionStringsId,
     // Generic detail/transaction labels (ID)
     'transaction_details_title': 'Detail Transaksi',
     'transaction_not_found': 'Transaksi tidak ditemukan',

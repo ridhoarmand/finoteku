@@ -3,8 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'add_transaction_screen.dart';
 import 'transaction_detail_screen.dart';
 import '../../transfer/screens/transfer_detail_screen.dart';
-import '../../category/theme/category_theme.dart';
-import '../../transfer/services/transfer_service.dart';
+// removed unused imports after refactor
 import '../providers/transaction_providers.dart';
 import '../../../models/ledger_entry.dart';
 import '../../wallet/providers/wallet_providers.dart';
@@ -15,6 +14,8 @@ import '../../../utils/currency_formatter.dart';
 import '../../../models/wallet.dart';
 import '../../../core/state/balance_visibility_provider.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../widgets/ledger_transfer_card.dart';
+import '../widgets/ledger_transaction_card.dart';
 
 class TransactionScreen extends ConsumerStatefulWidget {
   const TransactionScreen({super.key});
@@ -40,14 +41,12 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
 
     if (user == null) {
       return Scaffold(
-        body: Center(
-          child: Text(ref.tr(context, 'login_required_short')),
-        ),
+        body: Center(child: Text(ref.tr(context, 'login_required_short'))),
       );
     }
 
-  final walletsAsync = ref.watch(activeWalletsProvider(user.id));
-  final allWalletsAsync = ref.watch(walletsProvider(user.id));
+    final walletsAsync = ref.watch(activeWalletsProvider(user.id));
+    final allWalletsAsync = ref.watch(walletsProvider(user.id));
     final categoriesAsync = ref.watch(categoriesProvider(user.id));
 
     // Gunakan ledger entries agar transfer juga tampil dalam daftar
@@ -91,7 +90,10 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                       if (filtered.isEmpty) {
                         return _buildEmptyState(context, theme);
                       }
-                      final wallets = allWalletsAsync.valueOrNull ?? walletsAsync.valueOrNull ?? [];
+                      final wallets =
+                          allWalletsAsync.valueOrNull ??
+                          walletsAsync.valueOrNull ??
+                          [];
                       return _buildLedgerList(
                         filtered,
                         theme,
@@ -99,7 +101,8 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                         wallets,
                       );
                     },
-                    loading: () => const Center(child: CircularProgressIndicator()),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
                     error: (error, stack) =>
                         _buildErrorState(error, user.id, theme),
                   );
@@ -161,8 +164,8 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
           totalBalance = selected.balance;
         }
 
-  final isVisible = ref.watch(balanceVisibilityProvider);
-  return Column(
+        final isVisible = ref.watch(balanceVisibilityProvider);
+        return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -179,7 +182,8 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                   borderRadius: BorderRadius.circular(20),
                   onTap: () {
                     final current = ref.read(balanceVisibilityProvider);
-                    ref.read(balanceVisibilityProvider.notifier).state = !current;
+                    ref.read(balanceVisibilityProvider.notifier).state =
+                        !current;
                   },
                   child: Padding(
                     padding: const EdgeInsets.all(4),
@@ -502,7 +506,8 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
         items.add(_TxListItem.header(txDate));
       }
       // Group transfer_in/out into a single visual item per transferId
-      if ((e.kind == 'transfer_in' || e.kind == 'transfer_out') && e.transferId != null) {
+      if ((e.kind == 'transfer_in' || e.kind == 'transfer_out') &&
+          e.transferId != null) {
         if (processedTransferIds.contains(e.transferId)) {
           // already added a card for this transfer
           continue;
@@ -516,7 +521,9 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
         processedTransferIds.add(e.transferId!);
         // Create a synthetic entry to render a single card; we reuse the existing entry but
         // mark via a wrapper item type to customize UI later in the builder.
-        items.add(_TxListItem.transfer(e, counterpart != e ? counterpart : null));
+        items.add(
+          _TxListItem.transfer(e, counterpart != e ? counterpart : null),
+        );
       } else {
         items.add(_TxListItem.entry(e));
       }
@@ -553,212 +560,42 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
           }
           // Handle unified transfer card separately
           if (item.isTransfer) {
-            final a = item.entry!; // one side
-            final b = item.counterpart; // other side (may be null when filtered)
-            // Determine from/to wallets
-            LedgerEntry? outEntry = a.signedAmount < 0 ? a : (b != null && b.signedAmount < 0 ? b : null);
-            LedgerEntry? inEntry = a.signedAmount >= 0 ? a : (b != null && b.signedAmount >= 0 ? b : null);
-            final fromName = outEntry != null ? (walletMap[outEntry.walletId]?.name ?? '-') : null;
-            final toName = inEntry != null ? (walletMap[inEntry.walletId]?.name ?? '-') : null;
-            final amount = (a.amount); // both sides share same absolute amount
-            final amountFormatted = CurrencyFormatter.format(amount, 'IDR');
-            final displayAmount = amountFormatted;
-            final categoryColor = CategoryTheme.transfer; // neutral color for transfer
-            return Card(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () {
-                  // Open transfer detail
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => TransferDetailScreen(transferId: a.transferId!),
-                    ),
-                  );
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+            final a = item.entry!;
+            final b = item.counterpart;
+            return LedgerTransferCard(
+              a: a,
+              counterpart: b,
+              walletMap: walletMap,
+              theme: theme,
+              onTap: (id) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => TransferDetailScreen(transferId: id),
                   ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: categoryColor.withValues(alpha: 0.15),
-                        child: Icon(
-                          Icons.swap_horiz,
-                          color: CategoryTheme.transfer,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Title: from -> to. If counterpart missing, resolve via a small fetch.
-                            Builder(builder: (context) {
-                              if (fromName != null && toName != null) {
-                                return Text(
-                                  '$fromName -> $toName',
-                                  style: theme.textTheme.titleMedium,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                );
-                              }
-                              // counterpart not found (likely due to wallet filter), fetch transfer to resolve wallet names
-                              final user = ref.read(currentUserProvider).value;
-                              if (user == null) {
-                                return Text(
-                                  ref.tr(context, 'transfer'),
-                                  style: theme.textTheme.titleMedium,
-                                );
-                              }
-                              return FutureBuilder(
-                                future: ref.read(transferServiceProvider).getById(user.id, a.transferId!),
-                                builder: (context, snap) {
-                                  if (snap.connectionState != ConnectionState.done) {
-                                    return Text(
-                                      ref.tr(context, 'transfer'),
-                                      style: theme.textTheme.titleMedium,
-                                    );
-                                  }
-                                  final tr = snap.data as dynamic; // Transfer
-                                  if (tr == null) {
-                                    return Text(
-                                      ref.tr(context, 'transfer'),
-                                      style: theme.textTheme.titleMedium,
-                                    );
-                                  }
-                                  final from = walletMap[tr.fromWalletId]?.name ?? '-';
-                                  final to = walletMap[tr.toWalletId]?.name ?? '-';
-                                  return Text(
-                                    '$from -> $to',
-                                    style: theme.textTheme.titleMedium,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  );
-                                },
-                              );
-                            }),
-                            const SizedBox(height: 2),
-                            // Subtitle: notes
-                            if ((a.notes ?? b?.notes ?? '').trim().isNotEmpty)
-                              Text(
-                                (a.notes ?? b?.notes)!,
-                                style: theme.textTheme.bodySmall,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          const SizedBox(height: 2),
-                          Text(
-                            displayAmount,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: theme.colorScheme.onSurface,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+                );
+              },
+              currency: 'IDR',
             );
           }
           final entry = item.entry!;
-          final category = entry.categoryId != null ? categoryMap[entry.categoryId] : null;
+      final category = entry.categoryId != null
+              ? categoryMap[entry.categoryId]
+              : null;
           final wallet = walletMap[entry.walletId];
-          final isPositive = entry.signedAmount >= 0;
-          final amountFormatted = CurrencyFormatter.format(entry.amount, 'IDR');
-          final displayAmount = isPositive ? amountFormatted : '-$amountFormatted';
-          return Card(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () {
-                if (entry.kind == 'transaction') {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => TransactionDetailScreen(transactionId: entry.entryId),
-                    ),
-                  );
-                }
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: CategoryTheme.bySign(isPositive).withValues(alpha: 0.15),
-                      child: Icon(
-                        () {
-                          if (category?.iconCodePoint != null) {
-                            return IconData(category!.iconCodePoint!, fontFamily: 'MaterialIcons');
-                          }
-                          if (entry.kind == 'transfer_in') return Icons.call_received;
-                          if (entry.kind == 'transfer_out') return Icons.call_made;
-                          return isPositive ? Icons.trending_up : Icons.trending_down;
-                        }(),
-                        color: CategoryTheme.bySign(isPositive),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            category?.name ?? _titleForEntry(entry),
-                            style: theme.textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 2),
-                          if (entry.notes != null && entry.notes!.trim().isNotEmpty) ...[
-                            Text(
-                              entry.notes!,
-                              style: theme.textTheme.bodySmall,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          wallet?.name ?? ref.tr(context, 'wallet_label'),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          displayAmount,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: CategoryTheme.bySign(isPositive),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          return LedgerTransactionCard(
+            entry: entry,
+            category: category,
+            wallet: wallet,
+            theme: theme,
+            onTap: () {
+              if (entry.kind == 'transaction') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => TransactionDetailScreen(transactionId: entry.entryId),
+                  ),
+                );
+              }
+            },
           );
         },
       ),
@@ -806,16 +643,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  String _titleForEntry(LedgerEntry e) {
-    switch (e.kind) {
-      case 'transfer_in':
-        return ref.tr(context, 'transfer_in');
-      case 'transfer_out':
-        return ref.tr(context, 'transfer_out');
-      default:
-        return ref.tr(context, 'uncategorized');
-    }
-  }
+  // _titleForEntry removed; card uses category name or generic
 }
 
 class _TxListItem {
@@ -825,8 +653,17 @@ class _TxListItem {
   final bool isTransfer;
   final LedgerEntry? counterpart;
 
-  _TxListItem._(this.isHeader, this.date, this.entry, this.isTransfer, this.counterpart);
-  factory _TxListItem.header(DateTime date) => _TxListItem._(true, date, null, false, null);
-  factory _TxListItem.entry(LedgerEntry e) => _TxListItem._(false, null, e, false, null);
-  factory _TxListItem.transfer(LedgerEntry a, LedgerEntry? b) => _TxListItem._(false, null, a, true, b);
+  _TxListItem._(
+    this.isHeader,
+    this.date,
+    this.entry,
+    this.isTransfer,
+    this.counterpart,
+  );
+  factory _TxListItem.header(DateTime date) =>
+      _TxListItem._(true, date, null, false, null);
+  factory _TxListItem.entry(LedgerEntry e) =>
+      _TxListItem._(false, null, e, false, null);
+  factory _TxListItem.transfer(LedgerEntry a, LedgerEntry? b) =>
+      _TxListItem._(false, null, a, true, b);
 }

@@ -25,4 +25,38 @@ class TransferService {
   }
 
   Future<Transfer?> getById(String userId, String transferId) => _remote.getTransferById(userId, transferId);
+
+  Future<void> delete(String userId, String transferId) async {
+    await _remote.deleteTransfer(userId, transferId);
+  }
+
+  Future<Transfer> update(
+    String userId,
+    String transferId, {
+    String? fromWalletId,
+    String? toWalletId,
+    double? amount,
+    double? fee,
+    String? notes,
+    DateTime? date,
+    String? feeCategoryId,
+  }) async {
+    if (fromWalletId != null && toWalletId != null && fromWalletId == toWalletId) {
+      throw ValidationFailure('Wallet sumber dan tujuan tidak boleh sama');
+    }
+    if (amount != null && amount <= 0) {
+      throw ValidationFailure('Jumlah transfer harus lebih dari 0');
+    }
+    return _remote.updateTransfer(
+      userId,
+      transferId,
+      fromWalletId: fromWalletId,
+      toWalletId: toWalletId,
+      amount: amount,
+      fee: fee,
+      notes: notes,
+      date: date,
+      feeCategoryId: feeCategoryId,
+    );
+  }
 }

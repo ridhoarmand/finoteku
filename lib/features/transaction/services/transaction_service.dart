@@ -41,7 +41,18 @@ class TransactionService {
       if (request.amount != null && request.amount! <= 0) {
         throw ValidationFailure('Amount must be greater than 0');
       }
-      return await _supabase.updateTransaction(transactionId, userId, request);
+      final oldWalletId = existingTransaction.walletId;
+      final updated = await _supabase.updateTransaction(transactionId, userId, request);
+      // Ensure balances consistent when wallet/category/amount change
+      final newWalletId = request.walletId ?? oldWalletId;
+      // Recalculate both old and new wallets if wallet changed; else just the wallet
+      if (newWalletId != oldWalletId) {
+        await _supabase.recalcWalletBalance(oldWalletId, userId);
+        await _supabase.recalcWalletBalance(newWalletId, userId);
+      } else {
+        await _supabase.recalcWalletBalance(newWalletId, userId);
+      }
+      return updated;
     } catch (e, st) {
       AppLogger.e('Gagal update transaksi', error: e, stackTrace: st);
       throw mapException(e, st);

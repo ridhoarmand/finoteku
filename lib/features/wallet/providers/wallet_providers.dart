@@ -34,7 +34,7 @@ final walletProvider = FutureProvider.family<Wallet?, ({String walletId, String 
   return repo.getWallet(params.walletId, params.userId);
 });
 
-// Provider untuk active wallets saja
+// Provider untuk visible wallets (yang tidak hidden)
 final activeWalletsProvider = FutureProvider.family<List<Wallet>, String>((ref, userId) async {
   try {
     // Watch refresh trigger untuk auto-refresh saat ada perubahan
@@ -42,7 +42,7 @@ final activeWalletsProvider = FutureProvider.family<List<Wallet>, String>((ref, 
     
   final repo = ref.watch(walletRepositoryProvider);
   final wallets = await repo.getWallets(userId);
-    return wallets.where((wallet) => wallet.isActive).toList();
+    return wallets.where((wallet) => !wallet.isHidden).toList();
   } catch (e) {
     if (kDebugMode) {
       print('❌ Error in activeWalletsProvider for user $userId: $e');

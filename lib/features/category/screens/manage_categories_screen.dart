@@ -105,9 +105,7 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
         iconCodePoint: icon != null
             ? CategoryIconHelper.getCodePointFromIcon(icon)
             : null,
-  // Using value for ARGB int; if migrating to Color.toARGB32() adjust here.
-  // ignore: deprecated_member_use
-  color: color.value,
+        // color removed
       );
 
       await categoryService.createCategory(userId, request);

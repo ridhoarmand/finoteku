@@ -146,13 +146,13 @@ class ManageWalletsScreen extends ConsumerWidget {
         break;
       case 'activate':
       case 'deactivate':
-        // Treat is_active=false as Hidden (not deleted). Toggle visibility.
-        final toggled = !wallet.isActive;
+        // Treat is_hidden=true as Hidden (not deleted). Toggle visibility.
+        final toggled = !wallet.isHidden;
         try {
           await repo.updateWallet(
             wallet.id,
             userId,
-            UpdateWalletRequest(isActive: toggled),
+            UpdateWalletRequest(isHidden: !toggled),
           );
           refreshWalletProviders(ref);
           if (context.mounted) {
@@ -214,7 +214,7 @@ class ManageWalletsScreen extends ConsumerWidget {
           balance: wallet.balance,
           currency: wallet.currency,
           icon: wallet.icon,
-          isActive: wallet.isActive,
+          isHidden: wallet.isHidden,
         ),
         onSave: (request) async {
           try {
@@ -298,7 +298,7 @@ class ManageWalletsScreen extends ConsumerWidget {
             _detailRow(ref.tr(context, 'wallet_name_label'), wallet.name),
             _detailRow(ref.tr(context, 'wallet_balance_label'), wallet.balance.toStringAsFixed(2)),
             _detailRow(ref.tr(context, 'wallet_currency_label'), wallet.currency),
-            _detailRow(ref.tr(context, 'wallet_status_label'), wallet.isActive ? ref.tr(context, 'wallet_visible') : ref.tr(context, 'wallet_hidden')),
+            _detailRow(ref.tr(context, 'wallet_status_label'), !wallet.isHidden ? ref.tr(context, 'wallet_visible') : ref.tr(context, 'wallet_hidden')),
             _detailRow(ref.tr(context, 'wallet_created_label'), wallet.createdAt.toLocal().toString()),
             _detailRow(ref.tr(context, 'wallet_updated_label'), wallet.updatedAt.toLocal().toString()),
           ],

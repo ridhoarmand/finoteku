@@ -6,6 +6,7 @@ import '../../category/providers/category_providers.dart';
 import '../../transaction/providers/transaction_providers.dart';
 import '../../wallet/providers/wallet_providers.dart';
 import '../../../models/category.dart';
+import '../../category/theme/category_theme.dart';
 import '../../transaction/screens/transaction_detail_screen.dart';
 
 class RecentTransactionsSection extends ConsumerWidget {
@@ -164,12 +165,8 @@ class RecentTransactionsSection extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               CircleAvatar(
-                                backgroundColor: () {
-                                  final baseColor = category?.color != null
-                                      ? Color(category!.color!)
-                                      : (isIncome == true ? Colors.green : Colors.red);
-                                  return baseColor.withValues(alpha: 0.12);
-                                }(),
+                                backgroundColor: (isIncome == true ? CategoryTheme.income : CategoryTheme.expense)
+                                    .withValues(alpha: 0.12),
                                 child: Icon(
                                   () {
                                     if (category?.iconCodePoint != null) {
@@ -177,9 +174,7 @@ class RecentTransactionsSection extends ConsumerWidget {
                                     }
                                     return isIncome == true ? Icons.trending_up : Icons.trending_down;
                                   }(),
-                                  color: category?.color != null
-                                      ? Color(category!.color!)
-                                      : (isIncome == true ? Colors.green : Colors.red),
+                                  color: isIncome == true ? CategoryTheme.income : CategoryTheme.expense,
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -218,7 +213,7 @@ class RecentTransactionsSection extends ConsumerWidget {
                                   Text(
                                     displayAmount,
                                     style: theme.textTheme.titleMedium?.copyWith(
-                                      color: isIncome == true ? Colors.green : Colors.red,
+                                      color: isIncome == true ? CategoryTheme.income : CategoryTheme.expense,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),

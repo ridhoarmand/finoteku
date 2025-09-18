@@ -57,7 +57,7 @@ final categoriesByTypeProvider =
       (ref, params) async {
         ref.watch(categoryRefreshProvider);
         final all = await ref.watch(categoriesProvider(params.userId).future);
-        return all.where((c) => c.type == params.type && c.isActive).toList();
+        return all.where((c) => c.type == params.type && !c.isHidden).toList();
       },
     );
 
@@ -105,7 +105,7 @@ final activeCategoriesProvider = FutureProvider.family<List<Category>, String>((
 ) async {
   ref.watch(categoryRefreshProvider);
   final categories = await ref.watch(categoriesProvider(userId).future);
-  return categories.where((c) => c.isActive).toList();
+  return categories.where((c) => !c.isHidden).toList();
 });
 
 // Template-related providers dihapus karena konsep template/offline sudah dihilangkan.

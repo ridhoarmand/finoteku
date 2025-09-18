@@ -32,7 +32,7 @@ class CategoryService {
       final list = (response as List)
           .map((j) => Category.fromJson(_convertFromSupabase(j)))
           .toList();
-      return includeInactive ? list : list.where((c) => c.isActive).toList();
+      return includeInactive ? list : list.where((c) => !c.isHidden).toList();
     } catch (e, st) {
       AppLogger.e('getCategories error', error: e, stackTrace: st);
       throw mapException(e, st);
@@ -55,7 +55,7 @@ class CategoryService {
       final list = (response as List)
           .map((j) => Category.fromJson(_convertFromSupabase(j)))
           .toList();
-      return includeInactive ? list : list.where((c) => c.isActive).toList();
+      return includeInactive ? list : list.where((c) => !c.isHidden).toList();
     } catch (e, st) {
       AppLogger.e('getCategoriesByType error', error: e, stackTrace: st);
       throw mapException(e, st);
@@ -122,7 +122,7 @@ class CategoryService {
         data['icon_code_point'] = request.iconCodePoint;
       }
       if (request.color != null) data['color'] = request.color;
-      if (request.isActive != null) data['is_active'] = request.isActive;
+      if (request.isHidden != null) data['is_hidden'] = request.isHidden;
       if (data.isEmpty) {
         return await getCategoryById(categoryId, userId: userId);
       }
@@ -167,11 +167,9 @@ class CategoryService {
       'type': data['type'],
       'parent_id': data['parent_id'],
       'icon_code_point': data['icon_code_point'],
-      'color': data['color'],
-      'is_active': data['is_active'],
       'created_at': data['created_at'],
       'updated_at': data['updated_at'],
-  'is_hidden': data['is_hidden'],
+      'is_hidden': data['is_hidden'],
     };
   }
 }

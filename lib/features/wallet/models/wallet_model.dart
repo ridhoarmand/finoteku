@@ -4,7 +4,7 @@ class WalletModel {
   final String name;
   final double balance;
   final String currency;
-  final bool isActive;
+  final bool isHidden;
   final bool isDeleted;
   final bool needsSync;
   final DateTime? createdAt;
@@ -17,7 +17,7 @@ class WalletModel {
     required this.name,
     required this.balance,
     required this.currency,
-    this.isActive = true,
+    this.isHidden = false,
     this.isDeleted = false,
     this.needsSync = false,
     this.createdAt,
@@ -32,7 +32,7 @@ class WalletModel {
       name: json['name'] ?? '',
       balance: (json['balance'] as num?)?.toDouble() ?? 0.0,
       currency: json['currency'] ?? 'IDR',
-      isActive: json['isActive'] ?? true,
+      isHidden: json['isHidden'] ?? false,
       isDeleted: json['isDeleted'] ?? false,
       needsSync: json['needsSync'] ?? false,
       createdAt: json['createdAt'] != null 
@@ -54,7 +54,7 @@ class WalletModel {
       'name': name,
       'balance': balance,
       'currency': currency,
-      'isActive': isActive,
+      'isHidden': isHidden,
       'isDeleted': isDeleted,
       'needsSync': needsSync,
       'createdAt': createdAt?.toIso8601String(),
@@ -77,7 +77,7 @@ class WalletModel {
       name: name,
       balance: balance,
       currency: currency,
-      isActive: true,
+      isHidden: false,
       isDeleted: false,
       needsSync: true,
       createdAt: now,
@@ -92,7 +92,7 @@ class WalletModel {
     String? name,
     double? balance,
     String? currency,
-    bool? isActive,
+    bool? isHidden,
     bool? isDeleted,
     bool? needsSync,
     DateTime? createdAt,
@@ -105,7 +105,7 @@ class WalletModel {
       name: name ?? this.name,
       balance: balance ?? this.balance,
       currency: currency ?? this.currency,
-      isActive: isActive ?? this.isActive,
+      isHidden: isHidden ?? this.isHidden,
       isDeleted: isDeleted ?? this.isDeleted,
       needsSync: needsSync ?? this.needsSync,
       createdAt: createdAt ?? this.createdAt,
@@ -119,13 +119,13 @@ class WalletModel {
     String? name,
     double? balance,
     String? currency,
-    bool? isActive,
+    bool? isHidden,
   }) {
     return copyWith(
       name: name ?? this.name,
       balance: balance ?? this.balance,
       currency: currency ?? this.currency,
-      isActive: isActive ?? this.isActive,
+      isHidden: isHidden ?? this.isHidden,
       needsSync: true,
       updatedAt: DateTime.now(),
     );
@@ -135,7 +135,7 @@ class WalletModel {
   WalletModel delete() {
     return copyWith(
       isDeleted: true,
-      isActive: false,
+      isHidden: true,
       needsSync: true,
       updatedAt: DateTime.now(),
     );
@@ -157,7 +157,7 @@ class WalletModel {
       'name': name,
       'balance': balance,
       'currency': currency,
-      'is_active': isActive,
+      'is_hidden': isHidden,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -171,7 +171,7 @@ class WalletModel {
       name: json['name'] ?? '',
       balance: (json['balance'] as num?)?.toDouble() ?? 0.0,
       currency: json['currency'] ?? 'IDR',
-      isActive: json['is_active'] ?? true,
+      isHidden: json['is_hidden'] ?? false,
       isDeleted: false,
       needsSync: false,
       createdAt: json['created_at'] != null 
@@ -192,7 +192,7 @@ class WalletModel {
         other.name == name &&
         other.balance == balance &&
         other.currency == currency &&
-        other.isActive == isActive &&
+        other.isHidden == isHidden &&
         other.isDeleted == isDeleted &&
         other.needsSync == needsSync;
   }
@@ -205,7 +205,7 @@ class WalletModel {
       name,
       balance,
       currency,
-      isActive,
+      isHidden,
       isDeleted,
       needsSync,
     );

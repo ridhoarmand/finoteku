@@ -26,7 +26,7 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
   final _balanceController = TextEditingController();
   String _selectedCurrency = 'IDR';
   String? _selectedIcon;
-  bool _isActive = true;
+  bool _isHidden = false;
   bool _isLoading = false;
 
   final List<String> _currencies = const [
@@ -43,7 +43,7 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
       }
       _selectedCurrency = widget.initialData!.currency ?? 'IDR';
       _selectedIcon = widget.initialData!.icon;
-      _isActive = widget.initialData!.isActive ?? true;
+      _isHidden = widget.initialData!.isHidden ?? false;
     }
   }
 
@@ -134,8 +134,8 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
               Row(
                 children: [
                   Checkbox(
-                    value: _isActive,
-                    onChanged: (value) => setState(() => _isActive = value ?? true),
+                    value: !_isHidden,
+                    onChanged: (value) => setState(() => _isHidden = !(value ?? true)),
                   ),
                   Text(ref.tr(context, 'wallet_visible')),
                 ],
@@ -246,7 +246,7 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
           balance: balance,
           currency: _selectedCurrency,
           icon: _selectedIcon,
-          isActive: _isActive,
+          isHidden: _isHidden,
         );
         await widget.onSave(request);
       } else {

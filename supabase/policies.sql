@@ -119,6 +119,8 @@ DO $$ BEGIN
                 ) TO authenticated;
         GRANT EXECUTE ON FUNCTION public.recalculate_wallet_balance(UUID, UUID) TO authenticated;
         GRANT EXECUTE ON FUNCTION public.recalculate_all_wallet_balances(UUID) TO authenticated;
+        GRANT EXECUTE ON FUNCTION public.update_wallet_transfer(UUID, UUID, UUID, UUID, DECIMAL, DECIMAL, TEXT, DATE, UUID) TO authenticated;
+        GRANT EXECUTE ON FUNCTION public.delete_wallet_transfer(UUID, UUID) TO authenticated;
         GRANT EXECUTE ON FUNCTION public.transfer_transactions_to_wallet(UUID, UUID, UUID) TO authenticated;
         GRANT EXECUTE ON FUNCTION public.transfer_transactions_to_category(UUID, UUID, UUID) TO authenticated;
         GRANT EXECUTE ON FUNCTION public.cleanup_user_storage_files(UUID) TO authenticated;

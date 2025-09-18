@@ -167,7 +167,7 @@ final expenseByParentCategoryProvider = FutureProvider<List<CategorySpending>>((
   String? resolveParent(String id) {
     final cat = expenseCats.firstWhere((c) => c.id == id, orElse: () => Category(
       id: '_', userId: userId, name: 'Unknown', type: CategoryType.expense,
-      createdAt: DateTime.now(), updatedAt: DateTime.now(), isHidden: false, isActive: true,
+      createdAt: DateTime.now(), updatedAt: DateTime.now(), isHidden: false,
     ));
     if (cat.parentId == null) return cat.id;
     // Pastikan parent ada
@@ -182,7 +182,7 @@ final expenseByParentCategoryProvider = FutureProvider<List<CategorySpending>>((
       (c) => c.id == cid,
       orElse: () => Category(
         id: '_missing', userId: userId, name: 'Unknown', type: CategoryType.expense,
-        createdAt: DateTime.now(), updatedAt: DateTime.now(), isHidden: false, isActive: true,
+        createdAt: DateTime.now(), updatedAt: DateTime.now(), isHidden: false,
       ),
     );
     if (cat.id.startsWith('_missing')) continue; // skip unknown missing
@@ -193,7 +193,7 @@ final expenseByParentCategoryProvider = FutureProvider<List<CategorySpending>>((
   final list = agg.entries.map((e) {
     final parent = expenseCats.firstWhere((c) => c.id == e.key, orElse: () => Category(
       id: e.key, userId: userId, name: 'Unknown', type: CategoryType.expense,
-      createdAt: DateTime.now(), updatedAt: DateTime.now(), isHidden: false, isActive: true,
+      createdAt: DateTime.now(), updatedAt: DateTime.now(), isHidden: false,
     ));
     return CategorySpending(categoryId: e.key, name: parent.name, total: e.value, color: parent.color);
   }).toList();

@@ -9,6 +9,7 @@ import '../../../services/supabase_service.dart';
 import '../../../utils/currency_formatter.dart';
 import 'add_transaction_screen.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../models/category.dart';
 
 class TransactionDetailScreen extends ConsumerWidget {
   final String transactionId;
@@ -23,43 +24,36 @@ class TransactionDetailScreen extends ConsumerWidget {
       return Scaffold(body: Center(child: Text(ref.tr(context, 'login_required_short'))));
     }
 
-    final transactionAsync = ref.watch(
-      transactionProvider((transactionId: transactionId, userId: user.id)),
-    );
-
     return Scaffold(
       appBar: AppBar(title: Text(ref.tr(context, 'transaction_details_title'))),
-      body: transactionAsync.when(
-        data: (transaction) {
-          if (transaction == null) {
-            return Center(child: Text(ref.tr(context, 'transaction_not_found')));
-          }
-          return _buildTransactionDetail(context, ref, transaction, user.id);
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
-              const SizedBox(height: 16),
-              Text(ref.tr(context, 'error_loading_transactions').replaceAll('{error}', '$error')),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () => ref.invalidate(
-                  transactionProvider((
-                    transactionId: transactionId,
-                    userId: user.id,
-                  )),
-                ),
-                child: Text(ref.tr(context, 'retry')),
-              ),
-            ],
-          ),
-        ),
-      ),
+      body: _buildTransactionBody(context, ref, user.id),
     );
   }
+
+  Widget _buildTransactionBody(BuildContext context, WidgetRef ref, String userId) {
+    final txAsync = ref.watch(transactionProvider((transactionId: transactionId, userId: userId)));
+    return txAsync.when(
+      data: (tx) {
+        if (tx == null) return Center(child: Text(ref.tr(context, 'transaction_not_found')));
+        return _buildTransactionDetail(context, ref, tx, userId);
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, st) => _errorWithRetry(context, ref, () => ref.invalidate(transactionProvider((transactionId: transactionId, userId: userId)))),
+    );
+  }
+
+  Widget _errorWithRetry(BuildContext context, WidgetRef ref, VoidCallback retry) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(ref.tr(context, 'error_loading_transactions').replaceAll('{error}', '')),
+            const SizedBox(height: 16),
+            FilledButton(onPressed: retry, child: Text(ref.tr(context, 'retry'))),
+          ],
+        ),
+      );
 
   Widget _buildTransactionDetail(
     BuildContext context,
@@ -68,7 +62,6 @@ class TransactionDetailScreen extends ConsumerWidget {
     String userId,
   ) {
   final theme = Theme.of(context);
-  final isIncome = transaction.amount > 0;
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -82,6 +75,7 @@ class TransactionDetailScreen extends ConsumerWidget {
                 : const AsyncValue.data(null);
             return categoryAsync.when(
               data: (category) {
+                final isIncome = category?.type == CategoryType.income;
                 final color = isIncome ? CategoryTheme.income : CategoryTheme.expense;
                 final icon = category?.iconCodePoint != null
                     ? IconData(category!.iconCodePoint!, fontFamily: 'MaterialIcons')
@@ -132,19 +126,15 @@ class TransactionDetailScreen extends ConsumerWidget {
                     children: [
                       CircleAvatar(
                         radius: 30,
-                        backgroundColor: (isIncome ? CategoryTheme.income : CategoryTheme.expense).withValues(alpha: 0.2),
-                        child: Icon(isIncome ? Icons.trending_up : Icons.trending_down,
-                            color: isIncome ? CategoryTheme.income : CategoryTheme.expense, size: 32),
+                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                        child: Icon(Icons.category, color: Theme.of(context).colorScheme.primary, size: 28),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              isIncome ? ref.tr(context, 'income') : ref.tr(context, 'expense'),
-                              style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-                            ),
+                            Container(height: 16, width: 80, color: Colors.black12),
                             Container(height: 20, width: 120, color: Colors.black12),
                           ],
                         ),
@@ -160,25 +150,19 @@ class TransactionDetailScreen extends ConsumerWidget {
                     children: [
                       CircleAvatar(
                         radius: 30,
-                        backgroundColor: (isIncome ? CategoryTheme.income : CategoryTheme.expense).withValues(alpha: 0.2),
-                        child: Icon(isIncome ? Icons.trending_up : Icons.trending_down,
-                            color: isIncome ? CategoryTheme.income : CategoryTheme.expense, size: 32),
+                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                        child: Icon(Icons.category, color: Theme.of(context).colorScheme.primary, size: 28),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              isIncome ? ref.tr(context, 'income') : ref.tr(context, 'expense'),
-                              style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-                            ),
+                            Text(ref.tr(context, 'details_title'),
+                                style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey[600])),
                             Text(
                               CurrencyFormatter.format(transaction.amount.abs(), 'IDR'),
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                color: isIncome ? CategoryTheme.income : CategoryTheme.expense,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
@@ -527,7 +511,7 @@ class TransactionDetailScreen extends ConsumerWidget {
     final monthName = ref.tr(context, monthKey);
     final hour = dateTime.hour.toString().padLeft(2, '0');
     final minute = dateTime.minute.toString().padLeft(2, '0');
-    return '${dateTime.day} $monthName ${dateTime.year} ${hour}:${minute}';
+    return '${dateTime.day} $monthName ${dateTime.year} $hour:$minute';
   }
 
   IconData _getCategoryIcon(int? iconCodePoint) {

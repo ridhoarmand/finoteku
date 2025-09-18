@@ -12,6 +12,9 @@ final StrMap transferStringsEn = {
   'amount': 'Amount',
   'fee': 'Fee',
   'notes': 'Notes',
+  'transfer_updated_success': 'Transfer updated successfully',
+  'transfer_delete_title': 'Delete Transfer',
+  'transfer_deleted': 'Transfer deleted',
   'form_edit_transfer_not_available': 'Transfer edit form is not available yet',
 };
 
@@ -27,5 +30,8 @@ final StrMap transferStringsId = {
   'amount': 'Jumlah',
   'fee': 'Biaya',
   'notes': 'Catatan',
+  'transfer_updated_success': 'Transfer berhasil diperbarui',
+  'transfer_delete_title': 'Hapus Transfer',
+  'transfer_deleted': 'Transfer dihapus',
   'form_edit_transfer_not_available': 'Form edit transfer belum tersedia',
 };
