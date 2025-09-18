@@ -59,6 +59,14 @@ const Map<String, String> coreStringsEn = {
   'login_required_balance': 'Please login to see balance',
   'login_required_continue': 'Please login to continue',
   
+  // Splash screen states
+  'initializing_services': 'Initializing services...',
+  'checking_authentication': 'Checking authentication...',
+  'setting_up': 'Setting up...',
+  'loading_user_data': 'Loading user data...',
+  'ready': 'Ready!',
+  'something_went_wrong': 'Something went wrong',
+  
   // Labels
   'date_label': 'Date',
   'category_label': 'Category',
@@ -123,6 +131,14 @@ const Map<String, String> coreStringsId = {
   'login_required_short': 'Silakan login dulu',
   'login_required_balance': 'Silakan login untuk melihat saldo',
   'login_required_continue': 'Silakan login untuk melanjutkan',
+  
+  // Splash screen states
+  'initializing_services': 'Menginisialisasi layanan...',
+  'checking_authentication': 'Memeriksa autentikasi...',
+  'setting_up': 'Menyiapkan...',
+  'loading_user_data': 'Memuat data pengguna...',
+  'ready': 'Siap!',
+  'something_went_wrong': 'Terjadi kesalahan',
   
   // Labels
   'date_label': 'Tanggal',

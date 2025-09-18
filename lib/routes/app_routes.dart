@@ -15,15 +15,18 @@ import '../features/account/screens/change_password_screen.dart';
 import '../features/settings/theme_settings_screen.dart';
 import '../features/settings/language_settings_screen.dart';
 import '../features/onboarding/screens/onboarding_screen.dart';
+import '../features/onboarding/screens/language_selection_screen.dart';
 import '../features/splash/splash_screen.dart';
 import '../features/wallet/screens/manage_wallets_screen.dart';
 import '../features/category/screens/manage_categories_screen.dart';
 import '../features/onboarding/providers/onboarding_provider.dart';
+import '../features/onboarding/providers/language_preference_provider.dart';
 import '../widgets/main_shell.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
   final hasSeenOnboarding = ref.watch(onboardingProvider);
+  final hasLanguagePreference = ref.watch(hasLanguagePreferenceProvider);
 
   return GoRouter(
     initialLocation: '/',
@@ -34,44 +37,59 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Allow splash screen to always load
       if (location == '/') return null;
 
-      // Handle loading states
+      // Handle loading states for both auth and language preference
       return authState.when(
         data: (auth) {
-          final isAuthenticated = auth.session != null;
+          return hasLanguagePreference.when(
+            data: (hasLangPref) {
+              final isAuthenticated = auth.session != null;
 
-          // First time user - show onboarding
-          if (!hasSeenOnboarding && location != '/onboarding') {
-            return '/onboarding';
-          }
+              // First time user - show language selection if not set
+              if (!hasLangPref && location != '/language-selection') {
+                return '/language-selection';
+              }
 
-          // Public routes (accessible when not authenticated)
-          final publicRoutes = [
-            '/login',
-            '/login/register',
-            '/login/forgot-password',
-            '/onboarding',
-          ];
-          final isPublicRoute = publicRoutes.contains(location);
+              // If language is set but onboarding not seen, show onboarding
+              if (hasLangPref && !hasSeenOnboarding && location != '/onboarding') {
+                return '/onboarding';
+              }
 
-          // If not authenticated, redirect to login (except for public routes)
-          if (!isAuthenticated && !isPublicRoute) {
-            return '/login';
-          }
+              // Public routes (accessible when not authenticated)
+              final publicRoutes = [
+                '/login',
+                '/login/register',
+                '/login/forgot-password',
+                '/onboarding',
+                '/language-selection',
+              ];
+              final isPublicRoute = publicRoutes.contains(location);
 
-          // If authenticated and trying to access auth routes, redirect to home
-          if (isAuthenticated && isPublicRoute && location != '/onboarding') {
-            return '/home';
-          }
+              // If not authenticated, redirect to login (except for public routes)
+              if (!isAuthenticated && !isPublicRoute) {
+                return '/login';
+              }
 
-          return null;
+              // If authenticated and trying to access auth routes, redirect to home
+              if (isAuthenticated && isPublicRoute && location != '/onboarding' && location != '/language-selection') {
+                return '/home';
+              }
+
+              return null;
+            },
+            loading: () => null, // Allow navigation during loading
+            error: (error, stackTrace) => '/language-selection', // Default to language selection on error
+          );
         },
         loading: () => null, // Allow navigation during loading
-        error: (error, stackTrace) =>
-            '/login', // Redirect to login on auth error
+        error: (error, stackTrace) => '/login', // Redirect to login on auth error
       );
     },
     routes: [
       GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
+      GoRoute(
+        path: '/language-selection',
+        builder: (context, state) => const LanguageSelectionScreen(),
+      ),
       GoRoute(
         path: '/onboarding',
         builder: (context, state) => const OnboardingScreen(),

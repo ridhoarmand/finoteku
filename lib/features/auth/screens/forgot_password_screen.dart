@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../services/auth_service.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -51,7 +52,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to send reset email: ${e.toString()}'),
+            content: Text('${ref.tr(context, 'failed_to_send_reset_email')}: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -71,7 +72,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Reset Password'),
+        title: Text(ref.tr(context, 'reset_password_title')),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
@@ -93,7 +94,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Forgot Password?',
+                  ref.tr(context, 'reset_password_title'),
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -102,8 +103,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 const SizedBox(height: 8),
                 Text(
                   _emailSent
-                      ? 'We\'ve sent a password reset link to your email address. Please check your inbox and follow the instructions.'
-                      : 'Enter your email address and we\'ll send you a link to reset your password.',
+                      ? ref.tr(context, 'reset_email_sent')
+                      : ref.tr(context, 'reset_password_description'),
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -116,18 +117,18 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: Icon(Icons.email),
+                    decoration: InputDecoration(
+                      labelText: ref.tr(context, 'email_label'),
+                      prefixIcon: const Icon(Icons.email),
                     ),
                     validator: (value) {
                       if (value?.isEmpty ?? true) {
-                        return 'Please enter your email';
+                        return ref.tr(context, 'email_required');
                       }
                       if (!RegExp(
                         r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
                       ).hasMatch(value!)) {
-                        return 'Please enter a valid email';
+                        return ref.tr(context, 'email_invalid');
                       }
                       return null;
                     },
@@ -143,7 +144,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                             width: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Send Reset Link'),
+                        : Text(ref.tr(context, 'send_reset_link')),
                   ),
                   const SizedBox(height: 16),
                 ] else ...[
@@ -151,7 +152,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   FilledButton.icon(
                     onPressed: _handleResetPassword,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('Resend Email'),
+                    label: Text(ref.tr(context, 'resend_email')),
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -159,7 +160,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 // Back to Login
                 TextButton(
                   onPressed: () => context.pop(),
-                  child: const Text('Back to Login'),
+                  child: Text(ref.tr(context, 'back_to_login')),
                 ),
               ],
             ),

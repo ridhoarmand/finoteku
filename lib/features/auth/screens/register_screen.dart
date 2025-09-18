@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../services/auth_service.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -59,7 +60,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Registration failed: ${e.toString()}'),
+            content: Text('${ref.tr(context, 'registration_failed')}: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -79,7 +80,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Account'),
+        title: Text(ref.tr(context, 'register_title')),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
@@ -114,13 +115,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 // Full Name Field
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Full Name',
-                    prefixIcon: Icon(Icons.person),
+                  decoration: InputDecoration(
+                    labelText: ref.tr(context, 'full_name_label'),
+                    prefixIcon: const Icon(Icons.person),
                   ),
                   validator: (value) {
                     if (value?.isEmpty ?? true) {
-                      return 'Please enter your full name';
+                      return ref.tr(context, 'full_name_required');
                     }
                     return null;
                   },
@@ -131,18 +132,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email),
+                  decoration: InputDecoration(
+                    labelText: ref.tr(context, 'email_label'),
+                    prefixIcon: const Icon(Icons.email),
                   ),
                   validator: (value) {
                     if (value?.isEmpty ?? true) {
-                      return 'Please enter your email';
+                      return ref.tr(context, 'email_required');
                     }
                     if (!RegExp(
                       r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
                     ).hasMatch(value!)) {
-                      return 'Please enter a valid email';
+                      return ref.tr(context, 'email_invalid');
                     }
                     return null;
                   },
@@ -154,7 +155,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   controller: _passwordController,
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
-                    labelText: 'Password',
+                    labelText: ref.tr(context, 'password_label'),
                     prefixIcon: const Icon(Icons.lock),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -171,10 +172,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                   validator: (value) {
                     if (value?.isEmpty ?? true) {
-                      return 'Please enter a password';
+                      return ref.tr(context, 'password_required');
                     }
                     if (value!.length < 6) {
-                      return 'Password must be at least 6 characters';
+                      return ref.tr(context, 'password_min_length');
                     }
                     return null;
                   },
@@ -186,7 +187,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   controller: _confirmPasswordController,
                   obscureText: _obscureConfirmPassword,
                   decoration: InputDecoration(
-                    labelText: 'Confirm Password',
+                    labelText: ref.tr(context, 'confirm_password_label'),
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -203,10 +204,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                   validator: (value) {
                     if (value?.isEmpty ?? true) {
-                      return 'Please confirm your password';
+                      return ref.tr(context, 'confirm_password_required');
                     }
                     if (value != _passwordController.text) {
-                      return 'Passwords do not match';
+                      return ref.tr(context, 'passwords_do_not_match');
                     }
                     return null;
                   },
@@ -222,7 +223,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Create Account'),
+                      : Text(ref.tr(context, 'create_account_button')),
                 ),
                 const SizedBox(height: 16),
 
@@ -230,10 +231,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('Already have an account? '),
+                    Text(ref.tr(context, 'already_have_account')),
                     TextButton(
                       onPressed: _isLoading ? null : () => context.pop(),
-                      child: const Text('Sign In'),
+                      child: Text(ref.tr(context, 'sign_in')),
                     ),
                   ],
                 ),

@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/supabase_service.dart';
 
 /// User service for handling user-related data operations
@@ -108,6 +109,26 @@ class UserService {
       throw Exception('Database error: ${e.message}');
     } catch (e) {
       throw Exception('Unexpected error creating user profile: $e');
+    }
+  }
+
+  /// Save language preference to SharedPreferences
+  Future<void> saveLanguagePreference(String languageCode) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('language_preference', languageCode);
+    } catch (e) {
+      throw Exception('Failed to save language preference: $e');
+    }
+  }
+
+  /// Get language preference from SharedPreferences
+  Future<String?> getLanguagePreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('language_preference');
+    } catch (e) {
+      return null; // Return null if error, fallback to default
     }
   }
 }

@@ -9,6 +9,7 @@ import '../../services/supabase_service.dart';
 import '../category/providers/category_providers.dart';
 import '../notification/services/notification_service.dart';
 import '../../services/user_service.dart';
+import '../../core/localization/app_localizations.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -29,7 +30,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   void initState() {
     super.initState();
     _initializeAnimations();
-    _initializeApp();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Call _initializeApp after widget tree is fully built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _initializeApp();
+      }
+    });
   }
 
   void _initializeAnimations() {
@@ -67,17 +78,46 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     }
   }
 
+  String _safeTranslate(String key) {
+    try {
+      if (mounted) {
+        return ref.tr(context, key);
+      }
+    } catch (e) {
+      // Fallback if translation is not available
+      switch (key) {
+        case 'initializing_services':
+          return 'Initializing services...';
+        case 'checking_authentication':
+          return 'Checking authentication...';
+        case 'setting_up':
+          return 'Setting up...';
+        case 'loading_user_data':
+          return 'Loading user data...';
+        case 'ready':
+          return 'Ready!';
+        case 'something_went_wrong':
+          return 'Something went wrong';
+        case 'login_required_continue':
+          return 'Login required to continue';
+        default:
+          return key;
+      }
+    }
+    return key;
+  }
+
   Future<void> _initializeApp() async {
     try {
       if (!mounted) return;
-      _updateStatus('Initializing services...');
+      _updateStatus(_safeTranslate('initializing_services'));
 
       // Initialize notification service with user service
       final userService = ref.read(userServiceProvider);
       await NotificationService.initialize(userService: userService);
 
       if (!mounted) return;
-      _updateStatus('Checking authentication...');
+      _updateStatus(_safeTranslate('checking_authentication'));
 
       // Show splash for minimum 2 seconds for better UX and animation
       final minDelay = Future.delayed(const Duration(milliseconds: 2000));
@@ -96,7 +136,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
           if (!hasSeenOnboarding) {
             if (!mounted) return;
-            _updateStatus('Setting up...');
+            _updateStatus(_safeTranslate('setting_up'));
             await minDelay;
             if (mounted) context.go('/onboarding');
             return;
@@ -104,7 +144,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
           if (!isAuthenticated) {
             if (!mounted) return;
-            _updateStatus('Please login to continue');
+            _updateStatus(_safeTranslate('login_required_continue'));
             await minDelay;
             if (mounted) context.go('/login');
             return;
@@ -112,7 +152,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
           // User is authenticated - load user data
           if (!mounted) return;
-          _updateStatus('Loading user data...');
+          _updateStatus(_safeTranslate('loading_user_data'));
           
           final currentUserAsync = ref.read(currentUserProvider);
           await currentUserAsync.when(
@@ -136,26 +176,26 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           );
 
           if (!mounted) return;
-          _updateStatus('Ready!');
+          _updateStatus(_safeTranslate('ready'));
           await minDelay;
           if (mounted) context.go('/home');
         },
         loading: () async {
           if (!mounted) return;
-          _updateStatus('Loading...');
+          _updateStatus(_safeTranslate('loading_user_data'));
           await minDelay;
           // GoRouter redirect will handle this
         },
         error: (_, _) async {
           if (!mounted) return;
-          _updateStatus('Please login to continue');
+          _updateStatus(_safeTranslate('login_required_continue'));
           await minDelay;
           if (mounted) context.go('/login');
         },
       );
     } catch (e) {
       if (!mounted) return;
-      _updateStatus('Something went wrong');
+      _updateStatus(_safeTranslate('something_went_wrong'));
       await Future.delayed(const Duration(seconds: 2));
       if (mounted) context.go('/login');
     }

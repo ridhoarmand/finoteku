@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/onboarding_provider.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -14,35 +15,35 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  final List<OnboardingPageData> _pages = [
-    OnboardingPageData(
-      title: 'Kelola Keuanganmu dengan Mudah Bersama Finoteku!',
-      description:
-          'Finoteku membantu Anda mencatat pengeluaran, memantau anggaran, dan mencapai tujuan finansial Anda dengan cara yang sederhana dan menyenangkan.',
-      image: 'assets/onboardings/image1.png',
-    ),
-    OnboardingPageData(
-      title: 'Pantau Keuanganmu Secara Real-Time',
-      description:
-          'Catat setiap transaksi dengan cepat dan mudah, atur anggaran bulanan untuk berbagai kategori pengeluaran, dan dapatkan notifikasi cerdas agar Anda tetap pada jalur yang benar.',
-      image: 'assets/onboardings/image2.png',
-    ),
-    OnboardingPageData(
-      title: 'Raih Impianmu Bersama Finoteku',
-      description:
-          'Tetapkan target keuangan untuk hal-hal yang Anda impikan, lacak progres Anda secara berkala, dan dapatkan tips cerdas untuk mempercepat pencapaian tujuan Anda.',
-      image: 'assets/onboardings/image3.png',
-    ),
-  ];
-
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
   }
 
+  List<OnboardingPageData> _getPages(BuildContext context) {
+    return [
+      OnboardingPageData(
+        title: ref.tr(context, 'onboarding_1_title'),
+        description: ref.tr(context, 'onboarding_1_subtitle'),
+        image: 'assets/onboardings/image1.png',
+      ),
+      OnboardingPageData(
+        title: ref.tr(context, 'onboarding_2_title'),
+        description: ref.tr(context, 'onboarding_2_subtitle'),
+        image: 'assets/onboardings/image2.png',
+      ),
+      OnboardingPageData(
+        title: ref.tr(context, 'onboarding_3_title'),
+        description: ref.tr(context, 'onboarding_3_subtitle'),
+        image: 'assets/onboardings/image3.png',
+      ),
+    ];
+  }
+
   void _nextPage() {
-    if (_currentPage < _pages.length - 1) {
+    final pages = _getPages(context);
+    if (_currentPage < pages.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -72,7 +73,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               alignment: Alignment.topRight,
               child: TextButton(
                 onPressed: _completeOnboarding,
-                child: const Text('Skip'),
+                child: Text(ref.tr(context, 'skip_button')),
               ),
             ),
 
@@ -85,9 +86,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     _currentPage = index;
                   });
                 },
-                itemCount: _pages.length,
+                itemCount: _getPages(context).length,
                 itemBuilder: (context, index) {
-                  final page = _pages[index];
+                  final page = _getPages(context)[index];
                   return Padding(
                     padding: const EdgeInsets.all(24.0),
                     child: Column(
@@ -153,7 +154,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
-                _pages.length,
+                _getPages(context).length,
                 (index) => Container(
                   margin: const EdgeInsets.symmetric(horizontal: 4),
                   width: 8,
@@ -177,7 +178,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 child: FilledButton(
                   onPressed: _nextPage,
                   child: Text(
-                    _currentPage == _pages.length - 1 ? 'Get Started' : 'Next',
+                    _currentPage == _getPages(context).length - 1 
+                        ? ref.tr(context, 'get_started_button')
+                        : ref.tr(context, 'next_button'),
                   ),
                 ),
               ),
