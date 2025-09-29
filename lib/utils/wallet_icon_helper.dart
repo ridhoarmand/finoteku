@@ -25,12 +25,14 @@ class WalletIconHelper {
   ];
 
   // Available wallet icons
-  static const List<String> walletIcons = [
-    'assets/wallets/cash.svg',
-  ];
+  static const List<String> walletIcons = ['assets/wallets/cash.svg'];
 
   // All available icons combined
-  static List<String> get allIcons => [...bankIcons, ...ewalletIcons, ...walletIcons];
+  static List<String> get allIcons => [
+    ...bankIcons,
+    ...ewalletIcons,
+    ...walletIcons,
+  ];
 
   // Get display name from icon path
   static String getIconDisplayName(String iconPath) {
@@ -49,13 +51,13 @@ class WalletIconHelper {
   }
 
   // Build icon widget from path
-  static Widget buildIcon(String? iconPath, {double size = 24.0, Color? color}) {
+  static Widget buildIcon(
+    String? iconPath, {
+    double size = 24.0,
+    Color? color,
+  }) {
     if (iconPath == null || iconPath.isEmpty) {
-      return Icon(
-        Icons.account_balance_wallet,
-        size: size,
-        color: color,
-      );
+      return Icon(Icons.account_balance_wallet, size: size, color: color);
     }
 
     // Convert short name to full path if needed
@@ -68,7 +70,7 @@ class WalletIconHelper {
         // Check if it exists in banks or ewallets
         final bankPath = 'assets/banks/$iconPath.svg';
         final ewalletPath = 'assets/ewallets/$iconPath.svg';
-        
+
         if (bankIcons.contains(bankPath)) {
           fullPath = bankPath;
         } else if (ewalletIcons.contains(ewalletPath)) {
@@ -82,21 +84,34 @@ class WalletIconHelper {
         fullPath,
         width: size,
         height: size,
-        colorFilter: color != null ? ColorFilter.mode(color, BlendMode.srcIn) : null,
-        placeholderBuilder: (BuildContext context) => Icon(
-          Icons.account_balance_wallet,
-          size: size,
-          color: color,
-        ),
+        // Temporarily remove colorFilter to test if it's causing issues
+        // colorFilter: color != null ? ColorFilter.mode(color, BlendMode.srcIn) : null,
+        fit: BoxFit.contain,
+        placeholderBuilder: (BuildContext context) {
+          return Icon(_getIconDataFromPath(fullPath), size: size, color: color);
+        },
       );
     } catch (e) {
       // If asset loading fails, return default icon
-      return Icon(
-        Icons.account_balance_wallet,
-        size: size,
-        color: color,
-      );
+      return Icon(_getIconDataFromPath(fullPath), size: size, color: color);
     }
+  }
+
+  // Get appropriate Material Icon based on asset path as fallback
+  static IconData _getIconDataFromPath(String path) {
+    if (path.contains('banks/')) {
+      return Icons.account_balance;
+    } else if (path.contains('ewallets/')) {
+      if (path.contains('dana') ||
+          path.contains('gopay') ||
+          path.contains('ovo')) {
+        return Icons.phone_android;
+      }
+      return Icons.account_balance_wallet;
+    } else if (path.contains('cash')) {
+      return Icons.payments;
+    }
+    return Icons.account_balance_wallet;
   }
 
   // Build icon selection grid
@@ -113,10 +128,7 @@ class WalletIconHelper {
           // Bank Icons Section
           const Text(
             'Bank Icons',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
           GridView.builder(
@@ -132,7 +144,7 @@ class WalletIconHelper {
             itemBuilder: (context, index) {
               final iconPath = bankIcons[index];
               final isSelected = selectedIcon == iconPath;
-              
+
               return GestureDetector(
                 onTap: () => onIconSelected(iconPath),
                 child: Container(
@@ -145,7 +157,9 @@ class WalletIconHelper {
                     ),
                     borderRadius: BorderRadius.circular(8),
                     color: isSelected
-                        ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+                        ? Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.1)
                         : null,
                   ),
                   child: Padding(
@@ -163,7 +177,9 @@ class WalletIconHelper {
                             getIconDisplayName(iconPath),
                             style: TextStyle(
                               fontSize: 9,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
                               color: isSelected
                                   ? Theme.of(context).colorScheme.primary
                                   : null,
@@ -181,14 +197,11 @@ class WalletIconHelper {
             },
           ),
           const SizedBox(height: 12),
-          
+
           // E-Wallet Icons Section
           const Text(
             'E-Wallet Icons',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
           GridView.builder(
@@ -204,7 +217,7 @@ class WalletIconHelper {
             itemBuilder: (context, index) {
               final iconPath = ewalletIcons[index];
               final isSelected = selectedIcon == iconPath;
-              
+
               return GestureDetector(
                 onTap: () => onIconSelected(iconPath),
                 child: Container(
@@ -217,7 +230,9 @@ class WalletIconHelper {
                     ),
                     borderRadius: BorderRadius.circular(8),
                     color: isSelected
-                        ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+                        ? Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.1)
                         : null,
                   ),
                   child: Padding(
@@ -235,7 +250,9 @@ class WalletIconHelper {
                             getIconDisplayName(iconPath),
                             style: TextStyle(
                               fontSize: 9,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
                               color: isSelected
                                   ? Theme.of(context).colorScheme.primary
                                   : null,

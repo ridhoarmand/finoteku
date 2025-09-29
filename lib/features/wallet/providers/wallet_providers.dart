@@ -52,6 +52,24 @@ final activeWalletsProvider = FutureProvider.family<List<Wallet>, String>((ref, 
   }
 });
 
+// Provider untuk hidden wallets saja
+final hiddenWalletsProvider = FutureProvider.family<List<Wallet>, String>((ref, userId) async {
+  try {
+    // Watch refresh trigger untuk auto-refresh saat ada perubahan
+    ref.watch(walletRefreshTriggerProvider);
+    
+    final repo = ref.watch(walletRepositoryProvider);
+    final wallets = await repo.getWallets(userId);
+    return wallets.where((wallet) => wallet.isHidden).toList();
+  } catch (e) {
+    if (kDebugMode) {
+      print('❌ Error in hiddenWalletsProvider for user $userId: $e');
+    }
+    // Return empty list instead of throwing to prevent crashes
+    return <Wallet>[];
+  }
+});
+
 // Provider untuk total balance dari semua active wallets
 final totalBalanceProvider = FutureProvider.family<double, String>((ref, userId) async {
   try {

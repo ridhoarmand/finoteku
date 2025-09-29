@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'add_transaction_screen.dart';
 import 'transaction_detail_screen.dart';
 import '../../transfer/screens/transfer_detail_screen.dart';
-// removed unused imports after refactor
 import '../providers/transaction_providers.dart';
 import '../../../models/ledger_entry.dart';
 import '../../wallet/providers/wallet_providers.dart';
@@ -73,7 +72,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
 
           // Search Section
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(4),
             child: _buildSearchSection(theme),
           ),
 
@@ -81,7 +80,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
           Expanded(
             child: Padding(
               // Slightly reduce horizontal padding to widen cards similar to Home
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 2),
               child: ledgerAsync.when(
                 data: (entries) {
                   return allWalletsAsync.when(
@@ -106,8 +105,10 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                             _buildErrorState(error, user.id, theme),
                       );
                     },
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (error, stack) => _buildErrorState(error, user.id, theme),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (error, stack) =>
+                        _buildErrorState(error, user.id, theme),
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -189,7 +190,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                         !current;
                   },
                   child: Padding(
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.all(3),
                     child: Icon(
                       isVisible ? Icons.visibility : Icons.visibility_off,
                       size: 18,
@@ -549,7 +550,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
           if (item.isHeader) {
             final label = _formatDate(item.date!);
             return Padding(
-              padding: const EdgeInsets.only(top: 8, bottom: 2),
+              padding: const EdgeInsets.all(2),
               child: Text(
                 label,
                 style: theme.textTheme.titleSmall?.copyWith(
@@ -564,20 +565,24 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
           if (item.isTransfer) {
             final a = item.entry!;
             final b = item.counterpart;
-            return LedgerTransferCard(
-              a: a,
-              counterpart: b,
-              walletMap: walletMap,
-              theme: theme,
-              userId: userId, // Gunakan parameter userId
-              onTap: (id) {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => TransferDetailScreen(transferId: id),
-                  ),
-                );
-              },
-              currency: 'IDR',
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 1),
+              child: LedgerTransferCard(
+                a: a,
+                counterpart: b,
+                walletMap: walletMap,
+                theme: theme,
+                userId: userId, // Gunakan parameter userId
+                onTap: (id) {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          TransferDetailScreen(transferId: id),
+                    ),
+                  );
+                },
+                currency: 'IDR',
+              ),
             );
           }
           final entry = item.entry!;
@@ -585,21 +590,24 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
               ? categoryMap[entry.categoryId]
               : null;
           final wallet = walletMap[entry.walletId];
-          return LedgerTransactionCard(
-            entry: entry,
-            category: category,
-            wallet: wallet,
-            theme: theme,
-            onTap: () {
-              if (entry.kind == 'transaction') {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        TransactionDetailScreen(transactionId: entry.entryId),
-                  ),
-                );
-              }
-            },
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 1),
+            child: LedgerTransactionCard(
+              entry: entry,
+              category: category,
+              wallet: wallet,
+              theme: theme,
+              onTap: () {
+                if (entry.kind == 'transaction') {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          TransactionDetailScreen(transactionId: entry.entryId),
+                    ),
+                  );
+                }
+              },
+            ),
           );
         },
       ),

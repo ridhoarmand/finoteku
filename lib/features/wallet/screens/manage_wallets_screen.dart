@@ -56,7 +56,10 @@ class ManageWalletsScreen extends ConsumerWidget {
               return RefreshIndicator(
                 onRefresh: () async => ref.invalidate(walletsProvider(user.id)),
                 child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ), // Padding atas bawah lebih kecil
                   itemCount: wallets.length,
                   itemBuilder: (context, index) => WalletCard(
                     wallet: wallets[index],

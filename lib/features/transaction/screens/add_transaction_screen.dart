@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../models/transaction.dart';
 import '../../../models/category.dart';
 import '../../../models/wallet.dart';
@@ -11,7 +12,6 @@ import '../../../services/supabase_service.dart';
 import '../../../utils/currency_formatter.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../widgets/category_selector_sheet.dart';
-import '../widgets/wallet_selector_sheet.dart';
 import '../widgets/date_section.dart';
 import '../widgets/amount_section.dart';
 import '../widgets/notes_section.dart';
@@ -399,41 +399,41 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   void _selectWallet(List<Wallet> wallets) {
+    final user = ref.read(currentUserProvider).value;
+    if (user == null) return;
+
     _unfocus();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => WalletSelectorSheet(
-        wallets: wallets,
-        onWalletSelected: (wallet) {
-          setState(() {
-            _selectedWallet = wallet;
-          });
-          Navigator.pop(context);
-          refreshWalletProviders(ref);
-        },
-        rootContext: this.context,
-      ),
-    );
+    context
+        .push(
+          '/wallets/select?userId=${user.id}&title=${Uri.encodeComponent(ref.tr(context, 'select_wallet_title'))}',
+        )
+        .then((result) {
+          if (result != null && result is Wallet) {
+            setState(() {
+              _selectedWallet = result;
+            });
+            refreshWalletProviders(ref);
+          }
+        });
   }
 
   void _selectToWallet(List<Wallet> wallets) {
+    final user = ref.read(currentUserProvider).value;
+    if (user == null) return;
+
     _unfocus();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => WalletSelectorSheet(
-        wallets: wallets,
-        onWalletSelected: (wallet) {
-          setState(() {
-            _toWallet = wallet;
-          });
-          Navigator.pop(context);
-          refreshWalletProviders(ref);
-        },
-        rootContext: this.context,
-      ),
-    );
+    context
+        .push(
+          '/wallets/select?userId=${user.id}&title=${Uri.encodeComponent(ref.tr(context, 'select_destination_wallet'))}',
+        )
+        .then((result) {
+          if (result is Wallet) {
+            setState(() {
+              _toWallet = result;
+            });
+            refreshWalletProviders(ref);
+          }
+        });
   }
 
   void _selectFeeCategory(List<Category> categories) {

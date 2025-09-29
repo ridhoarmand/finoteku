@@ -19,6 +19,7 @@ import '../features/onboarding/screens/language_selection_screen.dart';
 import '../features/splash/splash_screen.dart';
 import '../features/wallet/screens/manage_wallets_screen.dart';
 import '../features/category/screens/manage_categories_screen.dart';
+import '../features/transaction/screens/wallet_selection_screen.dart';
 import '../widgets/main_shell.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -144,6 +145,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/wallets/manage',
         builder: (context, state) => const ManageWalletsScreen(),
       ),
+      // Wallet selection route
+      GoRoute(
+        path: '/wallets/select',
+        builder: (context, state) {
+          final userId = state.uri.queryParameters['userId'] ?? '';
+          final title = state.uri.queryParameters['title'] ?? 'Select Wallet';
+          return WalletSelectionScreen(
+            userId: userId,
+            title: title,
+          );
+        },
+      ),
       // Category management route
       GoRoute(
         path: '/categories/manage',
@@ -194,5 +207,6 @@ class AppRoutes {
   static const String themeSettings = '/account/theme-settings';
   static const String notifications = '/account/notifications';
   static const String manageWallets = '/wallets/manage';
+  static const String selectWallet = '/wallets/select';
   static const String manageCategories = '/categories/manage';
 }

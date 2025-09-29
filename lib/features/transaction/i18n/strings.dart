@@ -72,8 +72,13 @@ final StrMap transactionStringsEn = {
   'fee_category_required_error': 'Fee category (Expense) required if fee > 0',
   // Wallet section
   'select_wallet_title': 'Select Wallet',
+  'select_destination_wallet': 'To Wallet',
   'choose_wallet_subtitle': 'Choose wallet for transaction',
   'wallet_balance_prefix': 'Balance: ',
+  'show_hidden_wallets': 'Show Hidden Wallets',
+  'add_new_wallet': 'Add New Wallet',
+  'create_new_wallet': 'Create a new wallet',
+  'no_wallets_yet': 'No wallets yet. Create one to continue.',
 };
 
 final StrMap transactionStringsId = {
@@ -148,7 +153,12 @@ final StrMap transactionStringsId = {
   'fee_category_required_error':
       'Kategori biaya (Expense) diperlukan jika biaya > 0',
   // Wallet section
-  'select_wallet_title': 'Pilih Wallet',
-  'choose_wallet_subtitle': 'Pilih wallet untuk transaksi',
+  'select_wallet_title': 'Pilih Dompet',
+  'select_destination_wallet': 'Ke Dompet',
+  'choose_wallet_subtitle': 'Pilih dompet untuk transaksi',
   'wallet_balance_prefix': 'Saldo: ',
+  'show_hidden_wallets': 'Tampilkan Dompet Tersembunyi',
+  'add_new_wallet': 'Tambah Dompet Baru',
+  'create_new_wallet': 'Buat dompet baru',
+  'no_wallets_yet': 'Belum ada dompet. Buat satu untuk melanjutkan.',
 };
