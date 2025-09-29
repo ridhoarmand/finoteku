@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../providers/edit_profile_provider.dart';
 
 class SaveProfileButton extends ConsumerWidget {
@@ -22,7 +23,9 @@ class SaveProfileButton extends ConsumerWidget {
     return SizedBox(
       width: double.infinity,
       child: FilledButton.icon(
-        onPressed: profileState.isLoading ? null : () => _saveProfile(context, ref),
+        onPressed: profileState.isLoading
+            ? null
+            : () => _saveProfile(context, ref),
         icon: profileState.isLoading
             ? const SizedBox(
                 width: 16,
@@ -53,7 +56,7 @@ class SaveProfileButton extends ConsumerWidget {
     }
 
     final profileNotifier = ref.read(editProfileProvider.notifier);
-    
+
     final success = await profileNotifier.saveProfile(
       fullName: fullNameController.text,
       phone: phoneController.text,
@@ -62,18 +65,18 @@ class SaveProfileButton extends ConsumerWidget {
 
     if (context.mounted) {
       final error = ref.read(editProfileProvider).error;
-      
+
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile updated successfully'),
+          SnackBar(
+            content: Text(ref.tr(context, 'profile_updated_successfully')),
             backgroundColor: Colors.green,
           ),
         );
       } else if (error != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(error),
+            content: Text('${ref.tr(context, 'error_saving_profile')}: $error'),
             backgroundColor: Colors.red,
           ),
         );

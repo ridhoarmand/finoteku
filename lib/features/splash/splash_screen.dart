@@ -3,10 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:async';
 
-import '../auth/services/auth_service.dart';
-import '../onboarding/providers/onboarding_provider.dart';
-import '../../services/supabase_service.dart';
-import '../category/providers/category_providers.dart';
 import '../notification/services/notification_service.dart';
 import '../../services/user_service.dart';
 import '../../core/localization/app_localizations.dart';
@@ -25,6 +21,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   late Animation<double> _logoAnimation;
   late Animation<double> _textAnimation;
   String _statusText = 'Loading...';
+  bool _isInitialized = false; // Add flag to prevent multiple initialization
 
   @override
   void initState() {
@@ -35,35 +32,47 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Call _initializeApp after widget tree is fully built
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _initializeApp();
-      }
-    });
+    // Call _initializeApp after widget tree is fully built, only once
+    if (!_isInitialized) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_isInitialized) {
+          _isInitialized = true;
+          _initializeApp();
+        }
+      });
+    }
   }
 
   void _initializeAnimations() {
     _logoController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 800), // Reduced from 1000ms
       vsync: this,
     );
 
     _textController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 600), // Reduced from 800ms
       vsync: this,
     );
 
+    // Use more efficient curves for better performance
     _logoAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _logoController, curve: Curves.elasticOut),
+      CurvedAnimation(
+        parent: _logoController,
+        curve: Curves.easeOutQuart,
+      ), // More efficient than elasticOut
     );
 
     _textAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _textController, curve: Curves.easeInOut),
+      CurvedAnimation(
+        parent: _textController,
+        curve: Curves.easeOut,
+      ), // More efficient than easeInOut
     );
 
+    // Start animations immediately for better perceived performance
     _logoController.forward();
-    Timer(const Duration(milliseconds: 500), () {
+    Timer(const Duration(milliseconds: 300), () {
+      // Reduced from 500ms
       if (mounted) {
         _textController.forward();
       }
@@ -112,93 +121,43 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       if (!mounted) return;
       _updateStatus(_safeTranslate('initializing_services'));
 
-      // Initialize notification service with user service
-      final userService = ref.read(userServiceProvider);
-      await NotificationService.initialize(userService: userService);
+      // Start all background initialization without blocking UI
+      // Use unawaited to prevent blocking
+      _initializeBackgroundServices();
+
+      // Just wait for minimum splash time to show animation
+      await Future.delayed(const Duration(milliseconds: 1500));
 
       if (!mounted) return;
-      _updateStatus(_safeTranslate('checking_authentication'));
+      _updateStatus(_safeTranslate('ready'));
 
-      // Show splash for minimum 2 seconds for better UX and animation
-      final minDelay = Future.delayed(const Duration(milliseconds: 2000));
+      // Brief delay to show ready status, then navigate
+      await Future.delayed(const Duration(milliseconds: 300));
 
       if (!mounted) return;
 
-      // Check authentication status
-      final authState = ref.read(authStateProvider);
-
-      await authState.when(
-        data: (auth) async {
-          if (!mounted) return;
-          
-          final isAuthenticated = auth.session != null;
-          final hasSeenOnboarding = ref.read(onboardingProvider);
-
-          if (!hasSeenOnboarding) {
-            if (!mounted) return;
-            _updateStatus(_safeTranslate('setting_up'));
-            await minDelay;
-            if (mounted) context.go('/onboarding');
-            return;
-          }
-
-          if (!isAuthenticated) {
-            if (!mounted) return;
-            _updateStatus(_safeTranslate('login_required_continue'));
-            await minDelay;
-            if (mounted) context.go('/login');
-            return;
-          }
-
-          // User is authenticated - load user data
-          if (!mounted) return;
-          _updateStatus(_safeTranslate('loading_user_data'));
-          
-          final currentUserAsync = ref.read(currentUserProvider);
-          await currentUserAsync.when(
-            data: (user) async {
-              if (!mounted) return;
-              if (user != null) {
-                // Preload user categories
-                try {
-                  ref.read(categoriesProvider(user.id));
-                } catch (e) {
-                  // Ignore preload errors
-                }
-              }
-            },
-            loading: () async {
-              // Still loading user data
-            },
-            error: (_, _) async {
-              // User data error, that's fine
-            },
-          );
-
-          if (!mounted) return;
-          _updateStatus(_safeTranslate('ready'));
-          await minDelay;
-          if (mounted) context.go('/home');
-        },
-        loading: () async {
-          if (!mounted) return;
-          _updateStatus(_safeTranslate('loading_user_data'));
-          await minDelay;
-          // GoRouter redirect will handle this
-        },
-        error: (_, _) async {
-          if (!mounted) return;
-          _updateStatus(_safeTranslate('login_required_continue'));
-          await minDelay;
-          if (mounted) context.go('/login');
-        },
-      );
+      // Simple navigation trigger - let router redirect logic handle the rest
+      context.go('/home');
     } catch (e) {
       if (!mounted) return;
       _updateStatus(_safeTranslate('something_went_wrong'));
-      await Future.delayed(const Duration(seconds: 2));
+      await Future.delayed(const Duration(milliseconds: 1000));
+      // On error, go to login
       if (mounted) context.go('/login');
     }
+  }
+
+  // Background initialization without blocking main thread
+  void _initializeBackgroundServices() {
+    // Initialize notification service in background (don't wait for it)
+    Future(() async {
+      try {
+        final userService = ref.read(userServiceProvider);
+        await NotificationService.initialize(userService: userService);
+      } catch (e) {
+        // Ignore notification init errors
+      }
+    });
   }
 
   @override

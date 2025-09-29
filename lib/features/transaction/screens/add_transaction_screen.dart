@@ -642,7 +642,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${e.toString()}'),
+            content: Text(
+              '${ref.tr(context, 'error_saving_transaction')}: ${e.toString()}',
+            ),
             backgroundColor: Colors.red,
           ),
         );

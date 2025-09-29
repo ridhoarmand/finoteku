@@ -93,8 +93,7 @@ class CategoryService {
         'type': request.type.name,
         'parent_id': request.parentId,
         'icon_code_point': request.iconCodePoint,
-        'color': request.color,
-        'is_active': true,
+        'is_hidden': false, // Default value for new categories
       };
       final row = await _supabase
           .from('categories')
@@ -121,7 +120,7 @@ class CategoryService {
       if (request.iconCodePoint != null) {
         data['icon_code_point'] = request.iconCodePoint;
       }
-      if (request.color != null) data['color'] = request.color;
+      // Color field removed - no longer in database
       if (request.isHidden != null) data['is_hidden'] = request.isHidden;
       if (data.isEmpty) {
         return await getCategoryById(categoryId, userId: userId);

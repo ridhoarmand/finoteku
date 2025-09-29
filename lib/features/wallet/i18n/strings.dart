@@ -31,6 +31,7 @@ final StrMap walletStringsEn = {
   'wallet_number_invalid': 'Please enter a valid number',
   'wallet_created_success': 'Wallet created successfully',
   'wallet_updated_success': 'Wallet updated successfully',
+  'error_saving': 'Error saving wallet',
 
   // Visibility (is_active semantics)
   'wallet_visible': 'Visible',
@@ -88,6 +89,7 @@ final StrMap walletStringsId = {
   'wallet_number_invalid': 'Masukkan angka yang valid',
   'wallet_created_success': 'Dompet berhasil dibuat',
   'wallet_updated_success': 'Dompet berhasil diperbarui',
+  'error_saving': 'Gagal menyimpan dompet',
 
   // Visibility (is_active semantics)
   'wallet_visible': 'Tampil',

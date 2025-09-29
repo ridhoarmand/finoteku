@@ -5,8 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 const supportedLanguageCodes = ['en', 'id'];
 
 class AppLocaleState {
-  final Locale effectiveLocale;      // Locale used by MaterialApp
-  final String contentLanguageCode;  // Language code for strings (may differ when fallback)
+  final Locale effectiveLocale; // Locale used by MaterialApp
+  final String
+  contentLanguageCode; // Language code for strings (may differ when fallback)
   const AppLocaleState({
     required this.effectiveLocale,
     required this.contentLanguageCode,
@@ -15,7 +16,8 @@ class AppLocaleState {
 
 class LocaleNotifier extends StateNotifier<AppLocaleState> {
   LocaleNotifier() : super(_detectInitial()) {
-    _loadSaved();
+    // Use microtask to avoid blocking the constructor
+    Future.microtask(() => _loadSaved());
   }
 
   static const _prefsKey = 'app_locale_code';
@@ -73,5 +75,9 @@ class LocaleNotifier extends StateNotifier<AppLocaleState> {
 }
 
 final appLocaleProvider = StateNotifierProvider<LocaleNotifier, AppLocaleState>(
-  (ref) => LocaleNotifier(),
+  (ref) {
+    // Keep provider alive to prevent multiple loads
+    ref.keepAlive();
+    return LocaleNotifier();
+  },
 );
