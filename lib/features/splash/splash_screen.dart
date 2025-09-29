@@ -45,25 +45,34 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   void _initializeAnimations() {
     _logoController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 800), // Reduced from 1000ms
       vsync: this,
     );
 
     _textController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 600), // Reduced from 800ms
       vsync: this,
     );
 
+    // Use more efficient curves for better performance
     _logoAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _logoController, curve: Curves.elasticOut),
+      CurvedAnimation(
+        parent: _logoController,
+        curve: Curves.easeOutQuart,
+      ), // More efficient than elasticOut
     );
 
     _textAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _textController, curve: Curves.easeInOut),
+      CurvedAnimation(
+        parent: _textController,
+        curve: Curves.easeOut,
+      ), // More efficient than easeInOut
     );
 
+    // Start animations immediately for better perceived performance
     _logoController.forward();
-    Timer(const Duration(milliseconds: 500), () {
+    Timer(const Duration(milliseconds: 300), () {
+      // Reduced from 500ms
       if (mounted) {
         _textController.forward();
       }
@@ -112,27 +121,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       if (!mounted) return;
       _updateStatus(_safeTranslate('initializing_services'));
 
-      // Run initialization tasks in parallel to reduce blocking
-      final futures = <Future>[
-        // Initialize notification service with user service (non-blocking)
-        Future(() async {
-          try {
-            final userService = ref.read(userServiceProvider);
-            await NotificationService.initialize(userService: userService);
-          } catch (e) {
-            // Ignore notification init errors for now
-          }
-        }),
+      // Start all background initialization without blocking UI
+      // Use unawaited to prevent blocking
+      _initializeBackgroundServices();
 
-        // Minimum splash delay
-        Future.delayed(const Duration(milliseconds: 2000)),
-      ];
-
-      if (!mounted) return;
-      _updateStatus(_safeTranslate('checking_authentication'));
-
-      // Wait for all parallel tasks to complete
-      await Future.wait(futures);
+      // Just wait for minimum splash time to show animation
+      await Future.delayed(const Duration(milliseconds: 1500));
 
       if (!mounted) return;
       _updateStatus(_safeTranslate('ready'));
@@ -151,6 +145,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       // On error, go to login
       if (mounted) context.go('/login');
     }
+  }
+
+  // Background initialization without blocking main thread
+  void _initializeBackgroundServices() {
+    // Initialize notification service in background (don't wait for it)
+    Future(() async {
+      try {
+        final userService = ref.read(userServiceProvider);
+        await NotificationService.initialize(userService: userService);
+      } catch (e) {
+        // Ignore notification init errors
+      }
+    });
   }
 
   @override

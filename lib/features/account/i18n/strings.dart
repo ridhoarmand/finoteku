@@ -8,7 +8,7 @@ const Map<String, String> accountStringsEn = {
   'personal_info': 'Personal Information',
   'edit_profile': 'Edit Profile',
   'unknown_user': 'Unknown user',
-  
+
   // Profile form
   'full_name': 'Full Name',
   'full_name_hint': 'Enter your full name',
@@ -22,13 +22,15 @@ const Map<String, String> accountStringsEn = {
   'phone_invalid': 'Please enter a valid phone number',
   'phone_too_short': 'Phone number must be at least 10 digits',
   'error_loading_user': 'Error loading user data',
-  
+  'profile_updated_successfully': 'Profile updated successfully',
+  'error_saving_profile': 'Error saving profile',
+
   // Account actions
   'change_password': 'Change Password',
   'change_password_sub': 'Update your account password',
   'delete_account': 'Delete Account',
   'delete_account_sub': 'Permanently delete your account',
-  
+
   // Preferences
   'preferences': 'Preferences',
   'notifications': 'Notifications',
@@ -50,7 +52,7 @@ const Map<String, String> accountStringsEn = {
   'select_language': 'Select Language',
   'english': 'English',
   'indonesian': 'Indonesian',
-  
+
   // Support
   'support_section': 'Support',
   'help_faq': 'Help & FAQ',
@@ -58,7 +60,7 @@ const Map<String, String> accountStringsEn = {
   'about': 'About',
   'about_sub': 'App version and information',
   'about_app_description': 'Personal Finance Manager',
-  
+
   // Wallet & Categories section
   'wallet_categories_section': 'Wallet & Categories',
 };
@@ -70,7 +72,7 @@ const Map<String, String> accountStringsId = {
   'personal_info': 'Informasi Pribadi',
   'edit_profile': 'Ubah Profil',
   'unknown_user': 'Pengguna tidak dikenal',
-  
+
   // Profile form
   'full_name': 'Nama Lengkap',
   'full_name_hint': 'Masukkan nama lengkap Anda',
@@ -84,13 +86,15 @@ const Map<String, String> accountStringsId = {
   'phone_invalid': 'Masukkan nomor telepon yang valid',
   'phone_too_short': 'Nomor telepon minimal 10 digit',
   'error_loading_user': 'Gagal memuat data pengguna',
-  
+  'profile_updated_successfully': 'Profil berhasil diperbarui',
+  'error_saving_profile': 'Gagal menyimpan profil',
+
   // Account actions
   'change_password': 'Ganti Password',
   'change_password_sub': 'Perbarui password akun Anda',
   'delete_account': 'Hapus Akun',
   'delete_account_sub': 'Hapus akun Anda secara permanen',
-  
+
   // Preferences
   'preferences': 'Preferensi',
   'notifications': 'Notifikasi',
@@ -112,7 +116,7 @@ const Map<String, String> accountStringsId = {
   'select_language': 'Pilih Bahasa',
   'english': 'Inggris',
   'indonesian': 'Indonesia',
-  
+
   // Support
   'support_section': 'Bantuan',
   'help_faq': 'Bantuan & FAQ',
@@ -120,7 +124,7 @@ const Map<String, String> accountStringsId = {
   'about': 'Tentang',
   'about_sub': 'Versi aplikasi dan informasi',
   'about_app_description': 'Pengelola Keuangan Pribadi',
-  
+
   // Wallet & Categories section
   'wallet_categories_section': 'Dompet & Kategori',
 };

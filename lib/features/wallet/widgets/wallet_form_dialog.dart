@@ -7,7 +7,8 @@ import '../../../core/localization/app_localizations.dart';
 class WalletFormDialog extends ConsumerStatefulWidget {
   final String title;
   final UpdateWalletRequest? initialData;
-  final Future<void> Function(dynamic request) onSave; // accepts CreateWalletRequest or UpdateWalletRequest
+  final Future<void> Function(dynamic request)
+  onSave; // accepts CreateWalletRequest or UpdateWalletRequest
 
   const WalletFormDialog({
     super.key,
@@ -30,7 +31,13 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
   bool _isLoading = false;
 
   final List<String> _currencies = const [
-    'IDR', 'USD', 'EUR', 'GBP', 'JPY', 'SGD', 'MYR'
+    'IDR',
+    'USD',
+    'EUR',
+    'GBP',
+    'JPY',
+    'SGD',
+    'MYR',
   ];
 
   @override
@@ -70,8 +77,8 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
                   labelText: ref.tr(context, 'wallet_name_label'),
                   border: const OutlineInputBorder(),
                 ),
-        validator: (value) => (value == null || value.trim().isEmpty)
-          ? ref.tr(context, 'wallet_name_required')
+                validator: (value) => (value == null || value.trim().isEmpty)
+                    ? ref.tr(context, 'wallet_name_required')
                     : null,
               ),
               const SizedBox(height: 16),
@@ -103,7 +110,8 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
                 items: _currencies
                     .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                     .toList(),
-                onChanged: (value) => setState(() => _selectedCurrency = value ?? 'IDR'),
+                onChanged: (value) =>
+                    setState(() => _selectedCurrency = value ?? 'IDR'),
               ),
               const SizedBox(height: 16),
               Row(
@@ -135,7 +143,8 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
                 children: [
                   Checkbox(
                     value: !_isHidden,
-                    onChanged: (value) => setState(() => _isHidden = !(value ?? true)),
+                    onChanged: (value) =>
+                        setState(() => _isHidden = !(value ?? true)),
                   ),
                   Text(ref.tr(context, 'wallet_visible')),
                 ],
@@ -171,22 +180,38 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Container(
-          constraints: BoxConstraints(maxHeight: maxDialogHeight, maxWidth: 500),
+          constraints: BoxConstraints(
+            maxHeight: maxDialogHeight,
+            maxWidth: 500,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.account_balance_wallet_outlined, color: Theme.of(context).colorScheme.primary),
+                    Icon(
+                      Icons.account_balance_wallet_outlined,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(ref.tr(context, 'wallet_select_icon_title'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      child: Text(
+                        ref.tr(context, 'wallet_select_icon_title'),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -207,8 +232,16 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
-                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-                  border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2))),
+                  borderRadius: const BorderRadius.vertical(
+                    bottom: Radius.circular(16),
+                  ),
+                  border: Border(
+                    top: BorderSide(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outline.withValues(alpha: 0.2),
+                    ),
+                  ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
@@ -261,13 +294,22 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(widget.initialData != null ? ref.tr(context, 'wallet_updated_success') : ref.tr(context, 'wallet_created_success'))),
+          SnackBar(
+            content: Text(
+              widget.initialData != null
+                  ? ref.tr(context, 'wallet_updated_success')
+                  : ref.tr(context, 'wallet_created_success'),
+            ),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('${ref.tr(context, 'error_saving')}: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {

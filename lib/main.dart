@@ -29,11 +29,6 @@ void main() async {
     }
   }
 
-  // Print configuration in debug mode
-  if (kDebugMode) {
-    Environment.printConfig();
-  }
-
   // Initialize Supabase after environment is loaded
   try {
     await SupabaseService.initialize(
@@ -64,7 +59,7 @@ class MyApp extends ConsumerWidget {
     final localeState = ref.watch(appLocaleProvider);
 
     return MaterialApp.router(
-      title: Environment.appName,
+      title: 'Finoteku',
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,

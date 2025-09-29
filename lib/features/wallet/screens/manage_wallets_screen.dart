@@ -13,7 +13,7 @@ class ManageWalletsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-  final theme = Theme.of(context);
+    final theme = Theme.of(context);
     final currentUser = ref.watch(currentUserProvider);
     return Scaffold(
       appBar: AppBar(
@@ -60,7 +60,8 @@ class ManageWalletsScreen extends ConsumerWidget {
                   itemCount: wallets.length,
                   itemBuilder: (context, index) => WalletCard(
                     wallet: wallets[index],
-                    onTap: () => _showWalletDetails(context, ref, wallets[index]),
+                    onTap: () =>
+                        _showWalletDetails(context, ref, wallets[index]),
                     onAction: (action) => _handleMenuAction(
                       context,
                       ref,
@@ -83,7 +84,10 @@ class ManageWalletsScreen extends ConsumerWidget {
                     color: theme.colorScheme.error,
                   ),
                   const SizedBox(height: 16),
-                  Text(ref.tr(context, 'wallet_loading_error'), style: theme.textTheme.titleLarge),
+                  Text(
+                    ref.tr(context, 'wallet_loading_error'),
+                    style: theme.textTheme.titleLarge,
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     error.toString(),
@@ -111,7 +115,10 @@ class ManageWalletsScreen extends ConsumerWidget {
                 color: theme.colorScheme.error,
               ),
               const SizedBox(height: 16),
-              Text(ref.tr(context, 'wallet_auth_error'), style: theme.textTheme.titleLarge),
+              Text(
+                ref.tr(context, 'wallet_auth_error'),
+                style: theme.textTheme.titleLarge,
+              ),
               const SizedBox(height: 8),
               Text(
                 error.toString(),
@@ -146,21 +153,21 @@ class ManageWalletsScreen extends ConsumerWidget {
         break;
       case 'activate':
       case 'deactivate':
-        // Treat is_hidden=true as Hidden (not deleted). Toggle visibility.
-        final toggled = !wallet.isHidden;
         try {
           await repo.updateWallet(
             wallet.id,
             userId,
-            UpdateWalletRequest(isHidden: !toggled),
+            UpdateWalletRequest(isHidden: action == 'deactivate'),
           );
           refreshWalletProviders(ref);
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(toggled
-                    ? ref.tr(context, 'wallet_now_visible')
-                    : ref.tr(context, 'wallet_now_hidden')),
+                content: Text(
+                  action == 'deactivate'
+                      ? ref.tr(context, 'wallet_now_hidden')
+                      : ref.tr(context, 'wallet_now_visible'),
+                ),
               ),
             );
           }
@@ -296,11 +303,28 @@ class ManageWalletsScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _detailRow(ref.tr(context, 'wallet_name_label'), wallet.name),
-            _detailRow(ref.tr(context, 'wallet_balance_label'), wallet.balance.toStringAsFixed(2)),
-            _detailRow(ref.tr(context, 'wallet_currency_label'), wallet.currency),
-            _detailRow(ref.tr(context, 'wallet_status_label'), !wallet.isHidden ? ref.tr(context, 'wallet_visible') : ref.tr(context, 'wallet_hidden')),
-            _detailRow(ref.tr(context, 'wallet_created_label'), wallet.createdAt.toLocal().toString()),
-            _detailRow(ref.tr(context, 'wallet_updated_label'), wallet.updatedAt.toLocal().toString()),
+            _detailRow(
+              ref.tr(context, 'wallet_balance_label'),
+              wallet.balance.toStringAsFixed(2),
+            ),
+            _detailRow(
+              ref.tr(context, 'wallet_currency_label'),
+              wallet.currency,
+            ),
+            _detailRow(
+              ref.tr(context, 'wallet_status_label'),
+              !wallet.isHidden
+                  ? ref.tr(context, 'wallet_visible')
+                  : ref.tr(context, 'wallet_hidden'),
+            ),
+            _detailRow(
+              ref.tr(context, 'wallet_created_label'),
+              wallet.createdAt.toLocal().toString(),
+            ),
+            _detailRow(
+              ref.tr(context, 'wallet_updated_label'),
+              wallet.updatedAt.toLocal().toString(),
+            ),
           ],
         ),
         actions: [

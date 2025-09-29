@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
@@ -24,52 +23,32 @@ import '../features/onboarding/providers/onboarding_provider.dart';
 import '../features/onboarding/providers/language_preference_provider.dart';
 import '../widgets/main_shell.dart';
 
-// Router state provider that combines all necessary states
-final routerStateProvider = Provider<RouterState>((ref) {
-  final authState = ref.watch(authStateProvider);
-  final hasSeenOnboarding = ref.watch(onboardingProvider);
-  final hasLanguagePreference = ref.watch(hasLanguagePreferenceProvider);
-
-  return RouterState(
-    authState: authState,
-    hasSeenOnboarding: hasSeenOnboarding,
-    hasLanguagePreference: hasLanguagePreference,
-  );
-});
-
-class RouterState {
-  final AsyncValue<AuthState> authState;
-  final bool hasSeenOnboarding;
-  final AsyncValue<bool> hasLanguagePreference;
-
-  const RouterState({
-    required this.authState,
-    required this.hasSeenOnboarding,
-    required this.hasLanguagePreference,
-  });
-}
-
 final routerProvider = Provider<GoRouter>((ref) {
   // Keep router instance alive to prevent recreations
   ref.keepAlive();
 
   return GoRouter(
     initialLocation: '/',
-    debugLogDiagnostics: true,
+    debugLogDiagnostics: false, // Disable debug logging for better performance
     redirect: (context, state) {
       final location = state.matchedLocation;
-      final routerState = ref.read(routerStateProvider);
 
-      // Allow splash screen to always load
+      // Allow splash screen to always load - let splash handle logic
       if (location == '/') return null;
 
-      // Handle loading states for both auth and language preference
-      return routerState.authState.when(
-        data: (auth) {
-          return routerState.hasLanguagePreference.when(
-            data: (hasLangPref) {
-              final isAuthenticated = auth.session != null;
+      // Read providers individually to avoid blocking main thread
+      final authState = ref.read(authStateProvider);
+      final hasSeenOnboarding = ref.read(onboardingProvider);
+      final hasLanguagePreference = ref.read(hasLanguagePreferenceProvider);
 
+      // Handle auth state
+      return authState.when(
+        data: (auth) {
+          final isAuthenticated = auth.session != null;
+
+          // Handle language preference
+          return hasLanguagePreference.when(
+            data: (hasLangPref) {
               // First time user - show language selection if not set
               if (!hasLangPref && location != '/language-selection') {
                 return '/language-selection';
@@ -77,7 +56,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
               // If language is set but onboarding not seen, show onboarding
               if (hasLangPref &&
-                  !routerState.hasSeenOnboarding &&
+                  !hasSeenOnboarding &&
                   location != '/onboarding') {
                 return '/onboarding';
               }
