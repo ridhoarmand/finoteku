@@ -19,8 +19,6 @@ import '../features/onboarding/screens/language_selection_screen.dart';
 import '../features/splash/splash_screen.dart';
 import '../features/wallet/screens/manage_wallets_screen.dart';
 import '../features/category/screens/manage_categories_screen.dart';
-import '../features/onboarding/providers/onboarding_provider.dart';
-import '../features/onboarding/providers/language_preference_provider.dart';
 import '../widgets/main_shell.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -29,72 +27,44 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     initialLocation: '/',
-    debugLogDiagnostics: false, // Disable debug logging for better performance
+    debugLogDiagnostics: false, // Keep false for production
     redirect: (context, state) {
       final location = state.matchedLocation;
+      debugPrint('🚦 Router redirect check: $location');
 
-      // Allow splash screen to always load - let splash handle logic
+      // Allow splash screen to handle initial routing
       if (location == '/') return null;
 
-      // Read providers individually to avoid blocking main thread
-      final authState = ref.read(authStateProvider);
-      final hasSeenOnboarding = ref.read(onboardingProvider);
-      final hasLanguagePreference = ref.read(hasLanguagePreferenceProvider);
-
-      // Handle auth state
-      return authState.when(
-        data: (auth) {
-          final isAuthenticated = auth.session != null;
-
-          // Handle language preference
-          return hasLanguagePreference.when(
-            data: (hasLangPref) {
-              // First time user - show language selection if not set
-              if (!hasLangPref && location != '/language-selection') {
-                return '/language-selection';
-              }
-
-              // If language is set but onboarding not seen, show onboarding
-              if (hasLangPref &&
-                  !hasSeenOnboarding &&
-                  location != '/onboarding') {
-                return '/onboarding';
-              }
-
-              // Public routes (accessible when not authenticated)
-              final publicRoutes = [
-                '/login',
-                '/login/register',
-                '/login/forgot-password',
-                '/onboarding',
-                '/language-selection',
-              ];
-              final isPublicRoute = publicRoutes.contains(location);
-
-              // If not authenticated, redirect to login (except for public routes)
-              if (!isAuthenticated && !isPublicRoute) {
-                return '/login';
-              }
-
-              // If authenticated and trying to access auth routes, redirect to home
-              if (isAuthenticated &&
-                  isPublicRoute &&
-                  location != '/onboarding' &&
-                  location != '/language-selection') {
-                return '/home';
-              }
-
-              return null;
-            },
-            loading: () => null, // Allow navigation during loading
-            error: (error, stackTrace) =>
-                '/language-selection', // Default to language selection on error
-          );
-        },
-        loading: () => null, // Allow navigation during loading
-        error: (error, stackTrace) =>
-            '/login', // Redirect to login on auth error
+      // Use synchronous auth check to avoid loading state issues
+      final isAuthenticated = ref.read(currentAuthProvider);
+      debugPrint(
+        '🔐 Auth check: authenticated=$isAuthenticated, location=$location',
       );
+
+      // Public routes (accessible when not authenticated)
+      final publicRoutes = [
+        '/login',
+        '/login/register',
+        '/login/forgot-password',
+        '/onboarding',
+        '/language-selection',
+      ];
+      final isPublicRoute = publicRoutes.contains(location);
+
+      // If not authenticated and trying to access protected route
+      if (!isAuthenticated && !isPublicRoute) {
+        debugPrint('❌ Not authenticated, redirecting to login');
+        return '/login';
+      }
+
+      // If authenticated and trying to access login routes only
+      if (isAuthenticated && location == '/login') {
+        debugPrint('✅ Authenticated user on login page, redirecting to home');
+        return '/home';
+      }
+
+      debugPrint('✅ No redirect needed');
+      return null;
     },
     routes: [
       GoRoute(path: '/', builder: (context, state) => const SplashScreen()),

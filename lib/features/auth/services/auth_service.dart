@@ -54,7 +54,7 @@ class AuthService {
         password: password,
       );
 
-  // If signin successful, we could refresh initial data if needed (online-only now, so no sync step)
+      // If signin successful, we could refresh initial data if needed (online-only now, so no sync step)
 
       return response;
     } on AuthException catch (e) {
@@ -160,12 +160,18 @@ final authStateProvider = StreamProvider<AuthState>((ref) {
   return authService.onAuthStateChange;
 });
 
-/// Provider for current session
+/// Provider for current session (synchronous)
 final currentSessionProvider = Provider<Session?>((ref) {
   final authState = ref.watch(authStateProvider);
   return authState.when(
     data: (state) => state.session,
     loading: () => null,
-    error: (_, _) => null,
+    error: (_, stackTrace) => null,
   );
+});
+
+/// Provider for immediate auth check (synchronous)
+final currentAuthProvider = Provider<bool>((ref) {
+  final supabase = ref.watch(supabaseProvider);
+  return supabase.auth.currentSession != null;
 });

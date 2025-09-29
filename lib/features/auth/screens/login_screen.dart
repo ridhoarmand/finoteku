@@ -73,17 +73,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final authService = ref.read(authServiceProvider);
-      await authService.signIn(
+      debugPrint('🔐 Starting sign in process...');
+
+      final response = await authService.signIn(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+
+      debugPrint('✅ Sign in successful: ${response.session?.user.email}');
 
       // Save credentials to password manager after successful login
       if (mounted) {
         // Commit autofill context to save credentials
         TextInput.finishAutofillContext();
-        // Navigate to home screen will be handled by GoRouter redirect
-        context.go('/home');
+
+        debugPrint('🚀 Navigating to home...');
+
+        // Add small delay to ensure auth state is updated
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        // Navigate to home after successful login
+        if (mounted) {
+          context.go('/home');
+          debugPrint('📍 Navigation to /home completed');
+
+          // Reset loading state after navigation
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -262,7 +280,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               onPressed: _isLoading
                                   ? null
                                   : () => context.go('/login/register'),
-                              child: Text(ref.tr(context, 'create_new_account')),
+                              child: Text(
+                                ref.tr(context, 'create_new_account'),
+                              ),
                             ),
                           ],
                         ),

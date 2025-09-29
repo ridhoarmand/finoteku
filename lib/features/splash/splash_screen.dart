@@ -6,6 +6,9 @@ import 'dart:async';
 import '../notification/services/notification_service.dart';
 import '../../services/user_service.dart';
 import '../../core/localization/app_localizations.dart';
+import '../auth/services/auth_service.dart';
+import '../onboarding/providers/onboarding_provider.dart';
+import '../onboarding/providers/language_preference_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -45,37 +48,30 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   void _initializeAnimations() {
     _logoController = AnimationController(
-      duration: const Duration(milliseconds: 800), // Reduced from 1000ms
+      duration: const Duration(milliseconds: 600), // Reduced further
       vsync: this,
     );
 
     _textController = AnimationController(
-      duration: const Duration(milliseconds: 600), // Reduced from 800ms
+      duration: const Duration(milliseconds: 400), // Reduced further
       vsync: this,
     );
 
-    // Use more efficient curves for better performance
-    _logoAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _logoController,
-        curve: Curves.easeOutQuart,
-      ), // More efficient than elasticOut
-    );
+    // Simple, efficient animations
+    _logoAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _logoController, curve: Curves.easeOut));
 
-    _textAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _textController,
-        curve: Curves.easeOut,
-      ), // More efficient than easeInOut
-    );
+    _textAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _textController, curve: Curves.easeOut));
 
-    // Start animations immediately for better perceived performance
+    // Start animations with optimal timing
     _logoController.forward();
-    Timer(const Duration(milliseconds: 300), () {
-      // Reduced from 500ms
-      if (mounted) {
-        _textController.forward();
-      }
+    Timer(const Duration(milliseconds: 200), () {
+      if (mounted) _textController.forward();
     });
   }
 
@@ -121,43 +117,90 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       if (!mounted) return;
       _updateStatus(_safeTranslate('initializing_services'));
 
-      // Start all background initialization without blocking UI
-      // Use unawaited to prevent blocking
-      _initializeBackgroundServices();
-
-      // Just wait for minimum splash time to show animation
-      await Future.delayed(const Duration(milliseconds: 1500));
+      // Initialize notification service efficiently
+      await _initializeServices();
 
       if (!mounted) return;
-      _updateStatus(_safeTranslate('ready'));
+      _updateStatus(_safeTranslate('checking_authentication'));
 
-      // Brief delay to show ready status, then navigate
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      if (!mounted) return;
-
-      // Simple navigation trigger - let router redirect logic handle the rest
-      context.go('/home');
+      // Determine correct navigation destination based on app state
+      await _navigateToCorrectDestination();
     } catch (e) {
       if (!mounted) return;
       _updateStatus(_safeTranslate('something_went_wrong'));
-      await Future.delayed(const Duration(milliseconds: 1000));
-      // On error, go to login
+      await Future.delayed(const Duration(milliseconds: 500));
       if (mounted) context.go('/login');
     }
   }
 
-  // Background initialization without blocking main thread
-  void _initializeBackgroundServices() {
-    // Initialize notification service in background (don't wait for it)
-    Future(() async {
-      try {
-        final userService = ref.read(userServiceProvider);
-        await NotificationService.initialize(userService: userService);
-      } catch (e) {
-        // Ignore notification init errors
-      }
-    });
+  // Smart navigation based on app state
+  Future<void> _navigateToCorrectDestination() async {
+    if (!mounted) return;
+
+    // Check authentication state
+    final authState = ref.read(authStateProvider);
+    final hasSeenOnboarding = ref.read(onboardingProvider);
+    final hasLanguagePreference = ref.read(hasLanguagePreferenceProvider);
+
+    await authState.when(
+      data: (auth) async {
+        final isAuthenticated = auth.session != null;
+
+        await hasLanguagePreference.when(
+          data: (hasLangPref) async {
+            if (!mounted) return;
+
+            String destination;
+
+            // First time user - language selection
+            if (!hasLangPref) {
+              destination = '/language-selection';
+            }
+            // Language set but onboarding not seen
+            else if (hasLangPref && !hasSeenOnboarding) {
+              destination = '/onboarding';
+            }
+            // Not authenticated - login
+            else if (!isAuthenticated) {
+              destination = '/login';
+            }
+            // Authenticated - home
+            else {
+              destination = '/home';
+            }
+
+            _updateStatus(_safeTranslate('ready'));
+            await Future.delayed(const Duration(milliseconds: 200));
+
+            if (mounted) context.go(destination);
+          },
+          loading: () async {
+            if (mounted) context.go('/language-selection');
+          },
+          error: (_, stackTrace) async {
+            if (mounted) context.go('/language-selection');
+          },
+        );
+      },
+      loading: () async {
+        // Wait a bit for auth state to load
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted) context.go('/login');
+      },
+      error: (_, stackTrace) async {
+        if (mounted) context.go('/login');
+      },
+    );
+  }
+
+  // Efficient service initialization
+  Future<void> _initializeServices() async {
+    try {
+      final userService = ref.read(userServiceProvider);
+      await NotificationService.initialize(userService: userService);
+    } catch (e) {
+      // Ignore notification init errors - non-critical
+    }
   }
 
   @override
