@@ -43,8 +43,7 @@ final StrMap transactionStringsEn = {
   'update_transaction_button': 'Update Transaction',
   'add_transaction_button': 'Add Transaction',
   'transfer_internal_title': 'Transfer between my wallets',
-  'transfer_internal_subtitle':
-      'Move balance between wallets (optional admin fee)',
+  'transfer_internal_subtitle': 'Move balance between wallets',
   'source_destination_same_error':
       'Source and destination wallet cannot be the same',
   'please_select_wallet': 'Please select a wallet',
@@ -125,8 +124,7 @@ final StrMap transactionStringsId = {
   'update_transaction_button': 'Perbarui Transaksi',
   'add_transaction_button': 'Tambah Transaksi',
   'transfer_internal_title': 'Transfer antar wallet saya',
-  'transfer_internal_subtitle':
-      'Pindahkan saldo antar wallet (opsional biaya admin)',
+  'transfer_internal_subtitle': 'Pindahkan saldo antar wallet',
   'source_destination_same_error': 'Wallet sumber dan tujuan tidak boleh sama',
   'please_select_wallet': 'Silakan pilih wallet',
   'please_select_destination_wallet': 'Pilih wallet tujuan',

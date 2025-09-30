@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../auth/services/auth_service.dart';
+import '../../../services/supabase_service.dart';
 
 class LogoutButtonWidget extends ConsumerWidget {
   const LogoutButtonWidget({super.key});
@@ -35,11 +36,25 @@ class LogoutButtonWidget extends ConsumerWidget {
 
           if (shouldLogout == true && context.mounted) {
             try {
+              debugPrint('🚪 Starting logout process...');
               await authService.signOut();
+              debugPrint('✅ Auth signOut completed');
+
+              // Force refresh auth providers to trigger router redirect
+              ref.invalidate(currentAuthProvider);
+              ref.invalidate(currentUserProvider);
+              debugPrint('🔄 Auth providers invalidated');
+
               if (context.mounted) {
-                context.go('/login');
+                // Clear navigation stack and go to login
+                while (context.canPop()) {
+                  context.pop();
+                }
+                debugPrint('🔄 Navigation stack cleared, redirecting to login');
+                context.pushReplacement('/login');
               }
             } catch (e) {
+              debugPrint('❌ Logout error: $e');
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(

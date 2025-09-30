@@ -19,12 +19,16 @@ import '../features/onboarding/screens/language_selection_screen.dart';
 import '../features/splash/splash_screen.dart';
 import '../features/wallet/screens/manage_wallets_screen.dart';
 import '../features/category/screens/manage_categories_screen.dart';
+import '../features/category/screens/category_selection_screen.dart';
 import '../features/transaction/screens/wallet_selection_screen.dart';
 import '../widgets/main_shell.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   // Keep router instance alive to prevent recreations
   ref.keepAlive();
+
+  // Watch auth state changes to trigger router rebuilds
+  ref.watch(currentAuthProvider);
 
   return GoRouter(
     initialLocation: '/',
@@ -151,16 +155,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final userId = state.uri.queryParameters['userId'] ?? '';
           final title = state.uri.queryParameters['title'] ?? 'Select Wallet';
-          return WalletSelectionScreen(
-            userId: userId,
-            title: title,
-          );
+          return WalletSelectionScreen(userId: userId, title: title);
         },
       ),
       // Category management route
       GoRoute(
         path: '/categories/manage',
         builder: (context, state) => const ManageCategoriesScreen(),
+      ),
+      // Category selection route
+      GoRoute(
+        path: '/categories/select',
+        builder: (context, state) {
+          final userId = state.uri.queryParameters['userId'] ?? '';
+          final title = state.uri.queryParameters['title'] ?? 'Select Category';
+          return CategorySelectionScreen(userId: userId, title: title);
+        },
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
@@ -209,4 +219,5 @@ class AppRoutes {
   static const String manageWallets = '/wallets/manage';
   static const String selectWallet = '/wallets/select';
   static const String manageCategories = '/categories/manage';
+  static const String selectCategory = '/categories/select';
 }

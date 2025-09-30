@@ -196,43 +196,31 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         child: Form(
           key: _formKey,
           child: ListView(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(2), // Reduced from 6 to 4
             children: [
               // Date Section
               _buildDateSection(),
-              const SizedBox(height: 6),
-
               // Amount Section
               _buildAmountSection(),
-              const SizedBox(height: 6),
-
               // Transfer Toggle
               _buildTransferToggle(),
-              const SizedBox(height: 6),
 
               ...(!_isTransfer
                   ? [
                       // Category Selection
                       _buildCategorySection(user.id),
-                      const SizedBox(height: 6),
                       // Wallet Selection
                       _buildWalletSection(user.id),
-                      const SizedBox(height: 6),
                     ]
                   : [
                       // Source wallet, destination wallet and optional fee for transfer
                       _buildWalletSection(user.id),
-                      const SizedBox(height: 6),
                       _buildToWalletSection(user.id),
-                      const SizedBox(height: 6),
                       _buildFeeSection(user.id),
-                      const SizedBox(height: 6),
                     ]),
 
               // Notes Section
               _buildNotesSection(),
-              const SizedBox(height: 12),
-
               // Save Button
               FilledButton(
                 onPressed: _isLoading ? null : _saveTransaction,
@@ -325,7 +313,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     final cats = categoriesAsync.value ?? [];
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(10), // Reduced from 12 to 10
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -333,7 +321,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               ref.tr(context, 'fee_title'),
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4), // Reduced from 6 to 4
             TextFormField(
               controller: _feeController,
               keyboardType: TextInputType.number,
@@ -344,7 +332,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 hintText: ref.tr(context, 'fee_hint'),
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4), // Reduced from 6 to 4
             ListTile(
               leading: const Icon(Icons.receipt_long),
               title: Text(
@@ -377,25 +365,22 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   void _selectCategory(List<Category> categories) {
+    final user = ref.read(currentUserProvider).value;
+    if (user == null) return;
+
     _unfocus();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => CategorySelectorSheet(
-        categories: categories,
-        onCategorySelected: (category) {
-          setState(() {
-            _selectedCategory = category;
-          });
-          Navigator.pop(context);
-          final user = ref.read(currentUserProvider).value;
-          if (user != null) {
-            ref.invalidate(categoriesProvider(user.id));
+    context
+        .push(
+          '/categories/select?userId=${user.id}&title=${Uri.encodeComponent(ref.tr(context, 'select_category_title'))}',
+        )
+        .then((result) {
+          if (result != null && result is Category) {
+            setState(() {
+              _selectedCategory = result;
+            });
+            refreshCategoryProviders(ref);
           }
-        },
-        rootContext: this.context,
-      ),
-    );
+        });
   }
 
   void _selectWallet(List<Wallet> wallets) {

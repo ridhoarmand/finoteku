@@ -9,7 +9,7 @@ class NotesSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => Card(
     child: Padding(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10), // Reduced from 12 to 10
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

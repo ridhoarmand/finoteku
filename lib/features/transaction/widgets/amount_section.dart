@@ -19,7 +19,7 @@ class AmountSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => Card(
     child: Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -22,7 +22,8 @@ class SupabaseWalletService {
       final response = await _supabase
           .from('wallets')
           .select('*')
-          .eq('user_id', userId);
+          .eq('user_id', userId)
+          .order('updated_at', ascending: false); // Urutkan dari yang terbaru
 
       // Handle empty result
   if (response.isEmpty) return [];
