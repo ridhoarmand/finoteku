@@ -16,31 +16,24 @@ class AccountScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final currentUser = ref.watch(currentUserProvider);
 
-  return Scaffold(
+    return Scaffold(
       appBar: AppBar(
-    title: Text(ref.tr(context, 'account_title')),
+        title: Text(ref.tr(context, 'account_title')),
         automaticallyImplyLeading: false,
       ),
       body: currentUser.when(
         data: (user) => SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(8),
           child: Column(
             children: [
               // Profile Section
               ProfileSectionWidget(user: user),
-              const SizedBox(height: 12),
-
               // Wallet & Categories Section
               const WalletCategorySettingsWidget(),
-              const SizedBox(height: 12),
-
               // Preferences Section
               const PreferencesSettingsWidget(),
-              const SizedBox(height: 12),
-
+              // Support Section
               const SupportSettingsWidget(),
-              const SizedBox(height: 12),
-
               // Logout Button
               const LogoutButtonWidget(),
               const SizedBox(height: 12),

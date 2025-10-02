@@ -20,6 +20,8 @@ import '../features/splash/splash_screen.dart';
 import '../features/wallet/screens/manage_wallets_screen.dart';
 import '../features/category/screens/manage_categories_screen.dart';
 import '../features/category/screens/category_selection_screen.dart';
+import '../features/category/screens/add_edit_category_screen.dart';
+import '../models/category.dart';
 import '../features/transaction/screens/wallet_selection_screen.dart';
 import '../widgets/main_shell.dart';
 
@@ -162,6 +164,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/categories/manage',
         builder: (context, state) => const ManageCategoriesScreen(),
+      ),
+      // Add/Edit category route
+      GoRoute(
+        path: '/categories/add-edit',
+        builder: (context, state) {
+          final typeParam = state.uri.queryParameters['type'] ?? 'expense';
+          final categoryType = typeParam == 'income'
+              ? CategoryType.income
+              : CategoryType.expense;
+
+          // For edit mode, you would need to fetch the category data
+          // For now, using navigation with direct object passing is simpler
+          return AddEditCategoryScreen(categoryType: categoryType);
+        },
       ),
       // Category selection route
       GoRoute(
