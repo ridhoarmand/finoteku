@@ -193,6 +193,6 @@ final currentAuthProvider = Provider<bool>((ref) {
       final supabase = ref.watch(supabaseProvider);
       return supabase.auth.currentSession != null;
     },
-    error: (_, __) => false,
+    error: (_, _) => false,
   );
 });

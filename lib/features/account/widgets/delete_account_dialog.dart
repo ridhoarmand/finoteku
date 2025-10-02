@@ -316,6 +316,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
       // Wait a bit more for providers to refresh
       await Future.delayed(const Duration(milliseconds: 500));
 
+      if (!mounted) return;
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
