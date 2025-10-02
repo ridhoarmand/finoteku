@@ -9,19 +9,19 @@ class ThemeSettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-  final themeMode = ref.watch(themeModeProvider);
-  String t(String key) => ref.tr(context, key);
+    final themeMode = ref.watch(themeModeProvider);
+    String t(String key) => ref.tr(context, key);
 
     return Scaffold(
       appBar: AppBar(
-  title: Text(t('theme_settings')),
+        title: Text(t('theme_settings')),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -32,7 +32,7 @@ class ThemeSettingsScreen extends ConsumerWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 4),
             Text(
               t('choose_theme_sub'),
               style: theme.textTheme.bodyMedium?.copyWith(
@@ -52,7 +52,7 @@ class ThemeSettingsScreen extends ConsumerWidget {
               t('light_mode_sub'),
               () => ref.read(themeModeProvider.notifier).setLightMode(),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 4),
 
             _buildThemeOption(
               context,
@@ -64,7 +64,7 @@ class ThemeSettingsScreen extends ConsumerWidget {
               t('dark_mode_full_sub'),
               () => ref.read(themeModeProvider.notifier).setDarkMode(),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 4),
 
             _buildThemeOption(
               context,
@@ -76,7 +76,7 @@ class ThemeSettingsScreen extends ConsumerWidget {
               t('system_default_sub'),
               () => ref.read(themeModeProvider.notifier).setSystemMode(),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 4),
           ],
         ),
       ),

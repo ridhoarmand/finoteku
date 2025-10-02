@@ -77,14 +77,14 @@ class CategoryListTile extends StatelessWidget {
                         category.name,
                         style: const TextStyle(
                           fontWeight: FontWeight.w500,
-                          fontSize: 13,
+                          fontSize: 14,
                           color: Colors.black87,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
                         '${category.transactionCount} transaksi',
-                        style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ],
                   ),

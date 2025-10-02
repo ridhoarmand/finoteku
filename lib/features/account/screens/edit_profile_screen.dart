@@ -101,13 +101,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           ),
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Profile Avatar Section
               ProfileAvatarWidget(fullNameController: _fullNameController),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
 
               // Profile Form
               ProfileFormWidget(
@@ -116,7 +116,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 emailController: _emailController,
                 phoneController: _phoneController,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
 
               // Save Button
               SaveProfileButton(

@@ -186,7 +186,6 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
           return CategoryListTile(
             category: category,
             index: index, // Pass index untuk warna yang sama dengan chart
-            onTap: () => _navigateToDetail(category),
           );
         } else {
           // Others category
@@ -220,15 +219,6 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
         }
       },
     );
-  }
-
-  void _navigateToDetail(CategoryReportItem category) {
-    // TODO: Navigate to category detail screen
-    // Navigator.pushNamed(
-    //   context,
-    //   '/category-detail',
-    //   arguments: category,
-    // );
   }
 
   void _showOthersDetail(
@@ -292,10 +282,6 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                   return CategoryListTile(
                     category: category,
                     index: (index + 6) % 10, // Continue color pattern
-                    onTap: () {
-                      Navigator.pop(context);
-                      _navigateToDetail(category);
-                    },
                   );
                 },
               ),
