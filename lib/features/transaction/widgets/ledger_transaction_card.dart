@@ -3,6 +3,7 @@ import '../../../models/ledger_entry.dart';
 import '../../../models/category.dart';
 import '../../../models/wallet.dart';
 import '../../../utils/currency_formatter.dart';
+import '../../../utils/category_icon_helper.dart';
 import '../../category/theme/category_theme.dart';
 
 class LedgerTransactionCard extends StatelessWidget {
@@ -53,9 +54,8 @@ class LedgerTransactionCard extends StatelessWidget {
                 ).withValues(alpha: 0.12),
                 child: Icon(() {
                   if (category?.iconCodePoint != null) {
-                    return IconData(
-                      category!.iconCodePoint!,
-                      fontFamily: 'MaterialIcons',
+                    return CategoryIconHelper.getIconFromCodePoint(
+                      category!.iconCodePoint,
                     );
                   }
                   return isPositive ? Icons.trending_up : Icons.trending_down;

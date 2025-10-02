@@ -49,7 +49,7 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
     _nameController = TextEditingController(text: widget.initialName ?? '');
     _selectedIcon = widget.initialIcon;
     _selectedParentId = widget.initialParentId;
-  // Parent name is resolved lazily when dropdown loads
+    // Parent name is resolved lazily when dropdown loads
   }
 
   @override
@@ -98,10 +98,9 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
                     Expanded(
                       child: Text(
                         widget.title,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleLarge
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
@@ -172,7 +171,9 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
                       onPressed: _nameController.text.trim().isEmpty
                           ? null
                           : () {
-                              final autoColor = CategoryTheme.forType(widget.categoryType);
+                              final autoColor = CategoryTheme.forType(
+                                widget.categoryType,
+                              );
                               widget.onSave(
                                 _nameController.text.trim(),
                                 autoColor,
@@ -263,21 +264,25 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
                     '${ref.tr(context, 'preview')}: ',
                     style: TextStyle(color: Colors.grey[600], fontSize: 14),
                   ),
-                  Builder(builder: (context) {
-                    final previewColor = CategoryTheme.forType(widget.categoryType);
-                    return Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: previewColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: CategoryIconHelper.buildCategoryIcon(
-                        _selectedIcon ?? Icons.category,
-                        size: 24,
-                        color: previewColor,
-                      ),
-                    );
-                  }),
+                  Builder(
+                    builder: (context) {
+                      final previewColor = CategoryTheme.forType(
+                        widget.categoryType,
+                      );
+                      return Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: previewColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: CategoryIconHelper.buildCategoryIcon(
+                          _selectedIcon ?? Icons.category,
+                          size: 24,
+                          color: previewColor,
+                        ),
+                      );
+                    },
+                  ),
                   const SizedBox(width: 12),
                   if (_selectedIcon != null)
                     TextButton.icon(
@@ -416,9 +421,8 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
                           children: [
                             CategoryIconHelper.buildCategoryIcon(
                               category.iconCodePoint != null
-                                  ? IconData(
-                                      category.iconCodePoint!,
-                                      fontFamily: 'MaterialIcons',
+                                  ? CategoryIconHelper.getIconFromCodePoint(
+                                      category.iconCodePoint,
                                     )
                                   : CategoryIconHelper.getIconForCategory(
                                       category.name,
@@ -440,21 +444,21 @@ class _CategoryFormDialogState extends ConsumerState<CategoryFormDialog> {
                   onChanged: (value) {
                     setState(() {
                       _selectedParentId = value;
-                        // Update selected parent name for suggestions/icon inheritance
-                        if (value == null) {
-                          _selectedParentName = null;
-                        } else {
-                          final found = parentCategories.firstWhere(
-                            (c) => c.id == value,
-                            orElse: () => parentCategories.first,
-                          );
-                          _selectedParentName = found.name;
-                          // If user hasn't chosen an icon, inherit from parent name
-                          _selectedIcon = CategoryIconHelper.inheritIcon(
-                            childIcon: _selectedIcon,
-                            parentName: _selectedParentName!,
-                          );
-                        }
+                      // Update selected parent name for suggestions/icon inheritance
+                      if (value == null) {
+                        _selectedParentName = null;
+                      } else {
+                        final found = parentCategories.firstWhere(
+                          (c) => c.id == value,
+                          orElse: () => parentCategories.first,
+                        );
+                        _selectedParentName = found.name;
+                        // If user hasn't chosen an icon, inherit from parent name
+                        _selectedIcon = CategoryIconHelper.inheritIcon(
+                          childIcon: _selectedIcon,
+                          parentName: _selectedParentName!,
+                        );
+                      }
                     });
                   },
                 );

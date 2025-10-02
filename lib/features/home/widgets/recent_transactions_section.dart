@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../utils/currency_formatter.dart';
+import '../../../utils/category_icon_helper.dart';
 import '../../category/providers/category_providers.dart';
 import '../../transaction/providers/transaction_providers.dart';
 import '../../wallet/providers/wallet_providers.dart';
@@ -257,9 +258,8 @@ class RecentTransactionsSection extends ConsumerWidget {
                                   child: Icon(
                                     () {
                                       if (category?.iconCodePoint != null) {
-                                        return IconData(
-                                          category!.iconCodePoint!,
-                                          fontFamily: 'MaterialIcons',
+                                        return CategoryIconHelper.getIconFromCodePoint(
+                                          category!.iconCodePoint,
                                         );
                                       }
                                       return isIncome

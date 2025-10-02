@@ -10,6 +10,7 @@ import '../../category/providers/category_providers.dart';
 import '../../wallet/providers/wallet_providers.dart';
 import '../../../services/supabase_service.dart';
 import '../../../utils/currency_formatter.dart';
+import '../../../utils/category_icon_helper.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../widgets/category_selector_sheet.dart';
 import '../widgets/date_section.dart';
@@ -674,9 +675,8 @@ class _CategorySection extends ConsumerWidget {
           ListTile(
             leading: selected != null
                 ? Icon(
-                    IconData(
-                      selected!.iconCodePoint ?? Icons.category.codePoint,
-                      fontFamily: 'MaterialIcons',
+                    CategoryIconHelper.getIconFromCodePoint(
+                      selected!.iconCodePoint,
                     ),
                     color: selected!.color != null
                         ? Color(selected!.color!)

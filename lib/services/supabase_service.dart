@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 
 /// Supabase service for managing the Supabase client instance
 class SupabaseService {
@@ -19,10 +20,16 @@ class SupabaseService {
     }
 
     try {
+      if (kDebugMode) {
+        print('🔄 Initializing Supabase...');
+        print('📡 URL: $url');
+        print('🔑 Key: ${anonKey.substring(0, 20)}...');
+      }
+
       await Supabase.initialize(
         url: url,
         anonKey: anonKey,
-        debug: false, // Disabled to prevent blocking frames
+        debug: kDebugMode, // Only debug in debug mode
         authOptions: const FlutterAuthClientOptions(
           authFlowType: AuthFlowType.pkce,
         ),
@@ -32,8 +39,15 @@ class SupabaseService {
       );
       _client = Supabase.instance.client;
       _isInitialized = true;
+
+      if (kDebugMode) {
+        print('✅ Supabase initialized successfully');
+      }
     } catch (e) {
-      // Graceful degradation if Supabase fails to initialize
+      // Log error in debug mode, but be silent in release
+      if (kDebugMode) {
+        print('❌ Failed to initialize Supabase: $e');
+      }
       _isInitialized = false;
       rethrow;
     }

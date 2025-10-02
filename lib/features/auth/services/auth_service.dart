@@ -49,17 +49,29 @@ class AuthService {
     required String password,
   }) async {
     try {
+      if (kDebugMode) {
+        debugPrint('🔄 Attempting sign in for: $email');
+      }
+
       final response = await _supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
 
-      // If signin successful, we could refresh initial data if needed (online-only now, so no sync step)
+      if (kDebugMode) {
+        debugPrint('✅ Sign in successful for: $email');
+      }
 
       return response;
     } on AuthException catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Auth error during sign in: ${e.message}');
+      }
       throw AuthException(e.message);
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Unexpected error during sign in: $e');
+      }
       throw Exception('Unexpected error during sign in: $e');
     }
   }

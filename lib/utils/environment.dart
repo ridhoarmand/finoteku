@@ -8,10 +8,15 @@ class Environment {
   static Future<void> initialize() async {
     try {
       await dotenv.load(fileName: ".env");
-      debugPrint('✅ Environment variables loaded from .env');
+      if (kDebugMode) {
+        debugPrint('✅ Environment variables loaded from .env');
+      }
     } catch (e) {
-      debugPrint('⚠️ Could not load .env file: $e');
-      debugPrint('📝 Using default values for development');
+      if (kDebugMode) {
+        debugPrint('⚠️ Could not load .env file: $e');
+        debugPrint('📝 Using default values for development');
+      }
+      // In release mode, silently continue with fallback values
     }
   }
 
@@ -32,7 +37,9 @@ class Environment {
     for (final varName in requiredVars) {
       final value = dotenv.env[varName];
       if (value == null || value.isEmpty || value.contains('your-')) {
-        debugPrint('❌ Missing or invalid environment variable: $varName');
+        if (kDebugMode) {
+          debugPrint('❌ Missing or invalid environment variable: $varName');
+        }
         isValid = false;
       }
     }
@@ -40,7 +47,9 @@ class Environment {
     // Check URL format
     if (!supabaseUrl.startsWith('https://') ||
         !supabaseUrl.contains('.supabase.co')) {
-      debugPrint('❌ SUPABASE_URL format is invalid');
+      if (kDebugMode) {
+        debugPrint('❌ SUPABASE_URL format is invalid');
+      }
       isValid = false;
     }
 

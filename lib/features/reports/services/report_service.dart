@@ -176,7 +176,7 @@ class ReportService {
 
       // Get icon for category
       final icon = category.iconCodePoint != null
-          ? IconData(category.iconCodePoint!, fontFamily: 'MaterialIcons')
+          ? CategoryIconHelper.getIconFromCodePoint(category.iconCodePoint)
           : CategoryIconHelper.getIconForCategory(category.name);
 
       // Use theme color for category
@@ -238,9 +238,8 @@ class ReportService {
         // Add child amount to parent if parent doesn't exist in items
         if (!parentItems.containsKey(item.parentId)) {
           final icon = parentCategory.iconCodePoint != null
-              ? IconData(
-                  parentCategory.iconCodePoint!,
-                  fontFamily: 'MaterialIcons',
+              ? CategoryIconHelper.getIconFromCodePoint(
+                  parentCategory.iconCodePoint,
                 )
               : CategoryIconHelper.getIconForCategory(parentCategory.name);
 

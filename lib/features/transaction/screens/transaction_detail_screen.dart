@@ -7,6 +7,7 @@ import '../../category/providers/category_providers.dart';
 import '../../wallet/providers/wallet_providers.dart';
 import '../../../services/supabase_service.dart';
 import '../../../utils/currency_formatter.dart';
+import '../../../utils/category_icon_helper.dart';
 import 'add_transaction_screen.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../models/category.dart';
@@ -21,7 +22,9 @@ class TransactionDetailScreen extends ConsumerWidget {
     final user = ref.watch(currentUserProvider).value;
 
     if (user == null) {
-      return Scaffold(body: Center(child: Text(ref.tr(context, 'login_required_short'))));
+      return Scaffold(
+        body: Center(child: Text(ref.tr(context, 'login_required_short'))),
+      );
     }
 
     return Scaffold(
@@ -30,30 +33,51 @@ class TransactionDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTransactionBody(BuildContext context, WidgetRef ref, String userId) {
-    final txAsync = ref.watch(transactionProvider((transactionId: transactionId, userId: userId)));
+  Widget _buildTransactionBody(
+    BuildContext context,
+    WidgetRef ref,
+    String userId,
+  ) {
+    final txAsync = ref.watch(
+      transactionProvider((transactionId: transactionId, userId: userId)),
+    );
     return txAsync.when(
       data: (tx) {
-        if (tx == null) return Center(child: Text(ref.tr(context, 'transaction_not_found')));
+        if (tx == null)
+          return Center(child: Text(ref.tr(context, 'transaction_not_found')));
         return _buildTransactionDetail(context, ref, tx, userId);
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, st) => _errorWithRetry(context, ref, () => ref.invalidate(transactionProvider((transactionId: transactionId, userId: userId)))),
+      error: (e, st) => _errorWithRetry(
+        context,
+        ref,
+        () => ref.invalidate(
+          transactionProvider((transactionId: transactionId, userId: userId)),
+        ),
+      ),
     );
   }
 
-  Widget _errorWithRetry(BuildContext context, WidgetRef ref, VoidCallback retry) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(ref.tr(context, 'error_loading_transactions').replaceAll('{error}', '')),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: retry, child: Text(ref.tr(context, 'retry'))),
-          ],
+  Widget _errorWithRetry(
+    BuildContext context,
+    WidgetRef ref,
+    VoidCallback retry,
+  ) => Center(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+        const SizedBox(height: 16),
+        Text(
+          ref
+              .tr(context, 'error_loading_transactions')
+              .replaceAll('{error}', ''),
         ),
-      );
+        const SizedBox(height: 16),
+        FilledButton(onPressed: retry, child: Text(ref.tr(context, 'retry'))),
+      ],
+    ),
+  );
 
   Widget _buildTransactionDetail(
     BuildContext context,
@@ -61,7 +85,7 @@ class TransactionDetailScreen extends ConsumerWidget {
     Transaction transaction,
     String userId,
   ) {
-  final theme = Theme.of(context);
+    final theme = Theme.of(context);
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -69,26 +93,124 @@ class TransactionDetailScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Amount Card
-          Consumer(builder: (context, ref, _) {
-            final categoryAsync = transaction.categoryId != null
-                ? ref.watch(categoryProvider((categoryId: transaction.categoryId!, userId: userId)))
-                : const AsyncValue.data(null);
-            return categoryAsync.when(
-              data: (category) {
-                final isIncome = category?.type == CategoryType.income;
-                final color = isIncome ? CategoryTheme.income : CategoryTheme.expense;
-                final icon = category?.iconCodePoint != null
-                    ? IconData(category!.iconCodePoint!, fontFamily: 'MaterialIcons')
-                    : (isIncome ? Icons.trending_up : Icons.trending_down);
-                return Card(
+          Consumer(
+            builder: (context, ref, _) {
+              final categoryAsync = transaction.categoryId != null
+                  ? ref.watch(
+                      categoryProvider((
+                        categoryId: transaction.categoryId!,
+                        userId: userId,
+                      )),
+                    )
+                  : const AsyncValue.data(null);
+              return categoryAsync.when(
+                data: (category) {
+                  final isIncome = category?.type == CategoryType.income;
+                  final color = isIncome
+                      ? CategoryTheme.income
+                      : CategoryTheme.expense;
+                  final icon = category?.iconCodePoint != null
+                      ? CategoryIconHelper.getIconFromCodePoint(
+                          category!.iconCodePoint,
+                        )
+                      : (isIncome ? Icons.trending_up : Icons.trending_down);
+                  return Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 30,
+                            backgroundColor: color.withValues(alpha: 0.2),
+                            child: Icon(icon, color: color, size: 32),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isIncome
+                                      ? ref.tr(context, 'income')
+                                      : ref.tr(context, 'expense'),
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                Text(
+                                  CurrencyFormatter.format(
+                                    transaction.amount.abs(),
+                                    'IDR',
+                                  ),
+                                  style: theme.textTheme.headlineSmall
+                                      ?.copyWith(
+                                        color: color,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+                loading: () => Card(
                   child: Padding(
                     padding: const EdgeInsets.all(20.0),
                     child: Row(
                       children: [
                         CircleAvatar(
                           radius: 30,
-                          backgroundColor: color.withValues(alpha: 0.2),
-                          child: Icon(icon, color: color, size: 32),
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .withValues(alpha: 0.3),
+                          child: Icon(
+                            Icons.category,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                height: 16,
+                                width: 80,
+                                color: Colors.black12,
+                              ),
+                              Container(
+                                height: 20,
+                                width: 120,
+                                color: Colors.black12,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                error: (e, st) => Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 30,
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .withValues(alpha: 0.3),
+                          child: Icon(
+                            Icons.category,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 28,
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
@@ -96,7 +218,7 @@ class TransactionDetailScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                isIncome ? ref.tr(context, 'income') : ref.tr(context, 'expense'),
+                                ref.tr(context, 'details_title'),
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   color: Colors.grey[600],
                                 ),
@@ -107,7 +229,6 @@ class TransactionDetailScreen extends ConsumerWidget {
                                   'IDR',
                                 ),
                                 style: theme.textTheme.headlineSmall?.copyWith(
-                                  color: color,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -117,62 +238,10 @@ class TransactionDetailScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
-                );
-              },
-              loading: () => Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 30,
-                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                        child: Icon(Icons.category, color: Theme.of(context).colorScheme.primary, size: 28),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(height: 16, width: 80, color: Colors.black12),
-                            Container(height: 20, width: 120, color: Colors.black12),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
-              ),
-              error: (e, st) => Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 30,
-                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                        child: Icon(Icons.category, color: Theme.of(context).colorScheme.primary, size: 28),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(ref.tr(context, 'details_title'),
-                                style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey[600])),
-                            Text(
-                              CurrencyFormatter.format(transaction.amount.abs(), 'IDR'),
-                              style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }),
+              );
+            },
+          ),
 
           const SizedBox(height: 16),
 
@@ -223,7 +292,8 @@ class TransactionDetailScreen extends ConsumerWidget {
                             children: [
                               _buildDetailRow(
                                 ref.tr(context, 'category_label'),
-                                category?.name ?? ref.tr(context, 'uncategorized'),
+                                category?.name ??
+                                    ref.tr(context, 'uncategorized'),
                                 _getCategoryIcon(category?.iconCodePoint),
                               ),
                               const Divider(),
@@ -446,12 +516,12 @@ class TransactionDetailScreen extends ConsumerWidget {
       final repo = ref.read(transactionRepositoryProvider);
       await repo.deleteTransaction(transactionId, userId);
 
-  // Invalidate related providers to refresh data
-  refreshTransactionProviders(ref); // bumps all transaction lists
-  // Family providers require params; rely on refresh trigger instead of raw invalidation
+      // Invalidate related providers to refresh data
+      refreshTransactionProviders(ref); // bumps all transaction lists
+      // Family providers require params; rely on refresh trigger instead of raw invalidation
 
-  // Also refresh wallet providers to update balances
-  refreshWalletProviders(ref);
+      // Also refresh wallet providers to update balances
+      refreshWalletProviders(ref);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -466,7 +536,11 @@ class TransactionDetailScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(ref.tr(context, 'error_deleting_transaction').replaceAll('{error}', '$e')),
+            content: Text(
+              ref
+                  .tr(context, 'error_deleting_transaction')
+                  .replaceAll('{error}', '$e'),
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -493,7 +567,11 @@ class TransactionDetailScreen extends ConsumerWidget {
     return '${date.day} $monthName ${date.year}';
   }
 
-  String _formatDateTime(BuildContext context, WidgetRef ref, DateTime dateTime) {
+  String _formatDateTime(
+    BuildContext context,
+    WidgetRef ref,
+    DateTime dateTime,
+  ) {
     final monthKey = [
       'month_january',
       'month_february',
@@ -515,10 +593,7 @@ class TransactionDetailScreen extends ConsumerWidget {
   }
 
   IconData _getCategoryIcon(int? iconCodePoint) {
-    if (iconCodePoint != null) {
-      return IconData(iconCodePoint, fontFamily: 'MaterialIcons');
-    }
-    return Icons.category;
+    return CategoryIconHelper.getIconFromCodePoint(iconCodePoint);
   }
 
   IconData _getWalletIcon(String? icon) {

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../models/category.dart';
 import '../../category/theme/category_theme.dart';
+import '../../../utils/category_icon_helper.dart';
 import '../../../core/localization/app_localizations.dart';
 
 class CategorySelectorSheet extends StatefulWidget {
@@ -65,7 +66,7 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet>
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          
+
           // Header
           Padding(
             padding: const EdgeInsets.all(12),
@@ -78,18 +79,24 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet>
               ),
             ),
           ),
-          
+
           // Tab Bar
           Consumer(
             builder: (context, ref, _) => TabBar(
               controller: _tabController,
               tabs: [
-                Tab(icon: const Icon(Icons.trending_down), text: ref.tr(context, 'expense')),
-                Tab(icon: const Icon(Icons.trending_up), text: ref.tr(context, 'income')),
+                Tab(
+                  icon: const Icon(Icons.trending_down),
+                  text: ref.tr(context, 'expense'),
+                ),
+                Tab(
+                  icon: const Icon(Icons.trending_up),
+                  text: ref.tr(context, 'income'),
+                ),
               ],
             ),
           ),
-          
+
           // Tab Bar View
           Expanded(
             child: TabBarView(
@@ -105,7 +112,10 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet>
     );
   }
 
-  Widget _buildCategoryList(List<Category> categories, CategoryType categoryType) {
+  Widget _buildCategoryList(
+    List<Category> categories,
+    CategoryType categoryType,
+  ) {
     if (categories.isEmpty) {
       // Empty state: show the inline "Add New Category" action as a list item
       return ListView(
@@ -117,9 +127,9 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet>
             child: Consumer(
               builder: (context, ref, _) => Text(
                 ref.tr(context, 'no_categories_yet_create_one'),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[600],
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
               ),
             ),
           ),
@@ -143,11 +153,9 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet>
 
     for (int i = 0; i < parentCategories.length; i++) {
       final parent = parentCategories[i];
-      
+
       // Add parent category
-      hierarchicalItems.add(
-        _buildCategoryItem(parent, isParent: true),
-      );
+      hierarchicalItems.add(_buildCategoryItem(parent, isParent: true));
 
       // Add children of this parent
       final children = childCategories
@@ -157,11 +165,7 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet>
         final child = children[j];
         final isLastChild = j == children.length - 1;
         hierarchicalItems.add(
-          _buildCategoryItem(
-            child, 
-            isChild: true, 
-            isLastChild: isLastChild,
-          ),
+          _buildCategoryItem(child, isChild: true, isLastChild: isLastChild),
         );
       }
     }
@@ -172,9 +176,7 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet>
         .where((child) => !parentIds.contains(child.parentId))
         .toList();
     for (final orphan in orphanedChildren) {
-      hierarchicalItems.add(
-        _buildCategoryItem(orphan, isOrphan: true),
-      );
+      hierarchicalItems.add(_buildCategoryItem(orphan, isOrphan: true));
     }
 
     return ListView(
@@ -186,26 +188,19 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet>
   Widget _buildAddNewCategoryItem(CategoryType categoryType) {
     final theme = Theme.of(context);
     final isExpense = categoryType == CategoryType.expense;
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 4),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: theme.colorScheme.primary,
-          width: 1.5,
-        ),
+        side: BorderSide(color: theme.colorScheme.primary, width: 1.5),
       ),
       child: ListTile(
         leading: CircleAvatar(
           radius: 16,
           backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-          child: Icon(
-            Icons.add,
-            color: theme.colorScheme.primary,
-            size: 16,
-          ),
+          child: Icon(Icons.add, color: theme.colorScheme.primary, size: 16),
         ),
         title: Consumer(
           builder: (context, ref, _) => Text(
@@ -243,10 +238,7 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet>
             router.push('/categories/manage');
           });
         },
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 2,
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       ),
     );
   }
@@ -259,17 +251,14 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet>
     bool isLastChild = false,
   }) {
     final theme = Theme.of(context);
-    
+
     // Get icon and color
-    IconData icon = category.iconCodePoint != null
-        ? IconData(
-            category.iconCodePoint!,
-            fontFamily: 'MaterialIcons',
-          )
-        : Icons.category;
-    
-  // Standardized color by type
-  Color color = CategoryTheme.forType(category.type);
+    IconData icon = CategoryIconHelper.getIconFromCodePoint(
+      category.iconCodePoint,
+    );
+
+    // Standardized color by type
+    Color color = CategoryTheme.forType(category.type);
 
     // Different styling based on hierarchy level
     Widget leadingWidget;
@@ -343,7 +332,7 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet>
             fontWeight: isParent ? FontWeight.w600 : FontWeight.normal,
           ),
         ),
-        subtitle: isOrphan 
+        subtitle: isOrphan
             ? Consumer(
                 builder: (context, ref, _) => Text(
                   ref.tr(context, 'missing_parent_category'),
@@ -354,16 +343,16 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet>
                 ),
               )
             : isParent
-                ? Text(
-                    category.type.name.toUpperCase(),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: category.type == CategoryType.expense 
-                          ? CategoryTheme.expense 
-                          : CategoryTheme.income,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  )
-                : null,
+            ? Text(
+                category.type.name.toUpperCase(),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: category.type == CategoryType.expense
+                      ? CategoryTheme.expense
+                      : CategoryTheme.income,
+                  fontWeight: FontWeight.bold,
+                ),
+              )
+            : null,
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
         onTap: () => widget.onCategorySelected(category),
         contentPadding: EdgeInsets.symmetric(

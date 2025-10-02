@@ -5,6 +5,7 @@ import '../../../models/category.dart';
 import '../providers/category_providers.dart';
 import '../widgets/category_form_dialog.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../utils/category_icon_helper.dart';
 
 class CategorySelectionScreen extends ConsumerStatefulWidget {
   final String userId;
@@ -231,9 +232,9 @@ class CategoryListTab extends ConsumerWidget {
     final isSelected = selectedCategory?.id == category.id;
 
     // Get icon from category model or use default
-    IconData icon = category.iconCodePoint != null
-        ? IconData(category.iconCodePoint!, fontFamily: 'MaterialIcons')
-        : Icons.category;
+    IconData icon = CategoryIconHelper.getIconFromCodePoint(
+      category.iconCodePoint,
+    );
 
     // Use standardized color by type
     final Color color = categoryType == CategoryType.expense
