@@ -7,10 +7,12 @@ import '../../../core/logging/logger.dart';
 import '../../../models/ledger_entry.dart';
 
 // Provider untuk SupabaseTransactionService
-final supabaseTransactionServiceProvider = Provider<SupabaseTransactionService>((ref) {
-  final supabase = ref.watch(supabaseProvider);
-  return SupabaseTransactionService(supabase);
-});
+final supabaseTransactionServiceProvider = Provider<SupabaseTransactionService>(
+  (ref) {
+    final supabase = ref.watch(supabaseProvider);
+    return SupabaseTransactionService(supabase);
+  },
+);
 
 class SupabaseTransactionService {
   final SupabaseClient _supabase;
@@ -58,6 +60,8 @@ class SupabaseTransactionService {
     String? walletId,
     DateTime? startDate,
     DateTime? endDate,
+    int? limit,
+    int? offset,
   }) async {
     try {
       var query = _supabase
@@ -73,7 +77,15 @@ class SupabaseTransactionService {
         query = query.lte('date', endDate.toIso8601String().split('T')[0]);
       }
 
-      final response = await query.order('date', ascending: false);
+      // Apply pagination and ordering
+      var finalQuery = query.order('date', ascending: false);
+
+      if (limit != null) finalQuery = finalQuery.limit(limit);
+      if (offset != null) {
+        finalQuery = finalQuery.range(offset, offset + (limit ?? 50) - 1);
+      }
+
+      final response = await finalQuery;
       if (response.isEmpty) return [];
       return (response as List)
           .map((item) => LedgerEntry.fromJson(item as Map<String, dynamic>))
@@ -85,7 +97,10 @@ class SupabaseTransactionService {
   }
 
   // Ambil transaction by ID dari server
-  Future<Transaction?> getTransaction(String transactionId, String userId) async {
+  Future<Transaction?> getTransaction(
+    String transactionId,
+    String userId,
+  ) async {
     try {
       final response = await _supabase
           .from('transactions')
@@ -149,7 +164,9 @@ class SupabaseTransactionService {
       if (request.categoryId != null) data['category_id'] = request.categoryId;
       if (request.amount != null) data['amount'] = request.amount;
       if (request.notes != null) data['notes'] = request.notes;
-      if (request.date != null) data['date'] = request.date!.toIso8601String().split('T')[0];
+      if (request.date != null) {
+        data['date'] = request.date!.toIso8601String().split('T')[0];
+      }
 
       if (data.isEmpty) {
         throw const ValidationFailure('No data to update');
@@ -190,10 +207,10 @@ class SupabaseTransactionService {
   // Recalculate a single wallet balance using server-side function
   Future<void> recalcWalletBalance(String walletId, String userId) async {
     try {
-      await _supabase.rpc('recalculate_wallet_balance', params: {
-        'p_wallet_id': walletId,
-        'p_user_id': userId,
-      });
+      await _supabase.rpc(
+        'recalculate_wallet_balance',
+        params: {'p_wallet_id': walletId, 'p_user_id': userId},
+      );
     } catch (e, st) {
       AppLogger.e('recalc wallet balance failed', error: e, stackTrace: st);
       throw mapException(e, st);
@@ -215,7 +232,7 @@ class SupabaseTransactionService {
       'date': data['date'],
       'created_at': data['created_at'],
       'updated_at': data['updated_at'],
-  // Offline flags removed
+      // Offline flags removed
     };
   }
 
@@ -224,5 +241,4 @@ class SupabaseTransactionService {
     if (value is num) return value.toDouble();
     return double.tryParse(value.toString()) ?? 0;
   }
-
 }

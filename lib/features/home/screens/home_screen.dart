@@ -21,71 +21,80 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header
-              Builder(
-                builder: (context) {
-                  String greetingForLocale(DateTime now, String lang) {
-                    final hour = now.hour;
-                    final isMorning = hour >= 5 && hour <= 10;
-                    final isNoon = hour >= 11 && hour <= 14;
-                    final isAfternoon = hour >= 15 && hour <= 17;
-                    if (isMorning) return ref.tr(context, 'greeting_morning');
-                    if (isNoon) return ref.tr(context, 'greeting_afternoon');
-                    if (isAfternoon) return ref.tr(context, 'greeting_evening');
-                    return ref.tr(context, 'greeting_night');
-                  }
+              Padding(
+                padding: const EdgeInsets.fromLTRB(0, 16, 0, 0),
+                child: Builder(
+                  builder: (context) {
+                    String greetingForLocale(DateTime now, String lang) {
+                      final hour = now.hour;
+                      final isMorning = hour >= 5 && hour <= 10;
+                      final isNoon = hour >= 11 && hour <= 14;
+                      final isAfternoon = hour >= 15 && hour <= 17;
+                      if (isMorning) return ref.tr(context, 'greeting_morning');
+                      if (isNoon) return ref.tr(context, 'greeting_afternoon');
+                      if (isAfternoon) {
+                        return ref.tr(context, 'greeting_evening');
+                      }
+                      return ref.tr(context, 'greeting_night');
+                    }
 
-                  final lang = Localizations.localeOf(context).languageCode;
-                  final greeting = greetingForLocale(DateTime.now(), lang);
-                  // Try to get a nicer display name from user metadata if available
-                  final meta = currentUser?.userMetadata ?? {};
-                  final name =
-                      (meta['full_name'] ?? meta['name'] ?? meta['username'])
-                          ?.toString();
-                  final fallbackUser = ref.tr(context, 'user_fallback');
-                  final displayName = (name != null && name.trim().isNotEmpty)
-                      ? name.trim()
-                      : (currentUser?.email?.split('@').first ?? fallbackUser);
+                    final lang = Localizations.localeOf(context).languageCode;
+                    final greeting = greetingForLocale(DateTime.now(), lang);
+                    // Try to get a nicer display name from user metadata if available
+                    final meta = currentUser?.userMetadata ?? {};
+                    final name =
+                        (meta['full_name'] ?? meta['name'] ?? meta['username'])
+                            ?.toString();
+                    final fallbackUser = ref.tr(context, 'user_fallback');
+                    final displayName = (name != null && name.trim().isNotEmpty)
+                        ? name.trim()
+                        : (currentUser?.email?.split('@').first ??
+                              fallbackUser);
 
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            UserAvatarWidget(
-                              user: currentUser,
-                              radius: 24,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    greeting,
-                                    style: Theme.of(context).textTheme.titleMedium
-                                        ?.copyWith(color: Colors.grey[600]),
-                                  ),
-                                  Text(
-                                    displayName,
-                                    style: Theme.of(context).textTheme.headlineSmall
-                                        ?.copyWith(fontWeight: FontWeight.bold),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              UserAvatarWidget(user: currentUser, radius: 24),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      greeting,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(color: Colors.grey[600]),
+                                    ),
+                                    Text(
+                                      displayName,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  );
-                },
+                      ],
+                    );
+                  },
+                ),
               ),
               const SizedBox(height: 16),
 
@@ -296,6 +305,4 @@ class HomeScreen extends ConsumerWidget {
       ),
     );
   }
-
 }
- 

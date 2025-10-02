@@ -1,20 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'add_transaction_screen.dart';
-import 'transaction_detail_screen.dart';
-import '../../transfer/screens/transfer_detail_screen.dart';
 import '../providers/transaction_providers.dart';
 import '../../../models/ledger_entry.dart';
 import '../../wallet/providers/wallet_providers.dart';
 import '../../category/providers/category_providers.dart';
 import '../../../models/category.dart';
 import '../../../services/supabase_service.dart';
-import '../../../utils/currency_formatter.dart';
 import '../../../models/wallet.dart';
-import '../../../core/state/balance_visibility_provider.dart';
 import '../../../core/localization/app_localizations.dart';
-import '../widgets/ledger_transfer_card.dart';
-import '../widgets/ledger_transaction_card.dart';
+import '../widgets/transaction_balance_section.dart';
+import '../widgets/transaction_search_filter.dart';
+import '../widgets/transaction_list_widget.dart';
 
 class TransactionScreen extends ConsumerStatefulWidget {
   const TransactionScreen({super.key});
@@ -25,13 +22,47 @@ class TransactionScreen extends ConsumerStatefulWidget {
 
 class _TransactionScreenState extends ConsumerState<TransactionScreen> {
   String? _selectedWalletId; // null means "All Wallets"
+  String? _selectedCategoryId; // null means "All Categories"
+  DateTime? _startDate;
+  DateTime? _endDate;
   String _searchQuery = '';
+  bool _showFilters = false;
+  bool _isLoadingMore = false;
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      // Load more when user scrolls close to bottom
+      _loadMoreData();
+    }
+  }
+
+  void _loadMoreData() {
+    if (_isLoadingMore) return;
+    setState(() {
+      _isLoadingMore = true;
+    });
+    // Trigger provider refresh for more data
+    Future.delayed(const Duration(milliseconds: 100), () {
+      setState(() {
+        _isLoadingMore = false;
+      });
+    });
   }
 
   @override
@@ -53,8 +84,8 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
       ledgerEntriesProvider((
         userId: user.id,
         walletId: _selectedWalletId,
-        startDate: null,
-        endDate: null,
+        startDate: _startDate,
+        endDate: _endDate,
       )),
     );
 
@@ -65,38 +96,69 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
         title: Text(ref.tr(context, 'transactions_title')),
         automaticallyImplyLeading: false,
       ),
+      resizeToAvoidBottomInset: false, // Mencegah overflow saat keyboard muncul
       body: Column(
         children: [
-          // Compact top summary (balance + wallet selector side by side)
-          _buildTopSummarySection(walletsAsync, theme),
-
-          // Search Section
-          Padding(
-            padding: const EdgeInsets.all(4),
-            child: _buildSearchSection(theme),
+          // Balance Section - Fixed at top
+          TransactionBalanceSection(
+            walletsAsync: walletsAsync,
+            selectedWalletId: _selectedWalletId,
+            onWalletChanged: (val) => setState(() => _selectedWalletId = val),
           ),
 
-          // Transaction List
+          // Search and Filter Section - Fixed below balance
+          TransactionSearchFilter(
+            searchController: _searchController,
+            searchQuery: _searchQuery,
+            showFilters: _showFilters,
+            selectedCategoryId: _selectedCategoryId,
+            startDate: _startDate,
+            endDate: _endDate,
+            categoriesAsync: categoriesAsync,
+            onSearchChanged: (value) => setState(() => _searchQuery = value),
+            onToggleFilters: () => setState(() => _showFilters = !_showFilters),
+            onCategoryChanged: (categoryId) =>
+                setState(() => _selectedCategoryId = categoryId),
+            onStartDateChanged: (date) => setState(() => _startDate = date),
+            onEndDateChanged: (date) => setState(() => _endDate = date),
+            onClearSearch: () {
+              _searchController.clear();
+              setState(() => _searchQuery = '');
+            },
+            onResetFilters: () {
+              setState(() {
+                _selectedCategoryId = null;
+                _startDate = null;
+                _endDate = null;
+              });
+            },
+          ),
+
+          // Transaction List - Scrollable
           Expanded(
             child: Padding(
-              // Slightly reduce horizontal padding to widen cards similar to Home
-              padding: const EdgeInsets.symmetric(horizontal: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               child: ledgerAsync.when(
                 data: (entries) {
                   return allWalletsAsync.when(
                     data: (allWallets) {
                       return categoriesAsync.when(
                         data: (categories) {
-                          final filtered = _filterLedgerBySearch(entries);
+                          final filtered = _filterLedgerBySearch(
+                            entries,
+                            categories,
+                            allWallets,
+                          );
                           if (filtered.isEmpty) {
                             return _buildEmptyState(context, theme);
                           }
-                          return _buildLedgerList(
-                            filtered,
-                            theme,
-                            categories,
-                            allWallets,
-                            user.id, // Tambahkan userId
+                          return TransactionListWidget(
+                            entries: filtered,
+                            categories: categories,
+                            wallets: allWallets,
+                            userId: user.id,
+                            scrollController: _scrollController,
+                            isLoadingMore: _isLoadingMore,
                           );
                         },
                         loading: () =>
@@ -141,273 +203,79 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     );
   }
 
-  Widget _buildBalanceSection(
-    AsyncValue<List<Wallet>> walletsAsync,
-    ThemeData theme,
+  List<LedgerEntry> _filterLedgerBySearch(
+    List<LedgerEntry> entries,
+    List<Category> categories,
+    List<Wallet> wallets,
   ) {
-    return walletsAsync.when(
-      data: (wallets) {
-        double totalBalance = 0;
-        Wallet? selected;
-        if (_selectedWalletId == null) {
-          totalBalance = wallets.fold(0, (sum, wallet) => sum + wallet.balance);
-        } else {
-          selected = wallets.firstWhere(
-            (w) => w.id == _selectedWalletId,
-            orElse: () => wallets.isNotEmpty
-                ? wallets.first
-                : Wallet(
-                    id: '',
-                    name: 'N/A',
-                    balance: 0,
-                    userId: '',
-                    createdAt: DateTime.now(),
-                    updatedAt: DateTime.now(),
-                  ),
-          );
-          totalBalance = selected.balance;
-        }
+    var filtered = entries;
 
-        final isVisible = ref.watch(balanceVisibilityProvider);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  ref.tr(context, 'total_balance'),
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                InkWell(
-                  borderRadius: BorderRadius.circular(20),
-                  onTap: () {
-                    final current = ref.read(balanceVisibilityProvider);
-                    ref.read(balanceVisibilityProvider.notifier).state =
-                        !current;
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(3),
-                    child: Icon(
-                      isVisible ? Icons.visibility : Icons.visibility_off,
-                      size: 18,
-                      color: Colors.white70,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            // Responsive amount that scales down if too long
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                isVisible
-                    ? CurrencyFormatter.format(totalBalance, 'IDR')
-                    : '••••••••',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _selectedWalletId == null
-                  ? ref.tr(context, 'wallet_all_wallets')
-                  : (selected?.name ?? ''),
-              style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+    // Filter by category first if selected
+    if (_selectedCategoryId != null) {
+      filtered = filtered
+          .where((e) => e.categoryId == _selectedCategoryId)
+          .toList();
+    }
+
+    // Filter by date range if selected
+    if (_startDate != null && _endDate != null) {
+      filtered = filtered.where((e) {
+        final entryDate = e.date;
+        // Memastikan date comparison menggunakan hari penuh
+        final startDateMidnight = DateTime(
+          _startDate!.year,
+          _startDate!.month,
+          _startDate!.day,
         );
-      },
-      loading: () => SizedBox(
-        height: 80,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 110,
-              height: 12,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(6),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              width: 160,
-              height: 26,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ],
-        ),
-      ),
-      error: (error, stack) => Text(
-        ref.tr(context, 'error_loading_balance'),
-        style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
-      ),
-    );
-  }
+        final endDateMidnight = DateTime(
+          _endDate!.year,
+          _endDate!.month,
+          _endDate!.day,
+          23,
+          59,
+          59,
+          999,
+        );
 
-  // _buildWalletSelector removed (replaced by compact _buildTopSummarySection)
+        return entryDate.isAfter(
+              startDateMidnight.subtract(const Duration(seconds: 1)),
+            ) &&
+            entryDate.isBefore(endDateMidnight.add(const Duration(seconds: 1)));
+      }).toList();
+    }
 
-  Widget _buildWalletDropdown(
-    AsyncValue<List<Wallet>> walletsAsync,
-    ThemeData theme,
-  ) {
-    return walletsAsync.when(
-      data: (wallets) => DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white24, width: 1),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String?>(
-              value: _selectedWalletId,
-              isExpanded: true,
-              icon: const Icon(
-                Icons.keyboard_arrow_down,
-                color: Colors.white,
-                size: 18,
-              ),
-              dropdownColor: theme.primaryColor,
-              style: theme.textTheme.bodySmall?.copyWith(color: Colors.white),
-              onChanged: (val) => setState(() => _selectedWalletId = val),
-              items: [
-                DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text(
-                    ref.tr(context, 'wallet_all_short'),
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ),
-                ...wallets.map(
-                  (w) => DropdownMenuItem<String?>(
-                    value: w.id,
-                    child: Text(
-                      w.name,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      loading: () => const SizedBox(
-        width: 120,
-        height: 40,
-        child: Center(
-          child: SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: Colors.white,
-            ),
-          ),
-        ),
-      ),
-      error: (e, st) =>
-          const Icon(Icons.error_outline, color: Colors.white70, size: 20),
-    );
-  }
+    // Then filter by search query
+    if (_searchQuery.isEmpty) return filtered;
 
-  Widget _buildTopSummarySection(
-    AsyncValue<List<Wallet>> walletsAsync,
-    ThemeData theme,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              theme.colorScheme.primary,
-              theme.colorScheme.primary.withValues(alpha: 0.85),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: theme.colorScheme.primary.withValues(alpha: 0.25),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: _buildBalanceSection(walletsAsync, theme)),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 90,
-              child: _buildWalletDropdown(walletsAsync, theme),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSearchSection(ThemeData theme) {
-    return TextField(
-      controller: _searchController,
-      onChanged: (value) {
-        setState(() {
-          _searchQuery = value;
-        });
-      },
-      decoration: InputDecoration(
-        hintText: ref.tr(context, 'search_transactions'),
-        prefixIcon: Icon(Icons.search),
-        suffixIcon: _searchQuery.isNotEmpty
-            ? IconButton(
-                icon: Icon(Icons.clear),
-                onPressed: () {
-                  _searchController.clear();
-                  setState(() {
-                    _searchQuery = '';
-                  });
-                },
-              )
-            : null,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
-      ),
-    );
-  }
-
-  List<LedgerEntry> _filterLedgerBySearch(List<LedgerEntry> entries) {
-    if (_searchQuery.isEmpty) return entries;
     final q = _searchQuery.toLowerCase();
-    return entries.where((e) {
+
+    // Buat map untuk akses cepat kategori dan wallet
+    final categoryMap = {for (var c in categories) c.id: c};
+    final walletMap = {for (var w in wallets) w.id: w};
+
+    return filtered.where((e) {
+      // Pencarian dalam notes
       final notes = e.notes?.toLowerCase() ?? '';
+
+      // Pencarian dalam amount (exact match dan sebagian)
       final amount = e.amount.toString();
-      return notes.contains(q) || amount.contains(q);
+      final formattedAmount = e.amount.abs().toStringAsFixed(
+        0,
+      ); // Tanpa desimal untuk pencarian yang lebih mudah
+
+      // Pencarian dalam nama kategori
+      final category = e.categoryId != null ? categoryMap[e.categoryId] : null;
+      final categoryName = category?.name.toLowerCase() ?? '';
+
+      // Pencarian dalam nama wallet
+      final wallet = walletMap[e.walletId];
+      final walletName = wallet?.name.toLowerCase() ?? '';
+
+      return notes.contains(q) ||
+          amount.contains(q) ||
+          formattedAmount.contains(q) ||
+          categoryName.contains(q) ||
+          walletName.contains(q);
     }).toList();
   }
 
@@ -475,7 +343,6 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
               if (result == true) {
                 final user = ref.read(currentUserProvider).value;
                 if (user != null) {
-                  // filteredTransactionsProvider is a family; rely on refresh triggers
                   refreshWalletProviders(ref);
                 }
               }
@@ -487,195 +354,4 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
       ),
     );
   }
-
-  Widget _buildLedgerList(
-    List<LedgerEntry> entries,
-    ThemeData theme,
-    List<Category> categories,
-    List<Wallet> wallets,
-    String userId, // Tambahkan parameter userId
-  ) {
-    final categoryMap = {for (final c in categories) c.id: c};
-    final walletMap = {for (final w in wallets) w.id: w};
-
-    // Build flattened list with date headers
-    final items = <_TxListItem>[];
-    final processedTransferIds = <String>{};
-    DateTime? currentDate;
-    for (final e in entries) {
-      final txDate = DateTime(e.date.year, e.date.month, e.date.day);
-      if (currentDate == null || !_isSameDay(currentDate, txDate)) {
-        currentDate = txDate;
-        items.add(_TxListItem.header(txDate));
-      }
-      // Group transfer_in/out into a single visual item per transferId
-      if ((e.kind == 'transfer_in' || e.kind == 'transfer_out') &&
-          e.transferId != null) {
-        if (processedTransferIds.contains(e.transferId)) {
-          // already added a card for this transfer
-          continue;
-        }
-        // Try to find counterpart in current list (may be missing if filtered by wallet)
-        final counterpart = entries.firstWhere(
-          (x) => x.transferId == e.transferId && x.entryId != e.entryId,
-          orElse: () => e,
-        );
-        // Mark as processed
-        processedTransferIds.add(e.transferId!);
-        // Create a synthetic entry to render a single card; we reuse the existing entry but
-        // mark via a wrapper item type to customize UI later in the builder.
-        items.add(
-          _TxListItem.transfer(e, counterpart != e ? counterpart : null),
-        );
-      } else {
-        items.add(_TxListItem.entry(e));
-      }
-    }
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        // Refresh all transaction-related providers
-        final user = ref.read(currentUserProvider).value;
-        if (user != null) {
-          // filteredTransactionsProvider is a family; rely on refresh trigger and specific invalidations
-          ref.invalidate(transactionsProvider(user.id));
-          refreshWalletProviders(ref);
-          refreshCategoryProviders(ref);
-        }
-      },
-      child: ListView.builder(
-        itemCount: items.length,
-        itemBuilder: (context, index) {
-          final item = items[index];
-          if (item.isHeader) {
-            final label = _formatDate(item.date!);
-            return Padding(
-              padding: const EdgeInsets.all(2),
-              child: Text(
-                label,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.primary,
-                  letterSpacing: 0.3,
-                ),
-              ),
-            );
-          }
-          // Handle unified transfer card separately
-          if (item.isTransfer) {
-            final a = item.entry!;
-            final b = item.counterpart;
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 1),
-              child: LedgerTransferCard(
-                a: a,
-                counterpart: b,
-                walletMap: walletMap,
-                theme: theme,
-                userId: userId, // Gunakan parameter userId
-                onTap: (id) {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          TransferDetailScreen(transferId: id),
-                    ),
-                  );
-                },
-                currency: 'IDR',
-              ),
-            );
-          }
-          final entry = item.entry!;
-          final category = entry.categoryId != null
-              ? categoryMap[entry.categoryId]
-              : null;
-          final wallet = walletMap[entry.walletId];
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 1),
-            child: LedgerTransactionCard(
-              entry: entry,
-              category: category,
-              wallet: wallet,
-              theme: theme,
-              onTap: () {
-                if (entry.kind == 'transaction') {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          TransactionDetailScreen(transactionId: entry.entryId),
-                    ),
-                  );
-                }
-              },
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    if (_isSameDay(date, now)) {
-      return ref.tr(context, 'day_today');
-    }
-    final yesterday = DateTime(now.year, now.month, now.day - 1);
-    if (_isSameDay(date, yesterday)) {
-      return ref.tr(context, 'day_yesterday');
-    }
-
-    final weekdayKeys = [
-      'weekday_monday',
-      'weekday_tuesday',
-      'weekday_wednesday',
-      'weekday_thursday',
-      'weekday_friday',
-      'weekday_saturday',
-      'weekday_sunday',
-    ];
-    final monthKeys = [
-      'month_january',
-      'month_february',
-      'month_march',
-      'month_april',
-      'month_may',
-      'month_june',
-      'month_july',
-      'month_august',
-      'month_september',
-      'month_october',
-      'month_november',
-      'month_december',
-    ];
-    final weekdayName = ref.tr(context, weekdayKeys[date.weekday - 1]);
-    final monthName = ref.tr(context, monthKeys[date.month - 1]);
-    return '$weekdayName, ${date.day} $monthName ${date.year}';
-  }
-
-  bool _isSameDay(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day;
-
-  // _titleForEntry removed; card uses category name or generic
-}
-
-class _TxListItem {
-  final bool isHeader;
-  final DateTime? date;
-  final LedgerEntry? entry;
-  final bool isTransfer;
-  final LedgerEntry? counterpart;
-
-  _TxListItem._(
-    this.isHeader,
-    this.date,
-    this.entry,
-    this.isTransfer,
-    this.counterpart,
-  );
-  factory _TxListItem.header(DateTime date) =>
-      _TxListItem._(true, date, null, false, null);
-  factory _TxListItem.entry(LedgerEntry e) =>
-      _TxListItem._(false, null, e, false, null);
-  factory _TxListItem.transfer(LedgerEntry a, LedgerEntry? b) =>
-      _TxListItem._(false, null, a, true, b);
 }
