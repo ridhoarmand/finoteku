@@ -10,17 +10,15 @@
 - 📊 **Transaction Management** - Catat income dan expense dengan mudah
 - 🏷️ **Smart Categorization** - Sistem kategori hierarkis untuk pengorganisasian yang lebih baik
 - 🔄 **Transfer Between Wallets** - Transfer antar wallet dengan fee calculation
-- 📸 **Multi-Image Receipts** - Attach multiple images per transaction
 - 📱 **Cross-Platform** - Support untuk Android, iOS, dan web
 - 🎨 **Modern UI** - Material Design 3 dengan light/dark theme
-- ⚡ **Real-time Updates** - Auto-sync data dengan real-time balance tracking
 
 ## 🚀 Tech Stack
 
 - **Framework**: Flutter dengan Dart 3.8.0+
 - **State Management**: Riverpod
 - **UI/UX**: Material Design 3 + Flex Color Scheme
-- **Backend**: Supabase (PostgreSQL + Real-time + Auth + Storage)
+- **Backend**: Supabase (PostgreSQL + Auth + Storage)
 - **Authentication**: Supabase Auth
 
 ## 📋 Quick Start
@@ -60,11 +58,12 @@ finoteku/
 │   ├── storage.sql         # Storage configuration
 │   └── README.md           # Setup instructions
 ├── lib/                    # Flutter source code
+│   ├── core/               # Core utilities and constants
 │   ├── features/           # Feature modules
-│   ├── theme/              # Theme configuration
-│   ├── services/           # External services
 │   ├── models/             # Data models
 │   ├── routes/             # App routing
+│   ├── services/           # External services
+│   ├── theme/              # Theme configuration
 │   ├── utils/              # Utility functions
 │   └── widgets/            # Reusable UI components
 └── assets/                 # Static assets
@@ -72,17 +71,6 @@ finoteku/
     ├── ewallets/           # E-wallet icons
     └── onboardings/        # Onboarding images
 ```
-
-## 🎯 Current Status
-
-**Development Status: Active** ✅
-- ✅ Core foundation implemented
-- ✅ Multi-wallet management
-- ✅ Hierarchical category system
-- ✅ Transaction management
-- ✅ Real-time sync with Supabase
-- ✅ Material Design 3 theming
-- 🔄 Ongoing improvements and refinements
 
 ## 🤝 Contributing
 

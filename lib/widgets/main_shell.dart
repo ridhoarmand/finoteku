@@ -16,7 +16,7 @@ class MainShell extends ConsumerWidget {
         return 0;
       case '/transaction':
         return 1;
-      case '/chart':
+      case '/reports':
         return 2;
       case '/account':
         return 3;
@@ -35,35 +35,36 @@ class MainShell extends ConsumerWidget {
     }
 
     // Jika di Home tab, tampilkan dialog konfirmasi keluar
-  return await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-    title: Text(ref.tr(context, 'exit_app_title')),
-    content: Text(ref.tr(context, 'exit_app_message')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-      child: Text(ref.tr(context, 'exit_cancel')),
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(ref.tr(context, 'exit_app_title')),
+            content: Text(ref.tr(context, 'exit_app_message')),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text(ref.tr(context, 'exit_cancel')),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text(ref.tr(context, 'exit_confirm')),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-      child: Text(ref.tr(context, 'exit_confirm')),
-          ),
-        ],
-      ),
-    ) ?? false;
+        ) ??
+        false;
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-        
-  final shouldPop = await _onWillPop(context, ref);
+
+        final shouldPop = await _onWillPop(context, ref);
         if (shouldPop && context.mounted) {
           SystemNavigator.pop();
         }
@@ -86,33 +87,33 @@ class MainShell extends ConsumerWidget {
                 context.go('/transaction');
                 break;
               case 2:
-                context.go('/chart');
+                context.go('/reports');
                 break;
               case 3:
                 context.go('/account');
                 break;
             }
           },
-      items: [
+          items: [
             BottomNavigationBarItem(
               icon: Icon(Icons.home_outlined),
               activeIcon: Icon(Icons.home),
-        label: ref.tr(context, 'nav_home'),
+              label: ref.tr(context, 'nav_home'),
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.receipt_long_outlined),
               activeIcon: Icon(Icons.receipt_long),
-        label: ref.tr(context, 'nav_transaction'),
+              label: ref.tr(context, 'nav_transaction'),
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.bar_chart_outlined),
-              activeIcon: Icon(Icons.bar_chart),
-        label: ref.tr(context, 'nav_chart'),
+              icon: Icon(Icons.assessment_outlined),
+              activeIcon: Icon(Icons.assessment),
+              label: ref.tr(context, 'nav_reports'),
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person_outline),
               activeIcon: Icon(Icons.person),
-        label: ref.tr(context, 'nav_account'),
+              label: ref.tr(context, 'nav_account'),
             ),
           ],
         ),

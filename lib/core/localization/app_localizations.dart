@@ -9,7 +9,7 @@ import '../../features/transfer/i18n/strings.dart' as transfer_i18n;
 import '../../features/transaction/i18n/strings.dart' as transaction_i18n;
 import '../../features/home/i18n/strings.dart' as home_i18n;
 import '../../features/account/i18n/strings.dart' as account_i18n;
-import '../../features/chart/i18n/strings.dart' as chart_i18n;
+import '../../features/reports/i18n/strings.dart' as reports_i18n;
 import '../../features/onboarding/i18n/strings.dart' as onboarding_i18n;
 import '../i18n/strings.dart' as core_i18n;
 
@@ -26,7 +26,7 @@ final Map<String, StrMap> _strings = {
     ...transaction_i18n.transactionStringsEn,
     ...home_i18n.homeStringsEn,
     ...account_i18n.accountStringsEn,
-    ...chart_i18n.chartStringsEn,
+    ...reports_i18n.reportStringsEn,
     ...onboarding_i18n.onboardingStringsEn,
   },
   'id': {
@@ -39,7 +39,7 @@ final Map<String, StrMap> _strings = {
     ...transaction_i18n.transactionStringsId,
     ...home_i18n.homeStringsId,
     ...account_i18n.accountStringsId,
-    ...chart_i18n.chartStringsId,
+    ...reports_i18n.reportStringsId,
     ...onboarding_i18n.onboardingStringsId,
   },
 };

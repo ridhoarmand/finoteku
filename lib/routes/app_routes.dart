@@ -8,7 +8,7 @@ import '../features/auth/services/auth_service.dart';
 import '../features/home/screens/home_screen.dart';
 import '../features/notification/screens/notification_screen.dart';
 import '../features/transaction/screens/transaction_screen.dart';
-import '../features/chart/screens/chart_screen.dart';
+import '../features/reports/screens/report_screen.dart';
 import '../features/account/screens/account_screen.dart';
 import '../features/account/screens/edit_profile_screen.dart';
 import '../features/account/screens/change_password_screen.dart';
@@ -113,8 +113,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const TransactionScreen(),
           ),
           GoRoute(
-            path: '/chart',
-            builder: (context, state) => const ChartScreen(),
+            path: '/reports',
+            builder: (context, state) => const ReportScreen(),
           ),
           GoRoute(
             path: '/account',
@@ -210,7 +210,7 @@ class AppRoutes {
   static const String forgotPassword = '/login/forgot-password';
   static const String home = '/home';
   static const String transaction = '/transaction';
-  static const String chart = '/chart';
+  static const String reports = '/reports';
   static const String account = '/account';
   static const String editProfile = '/account/edit-profile';
   static const String changePassword = '/account/change-password';

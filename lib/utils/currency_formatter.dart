@@ -14,7 +14,7 @@ class CurrencyFormatter {
     }
 
     late NumberFormat formatter;
-    
+
     switch (currency) {
       case 'IDR':
         formatter = NumberFormat.currency(
@@ -79,7 +79,7 @@ class CurrencyFormatter {
   static String formatSimple(double amount, String currency) {
     final absAmount = amount.abs();
     final sign = amount < 0 ? '-' : '';
-    
+
     if (absAmount >= 1000000000) {
       return '$sign${(absAmount / 1000000000).toStringAsFixed(1)}B $currency';
     } else if (absAmount >= 1000000) {
@@ -88,6 +88,21 @@ class CurrencyFormatter {
       return '$sign${(absAmount / 1000).toStringAsFixed(1)}K $currency';
     } else {
       return '$sign${absAmount.toStringAsFixed(currency == 'IDR' || currency == 'JPY' ? 0 : 2)} $currency';
+    }
+  }
+
+  static String formatCompact(double amount) {
+    final absAmount = amount.abs();
+    final sign = amount < 0 ? '-' : '';
+
+    if (absAmount >= 1000000000) {
+      return '${sign}Rp ${(absAmount / 1000000000).toStringAsFixed(1)}B';
+    } else if (absAmount >= 1000000) {
+      return '${sign}Rp ${(absAmount / 1000000).toStringAsFixed(1)}M';
+    } else if (absAmount >= 1000) {
+      return '${sign}Rp ${(absAmount / 1000).toStringAsFixed(0)}K';
+    } else {
+      return '${sign}Rp ${absAmount.toStringAsFixed(0)}';
     }
   }
 }
