@@ -126,6 +126,7 @@ DO $$ BEGIN
         GRANT EXECUTE ON FUNCTION public.cleanup_user_storage_files(UUID) TO authenticated;
         GRANT EXECUTE ON FUNCTION public.delete_user_account() TO authenticated;
         GRANT EXECUTE ON FUNCTION public.delete_user_account_complete() TO authenticated;
+        GRANT EXECUTE ON FUNCTION public.get_user_data_summary() TO authenticated;
     -- Read-only view for unified ledger
     GRANT SELECT ON TABLE public.ledger_entries TO authenticated;
     END IF;

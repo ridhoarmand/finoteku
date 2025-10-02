@@ -149,6 +149,17 @@ class CategoryService {
       return true;
     } catch (e, st) {
       AppLogger.e('deleteCategory error', error: e, stackTrace: st);
+
+      // Handle specific database errors with user-friendly messages
+      final errorMessage = e.toString().toLowerCase();
+      if (errorMessage.contains(
+        'cannot delete category with existing transactions',
+      )) {
+        throw const ValidationFailure(
+          'Cannot delete category that has transactions. Hide the category instead or move transactions to another category first.',
+        );
+      }
+
       throw mapException(e, st);
     }
   }

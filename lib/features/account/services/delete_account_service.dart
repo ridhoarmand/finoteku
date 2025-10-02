@@ -2,30 +2,36 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../services/supabase_service.dart';
+import '../models/user_data_summary.dart';
 
-/// Service untuk menangani delete account
+/// Service untuk menangani operasi delete account
+/// Focused hanya pada business logic untuk penghapusan akun
 class DeleteAccountService {
   final SupabaseClient _supabase;
 
   DeleteAccountService(this._supabase);
 
   /// Delete user account dan semua data terkait
+  ///
+  /// Memanggil stored procedure di Supabase yang akan:
+  /// - Menghapus semua data user dari database
+  /// - Menghapus file storage yang terkait
+  /// - Sign out user
   Future<void> deleteAccount() async {
+    final userId = SupabaseService.currentUserId;
+    if (userId == null) {
+      throw const DeleteAccountException('User not authenticated');
+    }
+
+    if (kDebugMode) {
+      print('🗑️ Starting account deletion process for user: $userId');
+    }
+
     try {
-      final userId = SupabaseService.currentUserId;
-      if (userId == null) {
-        throw Exception('User not authenticated');
-      }
-
-      if (kDebugMode) {
-        print('🗑️ Starting account deletion process for user: $userId');
-      }
-
-  // 1. Panggil function di Supabase untuk menghapus semua data user
-      // Ini akan menghapus data dari database dan storage files
+      // Panggil function di Supabase untuk menghapus semua data user
       await _supabase.rpc('delete_user_account_complete');
 
-      // 3. Sign out user after successful deletion
+      // Sign out user after successful deletion
       await _supabase.auth.signOut();
 
       if (kDebugMode) {
@@ -35,21 +41,23 @@ class DeleteAccountService {
       if (kDebugMode) {
         print('❌ Error during account deletion: $e');
       }
-      
-      // Provide specific error messages
-      if (e.toString().contains('User not authenticated')) {
-        throw Exception('You must be logged in to delete your account');
-      } else if (e.toString().contains('function does not exist')) {
-        throw Exception('Account deletion feature is not properly configured. Please contact support.');
+
+      // Transform errors into domain-specific exceptions
+      if (e.toString().contains('function does not exist')) {
+        throw const DeleteAccountException(
+          'Account deletion feature is not properly configured. Please contact support.',
+        );
       } else {
-        throw Exception('Failed to delete account: ${e.toString()}');
+        throw DeleteAccountException(
+          'Failed to delete account: ${e.toString()}',
+        );
       }
     }
   }
 
-  // Local cleanup dihapus (tidak ada lagi storage lokal)
-
-  /// Verify user identity sebelum delete (untuk keamanan)
+  /// Verify user identity dengan password sebelum delete (untuk keamanan)
+  ///
+  /// Returns true jika password benar, false jika salah
   Future<bool> verifyUserPassword(String password) async {
     try {
       final user = SupabaseService.currentUser;
@@ -73,152 +81,68 @@ class DeleteAccountService {
   }
 
   /// Get summary of user data yang akan dihapus
+  ///
+  /// Memanggil RPC function di Supabase untuk mendapatkan count data user
   Future<UserDataSummary> getUserDataSummary() async {
     try {
       final userId = SupabaseService.currentUserId;
       if (userId == null) {
-        throw Exception('User not authenticated');
+        throw const DeleteAccountException('User not authenticated');
       }
 
-  // Data lokal dihapus: summary sekarang hanya mengambil 0 (server summary dapat ditambahkan nanti via RPC)
-  return UserDataSummary(walletsCount: 0, categoriesCount: 0, transactionsCount: 0);
+      if (kDebugMode) {
+        print('📊 Fetching user data summary for user: $userId');
+      }
+
+      // Call RPC function untuk mendapatkan summary dari server
+      final response = await _supabase.rpc('get_user_data_summary');
+
+      if (kDebugMode) {
+        print('📊 User data summary response: $response');
+      }
+
+      // Parse response as JSON
+      if (response is Map<String, dynamic>) {
+        return UserDataSummary.fromJson(response);
+      } else {
+        // Handle unexpected response format
+        if (kDebugMode) {
+          print(
+            '⚠️ Unexpected response format from get_user_data_summary: $response',
+          );
+        }
+        return UserDataSummary.empty();
+      }
     } catch (e) {
       if (kDebugMode) {
         print('❌ Error getting user data summary: $e');
       }
-      return UserDataSummary(
-        walletsCount: 0,
-        categoriesCount: 0,
-        transactionsCount: 0,
-      );
+
+      // Transform specific errors
+      if (e.toString().contains('function does not exist')) {
+        throw const DeleteAccountException(
+          'Data summary feature is not properly configured. Please contact support.',
+        );
+      }
+
+      // For other errors, return empty summary instead of throwing
+      return UserDataSummary.empty();
     }
   }
 }
 
-/// Model untuk summary data user
-class UserDataSummary {
-  final int walletsCount;
-  final int categoriesCount;
-  final int transactionsCount;
+/// Exception khusus untuk operasi delete account
+class DeleteAccountException implements Exception {
+  final String message;
 
-  UserDataSummary({
-    required this.walletsCount,
-    required this.categoriesCount,
-    required this.transactionsCount,
-  });
+  const DeleteAccountException(this.message);
 
-  bool get hasData => walletsCount > 0 || categoriesCount > 0 || transactionsCount > 0;
+  @override
+  String toString() => message;
 }
 
 /// Provider untuk DeleteAccountService
 final deleteAccountServiceProvider = Provider<DeleteAccountService>((ref) {
   final supabase = ref.watch(supabaseProvider);
   return DeleteAccountService(supabase);
-});
-
-/// State notifier untuk delete account process
-class DeleteAccountNotifier extends StateNotifier<DeleteAccountState> {
-  final DeleteAccountService _deleteAccountService;
-
-  DeleteAccountNotifier(this._deleteAccountService) : super(DeleteAccountState.initial());
-
-  /// Start delete account process
-  Future<bool> deleteAccount(String password) async {
-    state = state.copyWith(isLoading: true, error: null);
-
-    try {
-      // 1. Verify password first
-      final isPasswordValid = await _deleteAccountService.verifyUserPassword(password);
-      if (!isPasswordValid) {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'Incorrect password. Please try again.',
-        );
-        return false;
-      }
-
-      // 2. Delete account
-      await _deleteAccountService.deleteAccount();
-
-      state = state.copyWith(
-        isLoading: false,
-        isDeleted: true,
-      );
-      return true;
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
-      return false;
-    }
-  }
-
-  /// Get user data summary
-  Future<void> loadUserDataSummary() async {
-    state = state.copyWith(isLoadingSummary: true);
-
-    try {
-      final summary = await _deleteAccountService.getUserDataSummary();
-      state = state.copyWith(
-        isLoadingSummary: false,
-        dataSummary: summary,
-      );
-    } catch (e) {
-      state = state.copyWith(
-        isLoadingSummary: false,
-        error: e.toString(),
-      );
-    }
-  }
-
-  void clearError() {
-    state = state.copyWith(error: null);
-  }
-}
-
-/// State untuk delete account process
-class DeleteAccountState {
-  final bool isLoading;
-  final bool isLoadingSummary;
-  final bool isDeleted;
-  final String? error;
-  final UserDataSummary? dataSummary;
-
-  DeleteAccountState({
-    required this.isLoading,
-    required this.isLoadingSummary,
-    required this.isDeleted,
-    this.error,
-    this.dataSummary,
-  });
-
-  DeleteAccountState.initial()
-      : isLoading = false,
-        isLoadingSummary = false,
-        isDeleted = false,
-        error = null,
-        dataSummary = null;
-
-  DeleteAccountState copyWith({
-    bool? isLoading,
-    bool? isLoadingSummary,
-    bool? isDeleted,
-    String? error,
-    UserDataSummary? dataSummary,
-  }) {
-    return DeleteAccountState(
-      isLoading: isLoading ?? this.isLoading,
-      isLoadingSummary: isLoadingSummary ?? this.isLoadingSummary,
-      isDeleted: isDeleted ?? this.isDeleted,
-      error: error ?? this.error,
-      dataSummary: dataSummary ?? this.dataSummary,
-    );
-  }
-}
-
-/// Provider untuk delete account state
-final deleteAccountProvider = StateNotifierProvider<DeleteAccountNotifier, DeleteAccountState>((ref) {
-  final service = ref.watch(deleteAccountServiceProvider);
-  return DeleteAccountNotifier(service);
 });

@@ -30,6 +30,20 @@ class _LanguageSelectionScreenState
     });
   }
 
+  // Update language selection and immediately change locale
+  Future<void> _selectLanguage(String languageCode) async {
+    if (_selectedLanguage == languageCode) return;
+
+    setState(() {
+      _selectedLanguage = languageCode;
+    });
+
+    // Immediately update the locale provider for real-time language change
+    await ref.read(appLocaleProvider.notifier).setLanguage(languageCode);
+
+    debugPrint('Language updated to: $languageCode');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -81,7 +95,7 @@ class _LanguageSelectionScreenState
                 languageName: ref.tr(context, 'language_english'),
                 flag: '🇺🇸',
                 isSelected: _selectedLanguage == 'en',
-                onTap: () => setState(() => _selectedLanguage = 'en'),
+                onTap: () => _selectLanguage('en'),
               ),
 
               const SizedBox(height: 16),
@@ -92,7 +106,7 @@ class _LanguageSelectionScreenState
                 languageName: ref.tr(context, 'language_indonesian'),
                 flag: '🇮🇩',
                 isSelected: _selectedLanguage == 'id',
-                onTap: () => setState(() => _selectedLanguage = 'id'),
+                onTap: () => _selectLanguage('id'),
               ),
 
               const Spacer(),
@@ -170,14 +184,10 @@ class _LanguageSelectionScreenState
 
   Future<void> _saveLanguageAndContinue() async {
     try {
-      // Save language preference
+      // Save language preference to user service (for onboarding tracking)
       final userService = ref.read(userServiceProvider);
       await userService.saveLanguagePreference(_selectedLanguage);
       debugPrint('Language preference saved: $_selectedLanguage');
-
-      // Update the locale provider to reflect the new language immediately
-      await ref.read(appLocaleProvider.notifier).setLanguage(_selectedLanguage);
-      debugPrint('Locale provider updated');
 
       // Refresh the language preference provider to update router logic
       ref.invalidate(hasLanguagePreferenceProvider);
@@ -186,7 +196,7 @@ class _LanguageSelectionScreenState
       // Small delay to ensure provider refresh is processed
       await Future.delayed(const Duration(milliseconds: 200));
 
-      // Try using pushReplacement instead of go to avoid conflicts
+      // Navigate to onboarding
       if (mounted) {
         debugPrint('Navigating to onboarding...');
         context.pushReplacement('/onboarding');

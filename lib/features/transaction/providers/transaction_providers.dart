@@ -3,12 +3,19 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import '../../../models/transaction.dart';
 import '../../../models/transaction_summary.dart';
 import '../../../models/ledger_entry.dart';
-import '../services/supabase_transaction_service.dart';
+import '../services/transaction_service.dart';
+import '../../../services/supabase_service.dart';
 import '../../../core/state/refresh_token.dart';
 
+// Provider untuk TransactionService (unified)
+final transactionServiceProvider = Provider<TransactionService>((ref) {
+  final supabase = ref.watch(supabaseProvider);
+  return TransactionService(supabase);
+});
+
 // Alias repository langsung
-final transactionRepositoryProvider = Provider<SupabaseTransactionService>(
-  (ref) => ref.watch(supabaseTransactionServiceProvider),
+final transactionRepositoryProvider = Provider<TransactionService>(
+  (ref) => ref.watch(transactionServiceProvider),
 );
 
 // Unified refresh trigger

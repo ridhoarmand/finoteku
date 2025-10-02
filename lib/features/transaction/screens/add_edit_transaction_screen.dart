@@ -22,11 +22,11 @@ import '../../transfer/models/transfer.dart' as transfer_model;
 import '../../transfer/screens/transfer_detail_screen.dart'; // Import untuk transferByIdProvider
 import '../widgets/ledger_transfer_card.dart'; // Import untuk transferDataProvider
 
-class AddTransactionScreen extends ConsumerStatefulWidget {
+class AddEditTransactionScreen extends ConsumerStatefulWidget {
   final Transaction? initialTransaction;
   final transfer_model.Transfer? initialTransfer;
 
-  const AddTransactionScreen({
+  const AddEditTransactionScreen({
     super.key,
     this.initialTransaction,
     this.initialTransfer,
@@ -37,11 +37,12 @@ class AddTransactionScreen extends ConsumerStatefulWidget {
        );
 
   @override
-  ConsumerState<AddTransactionScreen> createState() =>
-      _AddTransactionScreenState();
+  ConsumerState<AddEditTransactionScreen> createState() =>
+      _AddEditTransactionScreenState();
 }
 
-class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
+class _AddEditTransactionScreenState
+    extends ConsumerState<AddEditTransactionScreen> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _notesController = TextEditingController();

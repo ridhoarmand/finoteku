@@ -54,9 +54,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _completeOnboarding() async {
-    await ref.read(onboardingProvider.notifier).setOnboardingComplete();
-    if (mounted) {
-      context.go('/login');
+    try {
+      await ref.read(onboardingProvider.notifier).setOnboardingComplete();
+      if (mounted) {
+        // Use pushReplacement to avoid potential routing conflicts
+        context.pushReplacement('/login');
+      }
+    } catch (e) {
+      debugPrint('❌ Error completing onboarding: $e');
+      // Still try to navigate on error
+      if (mounted) {
+        context.pushReplacement('/login');
+      }
     }
   }
 
@@ -178,7 +187,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 child: FilledButton(
                   onPressed: _nextPage,
                   child: Text(
-                    _currentPage == _getPages(context).length - 1 
+                    _currentPage == _getPages(context).length - 1
                         ? ref.tr(context, 'get_started_button')
                         : ref.tr(context, 'next_button'),
                   ),

@@ -8,7 +8,7 @@ import '../../wallet/providers/wallet_providers.dart';
 import '../../../services/supabase_service.dart';
 import '../../../utils/currency_formatter.dart';
 import '../../../utils/category_icon_helper.dart';
-import 'add_transaction_screen.dart';
+import 'add_edit_transaction_screen.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../models/category.dart';
 
@@ -43,8 +43,9 @@ class TransactionDetailScreen extends ConsumerWidget {
     );
     return txAsync.when(
       data: (tx) {
-        if (tx == null)
+        if (tx == null) {
           return Center(child: Text(ref.tr(context, 'transaction_not_found')));
+        }
         return _buildTransactionDetail(context, ref, tx, userId);
       },
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -459,7 +460,7 @@ class TransactionDetailScreen extends ConsumerWidget {
     final result = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) =>
-            AddTransactionScreen(initialTransaction: transaction),
+            AddEditTransactionScreen(initialTransaction: transaction),
       ),
     );
 

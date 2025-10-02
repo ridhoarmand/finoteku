@@ -648,6 +648,50 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Fungsi untuk mendapatkan summary data user (untuk delete account confirmation)
+CREATE OR REPLACE FUNCTION public.get_user_data_summary() RETURNS json AS $$
+DECLARE 
+  current_user_id UUID;
+  wallets_count INTEGER;
+  categories_count INTEGER;
+  transactions_count INTEGER;
+  transfers_count INTEGER;
+BEGIN
+  current_user_id := auth.uid();
+  IF current_user_id IS NULL THEN
+    RAISE EXCEPTION 'User not authenticated';
+  END IF;
+
+  -- Count wallets (tidak termasuk yang hidden)
+  SELECT COUNT(*) INTO wallets_count
+  FROM public.wallets 
+  WHERE user_id = current_user_id AND is_hidden = false;
+
+  -- Count categories (tidak termasuk yang hidden)
+  SELECT COUNT(*) INTO categories_count
+  FROM public.categories 
+  WHERE user_id = current_user_id AND is_hidden = false;
+
+  -- Count transactions
+  SELECT COUNT(*) INTO transactions_count
+  FROM public.transactions 
+  WHERE user_id = current_user_id;
+
+  -- Count transfers
+  SELECT COUNT(*) INTO transfers_count
+  FROM public.transfers 
+  WHERE user_id = current_user_id;
+
+  -- Return as JSON
+  RETURN json_build_object(
+    'walletsCount', wallets_count,
+    'categoriesCount', categories_count,
+    'transactionsCount', transactions_count,
+    'transfersCount', transfers_count
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Fungsi komprehensif: hapus file lalu data (wrapper)
 CREATE OR REPLACE FUNCTION public.delete_user_account_complete() RETURNS void AS $$
 DECLARE current_user_id UUID;

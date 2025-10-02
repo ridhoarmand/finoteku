@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'add_transaction_screen.dart';
+import 'add_edit_transaction_screen.dart';
 import '../providers/transaction_providers.dart';
 import '../../../models/ledger_entry.dart';
 import '../../wallet/providers/wallet_providers.dart';
@@ -185,7 +185,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
         onPressed: () async {
           final result = await Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => const AddTransactionScreen(),
+              builder: (context) => const AddEditTransactionScreen(),
             ),
           );
 
@@ -335,7 +335,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
             onPressed: () async {
               final result = await Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => const AddTransactionScreen(),
+                  builder: (context) => const AddEditTransactionScreen(),
                 ),
               );
 

@@ -14,46 +14,108 @@ import 'utils/environment.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize timezone database (light operation)
-  tz.initializeTimeZones();
-  tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
-
-  // Initialize environment variables first (must be sequential)
-  await Environment.initialize();
-
-  // Validate environment configuration
-  if (!Environment.validateConfig()) {
-    if (kDebugMode) {
-      print('⚠️ Environment configuration validation failed');
-      print('📝 Please check your .env file configuration');
-    }
-  }
-
-  // Initialize Supabase after environment is loaded
-  try {
-    await SupabaseService.initialize(
-      url: Environment.supabaseUrl,
-      anonKey: Environment.supabaseAnonKey,
-    );
-    if (kDebugMode) {
-      print('✅ Supabase initialized successfully');
-    }
-  } catch (e) {
-    if (kDebugMode) {
-      print('❌ Failed to initialize Supabase: $e');
-      print('📝 Please configure your Supabase credentials in .env file');
-    }
-    // Continue anyway for demo purposes
-  }
-
   runApp(ProviderScope(child: MyApp()));
 }
 
-class MyApp extends ConsumerWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> {
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    // Initialize timezone database (light operation)
+    tz.initializeTimeZones();
+    tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
+
+    // Initialize environment variables first (must be sequential)
+    await Environment.initialize();
+
+    // Validate environment configuration
+    if (!Environment.validateConfig()) {
+      if (kDebugMode) {
+        print('⚠️ Environment configuration validation failed');
+        print('📝 Please check your .env file configuration');
+      }
+    }
+
+    // Initialize Supabase after environment is loaded
+    try {
+      await SupabaseService.initialize(
+        url: Environment.supabaseUrl,
+        anonKey: Environment.supabaseAnonKey,
+      );
+      if (kDebugMode) {
+        print('✅ Supabase initialized successfully');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Failed to initialize Supabase: $e');
+        print('📝 Please configure your Supabase credentials in .env file');
+      }
+      // Continue anyway for demo purposes
+    }
+
+    if (mounted) {
+      setState(() {
+        _isInitialized = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isInitialized) {
+      return MaterialApp(
+        home: Scaffold(
+          backgroundColor: const Color(0xFF1E3A8A), // Primary blue
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // App Logo
+                Image.asset('assets/icon.png', width: 100, height: 100),
+                const SizedBox(height: 24),
+
+                // App Name
+                const Text(
+                  'Finoteku',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Loading indicator
+                const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+                const SizedBox(height: 16),
+
+                // Loading text
+                const Text(
+                  'Initializing...',
+                  style: TextStyle(color: Colors.white70, fontSize: 16),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final themeMode = ref.watch(themeModeProvider);
     final router = ref.watch(routerProvider);
     final localeState = ref.watch(appLocaleProvider);

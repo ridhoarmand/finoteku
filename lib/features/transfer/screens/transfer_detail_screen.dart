@@ -8,12 +8,18 @@ import '../../wallet/providers/wallet_providers.dart';
 import '../../transaction/providers/transaction_providers.dart'; // Tambahkan untuk refreshTransactionProviders
 import '../models/transfer.dart';
 import '../services/transfer_service.dart';
-import '../../transaction/screens/add_transaction_screen.dart';
+import '../../transaction/screens/add_edit_transaction_screen.dart';
 
 // Provider for transfer details
-final transferByIdProvider = FutureProvider.family<Transfer?, ({String userId, String transferId})>((ref, params) async {
-  return ref.watch(transferServiceProvider).getById(params.userId, params.transferId);
-});
+final transferByIdProvider =
+    FutureProvider.family<Transfer?, ({String userId, String transferId})>((
+      ref,
+      params,
+    ) async {
+      return ref
+          .watch(transferServiceProvider)
+          .getById(params.userId, params.transferId);
+    });
 
 class TransferDetailScreen extends ConsumerWidget {
   final String transferId;
@@ -30,12 +36,12 @@ class TransferDetailScreen extends ConsumerWidget {
       );
     }
 
-    final transferAsync = ref.watch(transferByIdProvider((userId: user.id, transferId: transferId)));
+    final transferAsync = ref.watch(
+      transferByIdProvider((userId: user.id, transferId: transferId)),
+    );
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(ref.tr(context, 'transfer_details_title')),
-      ),
+      appBar: AppBar(title: Text(ref.tr(context, 'transfer_details_title'))),
       body: transferAsync.when(
         data: (transfer) {
           if (transfer == null) {
@@ -45,13 +51,19 @@ class TransferDetailScreen extends ConsumerWidget {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, st) => _buildErrorWidget(context, ref, () {
-          ref.invalidate(transferByIdProvider((userId: user.id, transferId: transferId)));
+          ref.invalidate(
+            transferByIdProvider((userId: user.id, transferId: transferId)),
+          );
         }),
       ),
     );
   }
 
-  Widget _buildErrorWidget(BuildContext context, WidgetRef ref, VoidCallback retry) {
+  Widget _buildErrorWidget(
+    BuildContext context,
+    WidgetRef ref,
+    VoidCallback retry,
+  ) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -60,10 +72,7 @@ class TransferDetailScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           Text(ref.tr(context, 'error_loading_transfers')),
           const SizedBox(height: 16),
-          FilledButton(
-            onPressed: retry,
-            child: Text(ref.tr(context, 'retry')),
-          ),
+          FilledButton(onPressed: retry, child: Text(ref.tr(context, 'retry'))),
         ],
       ),
     );
@@ -76,14 +85,17 @@ class TransferDetailScreen extends ConsumerWidget {
     String userId,
   ) {
     final theme = Theme.of(context);
-    final walletsAsync = ref.watch(walletsProvider(userId)); // Use all wallets for transfers
+    final walletsAsync = ref.watch(
+      walletsProvider(userId),
+    ); // Use all wallets for transfers
 
     return walletsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, st) => Center(child: Text(ref.tr(context, 'wallet_loading_error'))),
+      error: (e, st) =>
+          Center(child: Text(ref.tr(context, 'wallet_loading_error'))),
       data: (wallets) {
         final walletMap = {for (final w in wallets) w.id: w};
-        
+
         return Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -97,8 +109,14 @@ class TransferDetailScreen extends ConsumerWidget {
                     children: [
                       CircleAvatar(
                         radius: 30,
-                        backgroundColor: CategoryTheme.transfer.withValues(alpha: 0.15),
-                        child: Icon(Icons.swap_horiz, color: CategoryTheme.transfer, size: 32),
+                        backgroundColor: CategoryTheme.transfer.withValues(
+                          alpha: 0.15,
+                        ),
+                        child: Icon(
+                          Icons.swap_horiz,
+                          color: CategoryTheme.transfer,
+                          size: 32,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -205,7 +223,12 @@ class TransferDetailScreen extends ConsumerWidget {
                   const SizedBox(width: 16),
                   Expanded(
                     child: FilledButton.icon(
-                      onPressed: () => _confirmDeleteTransfer(context, ref, transfer, userId),
+                      onPressed: () => _confirmDeleteTransfer(
+                        context,
+                        ref,
+                        transfer,
+                        userId,
+                      ),
                       icon: const Icon(Icons.delete),
                       label: Text(ref.tr(context, 'delete')),
                       style: FilledButton.styleFrom(
@@ -249,17 +272,24 @@ class TransferDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _editTransfer(BuildContext context, WidgetRef ref, Transfer transfer) async {
+  void _editTransfer(
+    BuildContext context,
+    WidgetRef ref,
+    Transfer transfer,
+  ) async {
     final result = await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => AddTransactionScreen(initialTransfer: transfer),
+        builder: (context) =>
+            AddEditTransactionScreen(initialTransfer: transfer),
       ),
     );
 
     if (result == true && context.mounted) {
       final user = ref.read(currentUserProvider).value;
       if (user != null) {
-        ref.invalidate(transferByIdProvider((userId: user.id, transferId: transfer.id)));
+        ref.invalidate(
+          transferByIdProvider((userId: user.id, transferId: transfer.id)),
+        );
         refreshWalletProviders(ref);
         // Refresh transaction providers untuk update ledger entries
         refreshTransactionProviders(ref);
@@ -267,9 +297,14 @@ class TransferDetailScreen extends ConsumerWidget {
     }
   }
 
-  void _confirmDeleteTransfer(BuildContext context, WidgetRef ref, Transfer transfer, String userId) {
+  void _confirmDeleteTransfer(
+    BuildContext context,
+    WidgetRef ref,
+    Transfer transfer,
+    String userId,
+  ) {
     final outerContext = context;
-    
+
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -283,40 +318,48 @@ class TransferDetailScreen extends ConsumerWidget {
           FilledButton(
             onPressed: () async {
               try {
-                await ref.read(transferServiceProvider).delete(userId, transfer.id);
-                
+                await ref
+                    .read(transferServiceProvider)
+                    .delete(userId, transfer.id);
+
                 if (!outerContext.mounted) return;
-                
+
                 // Close dialog first
                 if (Navigator.of(dialogContext).canPop()) {
                   Navigator.of(dialogContext).pop();
                 }
-                
+
                 // Refresh wallet providers
                 refreshWalletProviders(ref);
                 // Refresh transaction providers untuk update ledger entries
                 refreshTransactionProviders(ref);
-                
+
                 // Pop detail screen
                 if (Navigator.of(outerContext).canPop()) {
                   Navigator.of(outerContext).pop();
                 }
-                
+
                 // Show success message
                 ScaffoldMessenger.of(outerContext).showSnackBar(
-                  SnackBar(content: Text(ref.tr(outerContext, 'transfer_deleted'))),
+                  SnackBar(
+                    content: Text(ref.tr(outerContext, 'transfer_deleted')),
+                  ),
                 );
               } catch (e) {
                 // Close dialog
                 if (Navigator.of(dialogContext).canPop()) {
                   Navigator.of(dialogContext).pop();
                 }
-                
+
                 // Show error
                 if (outerContext.mounted) {
                   ScaffoldMessenger.of(outerContext).showSnackBar(
                     SnackBar(
-                      content: Text(ref.tr(outerContext, 'error_deleting_transfer').replaceAll('{error}', '$e')),
+                      content: Text(
+                        ref
+                            .tr(outerContext, 'error_deleting_transfer')
+                            .replaceAll('{error}', '$e'),
+                      ),
                       backgroundColor: Colors.red,
                     ),
                   );

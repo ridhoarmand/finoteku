@@ -184,6 +184,15 @@ final currentSessionProvider = Provider<Session?>((ref) {
 
 /// Provider for immediate auth check (synchronous)
 final currentAuthProvider = Provider<bool>((ref) {
-  final supabase = ref.watch(supabaseProvider);
-  return supabase.auth.currentSession != null;
+  // Listen to auth state changes instead of just reading current session
+  final authState = ref.watch(authStateProvider);
+  return authState.when(
+    data: (state) => state.session != null,
+    loading: () {
+      // During loading, check current session as fallback
+      final supabase = ref.watch(supabaseProvider);
+      return supabase.auth.currentSession != null;
+    },
+    error: (_, __) => false,
+  );
 });

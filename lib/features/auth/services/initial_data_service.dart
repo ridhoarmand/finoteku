@@ -1,20 +1,17 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// WalletService wrapper removed; use SupabaseWalletService directly
+// WalletService wrapper removed; use WalletService directly
 import '../../wallet/providers/wallet_providers.dart';
-import '../../wallet/services/supabase_wallet_service.dart';
+import '../../wallet/services/wallet_service.dart';
 import '../../category/services/category_service.dart';
 import '../../../models/wallet.dart';
 
 /// Service untuk mengelola initial data setup dan full sync
 class InitialDataService {
-  final SupabaseWalletService _walletService;
+  final WalletService _walletService;
   final CategoryService _categoryService;
 
-  InitialDataService(
-    this._walletService,
-    this._categoryService,
-  );
+  InitialDataService(this._walletService, this._categoryService);
 
   /// Setup initial data untuk new user (dipanggil saat register)
   Future<void> setupInitialData(String userId) async {
@@ -40,9 +37,7 @@ class InitialDataService {
     }
   }
 
-
   // _syncFromServerToLocal removed (online-only)
-
 
   /// Create default wallet untuk new user
   Future<void> _createDefaultWallet(String userId) async {
@@ -98,7 +93,7 @@ class InitialDataService {
         return;
       }
 
-  // Default categories import removed (template/import deprecated)
+      // Default categories import removed (template/import deprecated)
 
       if (kDebugMode) {
         print('✅ Default categories created successfully');

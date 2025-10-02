@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../services/delete_account_service.dart';
-// Removed unused provider imports due to simplified invalidation
+import '../providers/delete_account_provider.dart';
+import '../../auth/services/auth_service.dart';
 import '../../../services/supabase_service.dart';
 
 class DeleteAccountDialog extends ConsumerStatefulWidget {
   const DeleteAccountDialog({super.key});
 
   @override
-  ConsumerState<DeleteAccountDialog> createState() => _DeleteAccountDialogState();
+  ConsumerState<DeleteAccountDialog> createState() =>
+      _DeleteAccountDialogState();
 }
 
 class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
@@ -41,11 +42,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
     return AlertDialog(
       title: Row(
         children: [
-          Icon(
-            Icons.warning_amber_rounded,
-            color: Colors.red[600],
-            size: 28,
-          ),
+          Icon(Icons.warning_amber_rounded, color: Colors.red[600], size: 28),
           const SizedBox(width: 8),
           const Text('Delete Account'),
         ],
@@ -86,19 +83,17 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                   const SizedBox(height: 4),
                   Text(
                     'This action cannot be undone. All your data will be permanently deleted.',
-                    style: TextStyle(
-                      color: Colors.red[600],
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: Colors.red[600], fontSize: 13),
                   ),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 16),
 
             // Data summary section
-            if (deleteState.dataSummary != null && deleteState.dataSummary!.hasData) ...[
+            if (deleteState.dataSummary != null &&
+                deleteState.dataSummary!.hasData) ...[
               GestureDetector(
                 onTap: () {
                   setState(() {
@@ -114,11 +109,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.data_usage,
-                        color: Colors.grey[600],
-                        size: 20,
-                      ),
+                      Icon(Icons.data_usage, color: Colors.grey[600], size: 20),
                       const SizedBox(width: 8),
                       const Expanded(
                         child: Text(
@@ -127,14 +118,16 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                         ),
                       ),
                       Icon(
-                        _showDataSummary ? Icons.expand_less : Icons.expand_more,
+                        _showDataSummary
+                            ? Icons.expand_less
+                            : Icons.expand_more,
                         color: Colors.grey[600],
                       ),
                     ],
                   ),
                 ),
               ),
-              
+
               if (_showDataSummary) ...[
                 const SizedBox(height: 8),
                 Container(
@@ -160,23 +153,25 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                         deleteState.dataSummary!.transactionsCount,
                         Icons.receipt_long,
                       ),
+                      _buildDataRow(
+                        'Transfers',
+                        deleteState.dataSummary!.transfersCount,
+                        Icons.swap_horiz,
+                      ),
                     ],
                   ),
                 ),
               ],
-              
+
               const SizedBox(height: 16),
             ],
 
             // Account info
             Text(
               'Account: ${user?.email ?? 'Unknown'}',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             ),
-            
+
             const SizedBox(height: 16),
 
             // Password confirmation
@@ -187,10 +182,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                 children: [
                   const Text(
                     'Enter your password to confirm:',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 8),
                   TextFormField(
@@ -205,7 +197,9 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                       ),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                         ),
                         onPressed: () {
                           setState(() {
@@ -237,10 +231,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                 ),
                 child: Text(
                   deleteState.error!,
-                  style: TextStyle(
-                    color: Colors.red[700],
-                    fontSize: 13,
-                  ),
+                  style: TextStyle(color: Colors.red[700], fontSize: 13),
                 ),
               ),
             ],
@@ -249,9 +240,11 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: deleteState.isLoading ? null : () {
-            Navigator.of(context).pop();
-          },
+          onPressed: deleteState.isLoading
+              ? null
+              : () {
+                  Navigator.of(context).pop();
+                },
           child: const Text('Cancel'),
         ),
         ElevatedButton(
@@ -282,20 +275,11 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
         children: [
           Icon(icon, size: 16, color: Colors.grey[600]),
           const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey[700],
-            ),
-          ),
+          Text(label, style: TextStyle(fontSize: 13, color: Colors.grey[700])),
           const Spacer(),
           Text(
             count.toString(),
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -308,59 +292,74 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
     }
 
     final password = _passwordController.text.trim();
-    
+
     // Show final confirmation
     final confirmed = await _showFinalConfirmation();
     if (!confirmed) return;
 
     // Attempt to delete account
-    final success = await ref.read(deleteAccountProvider.notifier).deleteAccount(password);
-    
+    final success = await ref
+        .read(deleteAccountProvider.notifier)
+        .deleteAccount(password);
+
     if (success && mounted) {
       // Account deleted successfully
       Navigator.of(context).pop(); // Close dialog
-      
-      // Invalidate authentication providers to force refresh
+
+      // Wait a bit for auth state to propagate
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Force invalidate authentication providers
       ref.invalidate(currentUserProvider);
-      
-  // Also invalidate family instances as needed elsewhere; avoid invalidating families without params
-      
+      ref.invalidate(authStateProvider);
+
+      // Wait a bit more for providers to refresh
+      await Future.delayed(const Duration(milliseconds: 500));
+
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Account deleted successfully. You have been signed out.'),
+          content: Text(
+            'Account deleted successfully. You have been signed out.',
+          ),
           backgroundColor: Colors.green,
         ),
       );
-      
-      // Navigate to login/home page
-      context.go('/');
+
+      // Clear navigation stack and navigate to login page
+      if (context.mounted) {
+        while (context.canPop()) {
+          context.pop();
+        }
+        context.pushReplacement('/login');
+      }
     }
   }
 
   Future<bool> _showFinalConfirmation() async {
     return await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Final Confirmation'),
-        content: const Text(
-          'Are you absolutely sure you want to delete your account? This action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red[600],
-              foregroundColor: Colors.white,
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Final Confirmation'),
+            content: const Text(
+              'Are you absolutely sure you want to delete your account? This action cannot be undone.',
             ),
-            child: const Text('Yes, Delete'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red[600],
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Yes, Delete'),
+              ),
+            ],
           ),
-        ],
-      ),
-    ) ?? false;
+        ) ??
+        false;
   }
 }
