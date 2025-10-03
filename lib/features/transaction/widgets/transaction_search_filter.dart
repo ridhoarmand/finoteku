@@ -69,11 +69,11 @@ class TransactionSearchFilter extends ConsumerWidget {
     return Container(
       height: 42, // Fixed height untuk consistency dengan filter button
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
+            color: theme.shadowColor.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, 1),
@@ -83,13 +83,25 @@ class TransactionSearchFilter extends ConsumerWidget {
       child: TextField(
         controller: searchController,
         onChanged: onSearchChanged,
+        style: TextStyle(color: theme.colorScheme.onSurface),
         decoration: InputDecoration(
           hintText: 'Cari transaksi...',
-          hintStyle: TextStyle(color: Colors.grey[500], fontSize: 13),
-          prefixIcon: Icon(Icons.search, color: Colors.grey[600], size: 18),
+          hintStyle: TextStyle(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            fontSize: 13,
+          ),
+          prefixIcon: Icon(
+            Icons.search,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            size: 18,
+          ),
           suffixIcon: searchQuery.isNotEmpty
               ? IconButton(
-                  icon: Icon(Icons.clear, color: Colors.grey[600], size: 16),
+                  icon: Icon(
+                    Icons.clear,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                    size: 16,
+                  ),
                   onPressed: onClearSearch,
                 )
               : null,
@@ -102,7 +114,7 @@ class TransactionSearchFilter extends ConsumerWidget {
             vertical: 8,
           ),
           filled: true,
-          fillColor: Colors.white,
+          fillColor: theme.colorScheme.surface,
         ),
       ),
     );
@@ -119,12 +131,16 @@ class TransactionSearchFilter extends ConsumerWidget {
         icon: Icon(
           showFilters ? Icons.filter_list_off : Icons.tune,
           size: 16,
-          color: hasActiveFilters ? Colors.white : theme.colorScheme.primary,
+          color: hasActiveFilters
+              ? theme.colorScheme.onPrimary
+              : theme.colorScheme.primary,
         ),
         label: Text(
           'Filter',
           style: TextStyle(
-            color: hasActiveFilters ? Colors.white : theme.colorScheme.primary,
+            color: hasActiveFilters
+                ? theme.colorScheme.onPrimary
+                : theme.colorScheme.primary,
             fontSize: 12,
             fontWeight: FontWeight.w500,
           ),
@@ -132,7 +148,7 @@ class TransactionSearchFilter extends ConsumerWidget {
         style: OutlinedButton.styleFrom(
           backgroundColor: hasActiveFilters
               ? theme.colorScheme.primary
-              : Colors.white,
+              : theme.colorScheme.surface,
           side: BorderSide(
             color: hasActiveFilters
                 ? theme.colorScheme.primary
@@ -151,11 +167,11 @@ class TransactionSearchFilter extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
+            color: theme.shadowColor.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 4,
             offset: const Offset(0, 2),
@@ -175,7 +191,7 @@ class TransactionSearchFilter extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey[800],
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
                 const Spacer(),
@@ -183,7 +199,10 @@ class TransactionSearchFilter extends ConsumerWidget {
                   onPressed: onResetFilters,
                   child: Text(
                     'Reset Semua',
-                    style: TextStyle(color: Colors.orange[600], fontSize: 12),
+                    style: TextStyle(
+                      color: theme.colorScheme.primary,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               ],
@@ -207,7 +226,9 @@ class TransactionSearchFilter extends ConsumerWidget {
                 icon: const Icon(Icons.close, size: 16),
                 label: const Text('Tutup Filter'),
                 style: TextButton.styleFrom(
-                  foregroundColor: Colors.grey[600],
+                  foregroundColor: theme.colorScheme.onSurface.withValues(
+                    alpha: 0.7,
+                  ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 8,
@@ -230,7 +251,7 @@ class TransactionSearchFilter extends ConsumerWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Colors.grey[700],
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
           ),
         ),
         const SizedBox(height: 8),
@@ -283,9 +304,11 @@ class TransactionSearchFilter extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(
+            color: theme.colorScheme.outline.withValues(alpha: 0.3),
+          ),
           borderRadius: BorderRadius.circular(8),
-          color: Colors.grey[50],
+          color: theme.colorScheme.surface,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -293,7 +316,10 @@ class TransactionSearchFilter extends ConsumerWidget {
           children: [
             Text(
               label,
-              style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+              style: TextStyle(
+                fontSize: 10,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
             ),
             const SizedBox(height: 2),
             Text(
@@ -302,7 +328,9 @@ class TransactionSearchFilter extends ConsumerWidget {
                   : 'Pilih tanggal',
               style: TextStyle(
                 fontSize: 12,
-                color: date != null ? Colors.black87 : Colors.grey[500],
+                color: date != null
+                    ? theme.colorScheme.onSurface
+                    : theme.colorScheme.onSurface.withValues(alpha: 0.5),
                 fontWeight: date != null ? FontWeight.w500 : FontWeight.normal,
               ),
             ),
@@ -325,7 +353,7 @@ class TransactionSearchFilter extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey[700],
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
               ),
             ),
             const SizedBox(height: 8),
@@ -333,27 +361,42 @@ class TransactionSearchFilter extends ConsumerWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey[300]!),
+                border: Border.all(
+                  color: theme.colorScheme.outline.withValues(alpha: 0.3),
+                ),
                 borderRadius: BorderRadius.circular(8),
-                color: Colors.white,
+                color: theme.colorScheme.surface,
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String?>(
                   value: selectedCategoryId,
                   hint: Text(
                     'Pilih Kategori',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
                   ),
                   isExpanded: true,
-                  icon: Icon(Icons.arrow_drop_down, color: Colors.grey[600]),
-                  style: TextStyle(fontSize: 12, color: Colors.grey[800]),
+                  icon: Icon(
+                    Icons.arrow_drop_down,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                  dropdownColor: theme.colorScheme.surface,
                   items: [
                     // All categories option
                     DropdownMenuItem<String?>(
                       value: null,
                       child: Text(
                         'Semua Kategori',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[800]),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurface,
+                        ),
                       ),
                     ),
                     // Category options
@@ -364,7 +407,7 @@ class TransactionSearchFilter extends ConsumerWidget {
                           category.name,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey[800],
+                            color: theme.colorScheme.onSurface,
                           ),
                         ),
                       ),

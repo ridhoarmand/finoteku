@@ -16,6 +16,8 @@ class CategoryListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     // Warna yang sama dengan pie chart
     final pieColors = [
       const Color(0xFF0293EE),
@@ -32,7 +34,7 @@ class CategoryListTile extends StatelessWidget {
 
     final displayColor = index != null && index! < pieColors.length
         ? pieColors[index!]
-        : Colors.grey[400]!;
+        : const Color(0xFF9E9E9E); // Consistent gray color for both themes
 
     return Container(
       margin: const EdgeInsets.only(
@@ -43,9 +45,11 @@ class CategoryListTile extends StatelessWidget {
         vertical: 8.0, // Padding vertikal lebih kecil
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade100),
+        border: Border.all(
+          color: theme.colorScheme.outline.withValues(alpha: 0.1),
+        ),
       ),
       child: InkWell(
         onTap: onTap,
@@ -75,16 +79,21 @@ class CategoryListTile extends StatelessWidget {
                     children: [
                       Text(
                         category.name,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w500,
                           fontSize: 14,
-                          color: Colors.black87,
+                          color: theme.colorScheme.onSurface,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
                         '${category.transactionCount} transaksi',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -93,10 +102,10 @@ class CategoryListTile extends StatelessWidget {
                 // Full amount (tidak diringkas)
                 Text(
                   CurrencyFormatter.format(category.amount, 'IDR'),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -107,7 +116,9 @@ class CategoryListTile extends StatelessWidget {
                 Expanded(
                   child: LinearProgressIndicator(
                     value: category.percentage / 100,
-                    backgroundColor: Colors.grey.shade200,
+                    backgroundColor: theme.colorScheme.outline.withValues(
+                      alpha: 0.2,
+                    ),
                     valueColor: AlwaysStoppedAnimation<Color>(displayColor),
                     minHeight: 3,
                   ),
@@ -115,7 +126,10 @@ class CategoryListTile extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   '${category.percentage.toStringAsFixed(1)}%',
-                  style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
                 ),
               ],
             ),

@@ -54,17 +54,36 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _completeOnboarding() async {
+    debugPrint('🚀 Onboarding: _completeOnboarding called');
+
     try {
+      debugPrint('🚀 Onboarding: Setting onboarding complete...');
       await ref.read(onboardingProvider.notifier).setOnboardingComplete();
+      debugPrint('🚀 Onboarding: Onboarding complete set successfully');
+
       if (mounted) {
-        // Use pushReplacement to avoid potential routing conflicts
-        context.pushReplacement('/login');
+        debugPrint('🚀 Onboarding: Waiting for provider to rebuild...');
+        // Give provider time to rebuild before navigation
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        if (mounted) {
+          debugPrint('🚀 Onboarding: Navigating to login...');
+          // Use go instead of pushReplacement to avoid router conflicts
+          context.go('/login');
+          debugPrint('🚀 Onboarding: Navigation to login completed');
+        }
       }
     } catch (e) {
       debugPrint('❌ Error completing onboarding: $e');
       // Still try to navigate on error
       if (mounted) {
-        context.pushReplacement('/login');
+        debugPrint(
+          '🚀 Onboarding: Error occurred, still trying to navigate...',
+        );
+        await Future.delayed(const Duration(milliseconds: 100));
+        if (mounted) {
+          context.go('/login');
+        }
       }
     }
   }

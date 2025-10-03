@@ -16,6 +16,7 @@ import '../features/account/screens/edit_profile_screen.dart';
 import '../features/account/screens/change_password_screen.dart';
 import '../features/settings/theme_settings_screen.dart';
 import '../features/settings/language_settings_screen.dart';
+import '../features/help/screens/faq_screen.dart';
 import '../features/onboarding/screens/onboarding_screen.dart';
 import '../features/onboarding/screens/language_selection_screen.dart';
 import '../features/splash/splash_screen.dart';
@@ -51,7 +52,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       final hasLanguagePreferenceAsync = ref.read(
         hasLanguagePreferenceProvider,
       );
-      final hasSeenOnboarding = ref.read(onboardingProvider);
+
+      // Safe reading of onboarding provider to avoid race conditions
+      bool hasSeenOnboarding;
+      try {
+        hasSeenOnboarding = ref.read(onboardingProvider);
+      } catch (e) {
+        // If provider is rebuilding, assume onboarding not seen
+        debugPrint('⚠️ Onboarding provider rebuilding, assuming false');
+        hasSeenOnboarding = false;
+      }
 
       debugPrint('🔐 Auth: $isAuthenticated, Location: $location');
 
@@ -123,10 +133,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           // Otherwise redirect to language selection as safe fallback
           return '/language-selection';
         },
-        error: (_, _) {
+        error: (error, stackTrace) {
           // On error, start fresh install flow
           debugPrint(
-            '❌ Error checking language preference, redirecting to language selection',
+            '❌ Error checking language preference: $error, redirecting to language selection',
           );
           return '/language-selection';
         },
@@ -200,6 +210,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'notifications',
                 builder: (context, state) => const NotificationScreen(),
+              ),
+              GoRoute(
+                path: 'help-faq',
+                builder: (context, state) => const FAQScreen(),
               ),
             ],
           ),
@@ -291,6 +305,7 @@ class AppRoutes {
   static const String changePassword = '/account/change-password';
   static const String themeSettings = '/account/theme-settings';
   static const String notifications = '/account/notifications';
+  static const String helpFAQ = '/account/help-faq';
   static const String manageWallets = '/wallets/manage';
   static const String selectWallet = '/wallets/select';
   static const String manageCategories = '/categories/manage';

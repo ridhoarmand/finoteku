@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((
   ref,
@@ -8,36 +9,69 @@ final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((
 });
 
 class ThemeModeNotifier extends StateNotifier<ThemeMode> {
-  ThemeModeNotifier() : super(ThemeMode.light);
+  static const String _prefsKey = 'theme_mode';
+
+  ThemeModeNotifier() : super(ThemeMode.system) {
+    // Load saved theme preference asynchronously
+    _loadThemePreference();
+  }
+
+  Future<void> _loadThemePreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedThemeModeIndex = prefs.getInt(_prefsKey);
+      if (savedThemeModeIndex != null &&
+          savedThemeModeIndex >= 0 &&
+          savedThemeModeIndex < ThemeMode.values.length) {
+        state = ThemeMode.values[savedThemeModeIndex];
+      }
+    } catch (e) {
+      // If error loading preferences, keep default (system)
+      state = ThemeMode.system;
+    }
+  }
+
+  Future<void> _saveThemePreference(ThemeMode mode) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_prefsKey, mode.index);
+    } catch (e) {
+      // Handle save error silently
+    }
+  }
 
   void toggleTheme() {
     switch (state) {
       case ThemeMode.light:
-        state = ThemeMode.dark;
+        setDarkMode();
         break;
       case ThemeMode.dark:
-        state = ThemeMode.system;
+        setSystemMode();
         break;
       case ThemeMode.system:
-        state = ThemeMode.light;
+        setLightMode();
         break;
     }
   }
 
   void setThemeMode(ThemeMode mode) {
     state = mode;
+    _saveThemePreference(mode);
   }
 
   void setLightMode() {
     state = ThemeMode.light;
+    _saveThemePreference(state);
   }
 
   void setDarkMode() {
     state = ThemeMode.dark;
+    _saveThemePreference(state);
   }
 
   void setSystemMode() {
     state = ThemeMode.system;
+    _saveThemePreference(state);
   }
 
   String get themeText {

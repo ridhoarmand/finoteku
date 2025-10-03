@@ -10,12 +10,16 @@ class IncomeExpenseToggle extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(reportStateProvider);
+    final theme = Theme.of(context);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(25),
+        border: Border.all(
+          color: theme.colorScheme.outline.withValues(alpha: 0.2),
+        ),
       ),
       child: Row(
         children: [
@@ -42,7 +46,7 @@ class IncomeExpenseToggle extends ConsumerWidget {
                   style: TextStyle(
                     color: state.type == ReportType.expense
                         ? Colors.white
-                        : Colors.grey[700],
+                        : theme.colorScheme.onSurface.withValues(alpha: 0.7),
                     fontWeight: state.type == ReportType.expense
                         ? FontWeight.w600
                         : FontWeight.w500,
@@ -74,7 +78,7 @@ class IncomeExpenseToggle extends ConsumerWidget {
                   style: TextStyle(
                     color: state.type == ReportType.income
                         ? Colors.white
-                        : Colors.grey[700],
+                        : theme.colorScheme.onSurface.withValues(alpha: 0.7),
                     fontWeight: state.type == ReportType.income
                         ? FontWeight.w600
                         : FontWeight.w500,

@@ -9,6 +9,7 @@ class ReportHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final state = ref.watch(reportStateProvider);
     final canGoToPrevious = ref.watch(canGoToPreviousPeriodProvider);
     final canGoToNext = ref.watch(canGoToNextPeriodProvider);
@@ -30,7 +31,7 @@ class ReportHeader extends ConsumerWidget {
             child: Center(
               child: Text(
                 _formatPeriod(context, state),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w500,
                   fontSize: 14,
                 ),
@@ -53,16 +54,16 @@ class ReportHeader extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(
+                color: theme.colorScheme.outline.withValues(alpha: 0.5),
+              ),
               borderRadius: BorderRadius.circular(6),
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<ReportPeriod>(
                 value: state.period,
                 isDense: true,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(fontSize: 14),
+                style: theme.textTheme.bodySmall?.copyWith(fontSize: 14),
                 items: ReportPeriod.values.map((period) {
                   return DropdownMenuItem(
                     value: period,

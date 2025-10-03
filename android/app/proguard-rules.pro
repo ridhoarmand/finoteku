@@ -61,3 +61,24 @@
 -keep class * extends androidx.work.Worker
 -keep class * extends androidx.work.InputMerger
 -keep class androidx.work.** { *; }
+
+# Additional optimizations for smaller APK
+-optimizationpasses 5
+-dontpreverify
+-repackageclasses ''
+-allowaccessmodification
+
+# Remove debug logs in release
+-assumenosideeffects class android.util.Log {
+    public static boolean isLoggable(java.lang.String, int);
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+    public static int w(...);
+    public static int e(...);
+}
+
+# Keep native methods for Flutter
+-keepclasseswithmembernames class * {
+    native <methods>;
+}

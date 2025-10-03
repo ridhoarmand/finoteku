@@ -10,7 +10,9 @@ class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() {
+    return _LoginScreenState();
+  }
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
@@ -19,6 +21,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
+
+  @override
+  void initState() {
+    super.initState();
+    debugPrint('🔐 LoginScreen: initState called');
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    debugPrint('🔐 LoginScreen: didChangeDependencies called');
+  }
 
   @override
   void dispose() {
@@ -147,6 +161,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('🔐 LoginScreen: build method called');
     final theme = Theme.of(context);
 
     return PopScope(

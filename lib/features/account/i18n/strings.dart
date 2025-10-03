@@ -59,7 +59,8 @@ const Map<String, String> accountStringsEn = {
   'help_faq_sub': 'Get help and support',
   'about': 'About',
   'about_sub': 'App version and information',
-  'about_app_description': 'Personal Finance Manager',
+  'about_app_description':
+      'Finoteku is a comprehensive personal finance management app designed to help you track expenses, manage budgets, and achieve your financial goals. Built with modern Flutter technology for a seamless cross-platform experience.',
 
   // Wallet & Categories section
   'wallet_categories_section': 'Wallet & Categories',
@@ -123,7 +124,8 @@ const Map<String, String> accountStringsId = {
   'help_faq_sub': 'Dapatkan bantuan dan dukungan',
   'about': 'Tentang',
   'about_sub': 'Versi aplikasi dan informasi',
-  'about_app_description': 'Pengelola Keuangan Pribadi',
+  'about_app_description':
+      'Finoteku adalah aplikasi manajemen keuangan pribadi yang komprehensif, dirancang untuk membantu Anda melacak pengeluaran, mengelola anggaran, dan mencapai tujuan finansial. Dibangun dengan teknologi Flutter modern untuk pengalaman lintas platform yang mulus.',
 
   // Wallet & Categories section
   'wallet_categories_section': 'Dompet & Kategori',

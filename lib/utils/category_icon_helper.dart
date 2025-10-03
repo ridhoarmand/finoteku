@@ -180,50 +180,19 @@ class CategoryIconHelper {
   static IconData getIconFromCodePoint(int? codePoint) {
     if (codePoint == null) return Icons.category;
 
-    // Try to find a matching constant icon first
-    for (final iconData in _categoryIcons.values) {
-      if (iconData.codePoint == codePoint) {
-        return iconData;
-      }
+    // Create IconData directly from codePoint
+    // This ensures ANY valid Material Icon codePoint will work
+    try {
+      final iconData = IconData(
+        codePoint,
+        fontFamily: 'MaterialIcons',
+        fontPackage: null,
+      );
+      return iconData;
+    } catch (e) {
+      // Fallback to category icon if there's any error
+      return Icons.category;
     }
-
-    // Common Material Icons fallback mapping for known codePoints
-    final knownIcons = <int, IconData>{
-      Icons.category.codePoint: Icons.category,
-      Icons.work.codePoint: Icons.work,
-      Icons.restaurant.codePoint: Icons.restaurant,
-      Icons.directions_car.codePoint: Icons.directions_car,
-      Icons.shopping_bag.codePoint: Icons.shopping_bag,
-      Icons.movie.codePoint: Icons.movie,
-      Icons.local_hospital.codePoint: Icons.local_hospital,
-      Icons.school.codePoint: Icons.school,
-      Icons.receipt.codePoint: Icons.receipt,
-      Icons.home.codePoint: Icons.home,
-      Icons.trending_up.codePoint: Icons.trending_up,
-      Icons.business.codePoint: Icons.business,
-      Icons.card_giftcard.codePoint: Icons.card_giftcard,
-      Icons.star.codePoint: Icons.star,
-      Icons.account_balance.codePoint: Icons.account_balance,
-      Icons.handyman.codePoint: Icons.handyman,
-      Icons.shopping_cart.codePoint: Icons.shopping_cart,
-      Icons.electrical_services.codePoint: Icons.electrical_services,
-      Icons.security.codePoint: Icons.security,
-      Icons.local_gas_station.codePoint: Icons.local_gas_station,
-      Icons.phone.codePoint: Icons.phone,
-      Icons.wifi.codePoint: Icons.wifi,
-      Icons.checkroom.codePoint: Icons.checkroom,
-      Icons.face.codePoint: Icons.face,
-      Icons.fitness_center.codePoint: Icons.fitness_center,
-      Icons.flight.codePoint: Icons.flight,
-      Icons.subscriptions.codePoint: Icons.subscriptions,
-      Icons.volunteer_activism.codePoint: Icons.volunteer_activism,
-      Icons.pets.codePoint: Icons.pets,
-      Icons.build.codePoint: Icons.build,
-      Icons.gavel.codePoint: Icons.gavel,
-      Icons.more_horiz.codePoint: Icons.more_horiz,
-    };
-
-    return knownIcons[codePoint] ?? Icons.category;
   }
 
   // Convert IconData to codePoint for storage
@@ -231,14 +200,86 @@ class CategoryIconHelper {
     return icon.codePoint;
   }
 
+  // Debug method to check if icon exists in our mappings
+  static bool isIconSupported(int codePoint) {
+    // Check in availableIcons
+    for (final iconData in availableIcons) {
+      if (iconData.codePoint == codePoint) {
+        return true;
+      }
+    }
+
+    // Check in category icons
+    for (final iconData in _categoryIcons.values) {
+      if (iconData.codePoint == codePoint) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // Get all supported codePoints for debugging
+  static Set<int> getAllSupportedCodePoints() {
+    final Set<int> codePoints = {};
+
+    // Add from availableIcons
+    for (final icon in availableIcons) {
+      codePoints.add(icon.codePoint);
+    }
+
+    // Add from category icons
+    for (final icon in _categoryIcons.values) {
+      codePoints.add(icon.codePoint);
+    }
+
+    return codePoints;
+  }
+
   // Get icon display name for UI
   static String getIconName(IconData icon) {
-    // You can create a reverse mapping or use a more sophisticated approach
+    // Check in category icons mapping first
     for (final entry in _categoryIcons.entries) {
       if (entry.value.codePoint == icon.codePoint) {
         return entry.key.replaceAll('_', ' ').toUpperCase();
       }
     }
+
+    // Check if it's in availableIcons and provide common names
+    final commonIconNames = <int, String>{
+      Icons.coffee.codePoint: 'COFFEE',
+      Icons.fastfood.codePoint: 'FAST FOOD',
+      Icons.local_pizza.codePoint: 'PIZZA',
+      Icons.cake.codePoint: 'CAKE',
+      Icons.directions_bus.codePoint: 'BUS',
+      Icons.train.codePoint: 'TRAIN',
+      Icons.two_wheeler.codePoint: 'MOTORCYCLE',
+      Icons.local_taxi.codePoint: 'TAXI',
+      Icons.store.codePoint: 'STORE',
+      Icons.local_mall.codePoint: 'MALL',
+      Icons.sports_esports.codePoint: 'GAMING',
+      Icons.music_note.codePoint: 'MUSIC',
+      Icons.book.codePoint: 'BOOK',
+      Icons.laptop.codePoint: 'LAPTOP',
+      Icons.smartphone.codePoint: 'SMARTPHONE',
+      Icons.tv.codePoint: 'TV',
+      Icons.sports.codePoint: 'SPORTS',
+      Icons.beach_access.codePoint: 'BEACH',
+      Icons.camera_alt.codePoint: 'CAMERA',
+      Icons.palette.codePoint: 'PALETTE',
+      Icons.brush.codePoint: 'BRUSH',
+      Icons.cut.codePoint: 'CUT',
+      Icons.spa.codePoint: 'SPA',
+      Icons.child_care.codePoint: 'CHILD CARE',
+      Icons.elderly.codePoint: 'ELDERLY',
+      Icons.medical_services.codePoint: 'MEDICAL',
+      Icons.local_pharmacy.codePoint: 'PHARMACY',
+    };
+
+    if (commonIconNames.containsKey(icon.codePoint)) {
+      return commonIconNames[icon.codePoint]!;
+    }
+
     return 'CUSTOM';
   }
 

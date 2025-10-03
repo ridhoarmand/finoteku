@@ -13,9 +13,10 @@ class CategoryPieChart extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(reportStateProvider);
+    final theme = Theme.of(context);
 
     if (categories.isEmpty) {
-      return _buildEmptyChart(context, state);
+      return _buildEmptyChart(context, state, theme);
     }
 
     final totalAmount = categories.fold<double>(
@@ -57,17 +58,17 @@ class CategoryPieChart extends ConsumerWidget {
                       : 'Total Pengeluaran',
                   style: TextStyle(
                     fontSize: 10,
-                    color: Colors.grey[600],
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   CurrencyFormatter.formatCompact(totalAmount),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -81,12 +82,14 @@ class CategoryPieChart extends ConsumerWidget {
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.grey.shade300),
+                border: Border.all(
+                  color: theme.colorScheme.outline.withValues(alpha: 0.3),
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
+                    color: theme.shadowColor.withValues(alpha: 0.05),
                     spreadRadius: 0,
                     blurRadius: 2,
                     offset: const Offset(0, 1),
@@ -101,7 +104,7 @@ class CategoryPieChart extends ConsumerWidget {
                       ? Icons.unfold_less
                       : Icons.unfold_more,
                   size: 16,
-                  color: Colors.grey[700],
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
             ),
@@ -172,7 +175,7 @@ class CategoryPieChart extends ConsumerWidget {
         sections.add(
           PieChartSectionData(
             value: othersAmount,
-            color: Colors.grey[400]!,
+            color: const Color(0xFF9E9E9E), // Better gray color for both themes
             title: '${percentage.toStringAsFixed(1)}%',
             radius: 55,
             titleStyle: const TextStyle(
@@ -189,7 +192,11 @@ class CategoryPieChart extends ConsumerWidget {
     return sections;
   }
 
-  Widget _buildEmptyChart(BuildContext context, ReportState state) {
+  Widget _buildEmptyChart(
+    BuildContext context,
+    ReportState state,
+    ThemeData theme,
+  ) {
     return Container(
       height: 200,
       padding: const EdgeInsets.all(16),
@@ -197,13 +204,20 @@ class CategoryPieChart extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.pie_chart_outline, size: 48, color: Colors.grey[400]),
+            Icon(
+              Icons.pie_chart_outline,
+              size: 48,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+            ),
             const SizedBox(height: 8),
             Text(
               state.type == ReportType.income
                   ? 'Belum ada data pemasukan'
                   : 'Belum ada data pengeluaran',
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              style: TextStyle(
+                fontSize: 14,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
             ),
           ],
         ),

@@ -17,6 +17,7 @@ class ReportScreen extends ConsumerStatefulWidget {
 class _ReportScreenState extends ConsumerState<ReportScreen> {
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final currentUserId = ref.watch(currentUserIdProvider);
     final reportState = ref.watch(reportStateProvider);
 
@@ -27,7 +28,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     final reportDataAsync = ref.watch(reportDataProvider(currentUserId));
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: theme.colorScheme.surface,
       body: SafeArea(
         child: Column(
           children: [
@@ -46,21 +47,22 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                       Icon(
                         Icons.error_outline,
                         size: 64,
-                        color: Colors.red[300],
+                        color: theme.colorScheme.error,
                       ),
                       const SizedBox(height: 16),
                       Text(
                         'Gagal memuat data laporan',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.red[600],
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: theme.colorScheme.error,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         error.toString(),
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
@@ -82,6 +84,8 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
   }
 
   Widget _buildContent(ReportData data, ReportState reportState) {
+    final theme = Theme.of(context);
+
     return Column(
       children: [
         // Chart dan List Section (digabung dengan toggle)
@@ -89,11 +93,11 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withValues(alpha: 0.1),
+                  color: theme.shadowColor.withValues(alpha: 0.1),
                   spreadRadius: 1,
                   blurRadius: 8,
                   offset: const Offset(0, 2),
@@ -119,7 +123,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                 Container(
                   height: 1,
                   margin: const EdgeInsets.symmetric(horizontal: 16),
-                  color: Colors.grey.shade200,
+                  color: theme.colorScheme.outline.withValues(alpha: 0.2),
                 ),
 
                 const SizedBox(height: 6), // Jarak antara divider dan list
@@ -136,6 +140,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
   }
 
   Widget _buildCategoryList(ReportData data, ReportState reportState) {
+    final theme = Theme.of(context);
     final categories = data.categories;
 
     if (categories.isEmpty) {
@@ -143,22 +148,27 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.pie_chart_outline, size: 64, color: Colors.grey[400]),
+            Icon(
+              Icons.pie_chart_outline,
+              size: 64,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+            ),
             const SizedBox(height: 16),
             Text(
               reportState.type == ReportType.income
                   ? 'Belum ada data pemasukan'
                   : 'Belum ada data pengeluaran',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 fontWeight: FontWeight.w500,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Mulai catat transaksi untuk melihat laporan',
-              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
             ),
           ],
         ),
@@ -204,7 +214,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
             transactionCount: categories
                 .skip(6)
                 .fold<int>(0, (sum, cat) => sum + cat.transactionCount),
-            color: Colors.grey[400]!,
+            color: const Color(0xFF9E9E9E), // Better gray color for both themes
             icon: Icons.more_horiz,
             parentId: null,
             children: [],
@@ -223,17 +233,19 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
 
   void _showOthersDetail(
     List<CategoryReportItem> otherCategories,
-    ReportState reportState,
+    ReportState state,
   ) {
+    final theme = Theme.of(context);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
           children: [
@@ -243,7 +255,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: theme.colorScheme.outline.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -256,8 +268,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                   Expanded(
                     child: Text(
                       'Detail Kategori Lainnya',
-                      style: const TextStyle(
-                        fontSize: 18,
+                      style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
