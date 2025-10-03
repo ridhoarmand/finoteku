@@ -9,7 +9,7 @@ import '../../features/transfer/i18n/strings.dart' as transfer_i18n;
 import '../../features/transaction/i18n/strings.dart' as transaction_i18n;
 import '../../features/home/i18n/strings.dart' as home_i18n;
 import '../../features/account/i18n/strings.dart' as account_i18n;
-import '../../features/reports/i18n/strings.dart' as reports_i18n;
+import '../../features/report/i18n/strings.dart' as reports_i18n;
 import '../../features/onboarding/i18n/strings.dart' as onboarding_i18n;
 import '../i18n/strings.dart' as core_i18n;
 

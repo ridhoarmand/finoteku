@@ -1,7 +1,7 @@
 // Account Widgets Exports
 export 'profile_section_widget.dart';
 export 'settings_section_widget.dart';
-export '../../settings/preferences_settings_widget.dart';
+export '../../setting/preferences_settings_widget.dart';
 export 'wallet_category_settings_widget.dart';
 export 'support_settings_widget.dart';
 export 'logout_button_widget.dart';
