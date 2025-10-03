@@ -143,6 +143,15 @@ class CategoryIconPicker extends ConsumerWidget {
     Icons.breakfast_dining,
     Icons.dinner_dining,
     Icons.local_pizza,
+    Icons.icecream,
+    Icons.delivery_dining,
+    Icons.free_breakfast,
+    Icons.takeout_dining,
+    Icons.bakery_dining,
+    Icons.ramen_dining,
+    Icons.rice_bowl,
+    Icons.set_meal,
+
     // Transportation
     Icons.directions_car,
     Icons.local_gas_station,
@@ -154,6 +163,13 @@ class CategoryIconPicker extends ConsumerWidget {
     Icons.flight,
     Icons.directions_subway,
     Icons.local_parking,
+    Icons.local_shipping,
+    Icons.airport_shuttle,
+    Icons.electric_car,
+    Icons.car_rental,
+    Icons.commute,
+    Icons.two_wheeler,
+
     // Housing & Utilities
     Icons.home,
     Icons.apartment,
@@ -165,6 +181,12 @@ class CategoryIconPicker extends ConsumerWidget {
     Icons.heat_pump,
     Icons.ac_unit,
     Icons.router,
+    Icons.lightbulb,
+    Icons.thermostat,
+    Icons.security,
+    Icons.house,
+    Icons.cottage,
+
     // Health & Medical
     Icons.medical_services,
     Icons.local_pharmacy,
@@ -176,6 +198,10 @@ class CategoryIconPicker extends ConsumerWidget {
     Icons.emergency,
     Icons.healing,
     Icons.medication,
+    Icons.vaccines,
+    Icons.monitor_heart,
+    Icons.health_and_safety,
+
     // Education & Learning
     Icons.school,
     Icons.menu_book,
@@ -183,10 +209,14 @@ class CategoryIconPicker extends ConsumerWidget {
     Icons.auto_stories,
     Icons.calculate,
     Icons.science,
-    Icons.psychology,
     Icons.computer,
     Icons.laptop,
     Icons.tablet,
+    Icons.book,
+    Icons.quiz,
+    Icons.class_,
+    Icons.school_outlined,
+
     // Shopping & Personal
     Icons.shopping_bag,
     Icons.shopping_cart,
@@ -198,6 +228,11 @@ class CategoryIconPicker extends ConsumerWidget {
     Icons.face,
     Icons.style,
     Icons.watch,
+    Icons.diamond,
+    Icons.shopping_basket,
+    Icons.local_offer,
+    Icons.storefront,
+
     // Entertainment & Lifestyle
     Icons.movie,
     Icons.sports_esports,
@@ -209,6 +244,21 @@ class CategoryIconPicker extends ConsumerWidget {
     Icons.pool,
     Icons.hiking,
     Icons.beach_access,
+    Icons.camera_alt,
+    Icons.photo_camera,
+    Icons.videocam,
+    Icons.sports,
+    Icons.sports_golf,
+    Icons.sports_baseball,
+    Icons.sports_football,
+    Icons.sports_volleyball,
+    Icons.surfing,
+    Icons.snowboarding,
+    Icons.downhill_skiing,
+    Icons.kayaking,
+    Icons.sailing,
+    Icons.paragliding,
+
     // Family & Personal Care
     Icons.pets,
     Icons.baby_changing_station,
@@ -220,6 +270,9 @@ class CategoryIconPicker extends ConsumerWidget {
     Icons.self_improvement,
     Icons.volunteer_activism,
     Icons.favorite,
+    Icons.child_care,
+    Icons.stroller,
+
     // Bills & Finance
     Icons.receipt_long,
     Icons.payment,
@@ -231,6 +284,34 @@ class CategoryIconPicker extends ConsumerWidget {
     Icons.attach_money,
     Icons.price_check,
     Icons.receipt,
+    Icons.euro_symbol,
+    Icons.currency_yen,
+    Icons.currency_pound,
+
+    // Technology & Communication
+    Icons.smartphone,
+    Icons.tablet_mac,
+    Icons.desktop_mac,
+    Icons.headphones,
+    Icons.speaker,
+    Icons.tv,
+    Icons.games,
+    Icons.mouse,
+    Icons.keyboard,
+    Icons.cable,
+
+    // Hobbies & Interests
+    Icons.palette,
+    Icons.brush,
+    Icons.piano,
+    Icons.music_note,
+    Icons.audiotrack,
+    Icons.casino,
+    Icons.extension,
+    Icons.toys,
+    Icons.sports_handball,
+    Icons.format_paint,
+
     // Miscellaneous
     Icons.local_florist,
     Icons.celebration,
@@ -242,29 +323,68 @@ class CategoryIconPicker extends ConsumerWidget {
     Icons.plumbing,
     Icons.electrical_services,
     Icons.cleaning_services,
+    Icons.agriculture,
+    Icons.grass,
+    Icons.yard,
+    Icons.eco,
+    Icons.recycling,
+    Icons.nature,
+    Icons.park,
+    Icons.forest,
   ];
 
   static const List<IconData> _incomeIcons = [
+    // Work & Employment
     Icons.work,
     Icons.business,
+    Icons.business_center,
+    Icons.work_outline,
+    Icons.badge,
+    Icons.engineering,
+    Icons.construction,
+    Icons.architecture,
+    Icons.design_services,
+    Icons.support_agent,
+
+    // Finance & Investment
     Icons.monetization_on,
     Icons.account_balance,
     Icons.trending_up,
     Icons.attach_money,
     Icons.savings,
     Icons.credit_card,
-    Icons.card_giftcard,
-    Icons.redeem,
-    Icons.sell,
     Icons.local_atm,
     Icons.payment,
-    Icons.price_change,
     Icons.currency_exchange,
-    Icons.inventory,
+    Icons.euro_symbol,
+    Icons.currency_yen,
+    Icons.currency_pound,
+    Icons.price_change,
+    Icons.account_balance_wallet,
+
+    // Business & Sales
+    Icons.sell,
     Icons.store,
     Icons.storefront,
     Icons.shopping_cart,
     Icons.point_of_sale,
+    Icons.inventory,
+    Icons.local_offer,
+    Icons.campaign,
+    Icons.handshake,
+    Icons.groups,
+
+    // Gifts & Rewards
+    Icons.card_giftcard,
+    Icons.redeem,
+    Icons.celebration,
+    Icons.cake,
+    Icons.star,
+    Icons.military_tech,
+    Icons.emoji_events,
+    Icons.workspace_premium,
+
+    // Analytics & Reports
     Icons.receipt_long,
     Icons.calculate,
     Icons.assessment,
@@ -280,5 +400,41 @@ class CategoryIconPicker extends ConsumerWidget {
     Icons.format_list_numbered,
     Icons.checklist,
     Icons.task_alt,
+
+    // Online & Digital
+    Icons.computer,
+    Icons.laptop,
+    Icons.smartphone,
+    Icons.cloud,
+    Icons.web,
+    Icons.code,
+    Icons.developer_mode,
+    Icons.api,
+
+    // Investment & Assets
+    Icons.home,
+    Icons.apartment,
+    Icons.directions_car,
+    Icons.diamond,
+    Icons.landscape,
+    Icons.foundation,
+
+    // Freelance & Services
+    Icons.design_services,
+    Icons.brush,
+    Icons.palette,
+    Icons.camera_alt,
+    Icons.videocam,
+    Icons.mic,
+    Icons.edit,
+    Icons.content_copy,
+
+    // Passive Income
+    Icons.autorenew,
+    Icons.repeat,
+    Icons.schedule,
+    Icons.access_time,
+    Icons.update,
+    Icons.sync,
   ];
 }

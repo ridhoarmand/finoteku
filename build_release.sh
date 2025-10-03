@@ -22,7 +22,7 @@ echo "🔨 Building optimized release APK..."
 if [ "$NO_TREE_SHAKE" = true ]; then
     flutter build apk --release --no-tree-shake-icons --shrink --split-per-abi --obfuscate --split-debug-info=build/debug-info
 else
-    flutter build apk --release --shrink --split-per-abi --obfuscate --split-debug-info=build/debug-info
+    flutter build apk --release --tree-shake-icons --shrink --split-per-abi --obfuscate --split-debug-info=build/debug-info
 fi
 
 # Check if build was successful

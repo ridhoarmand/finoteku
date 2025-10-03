@@ -13,38 +13,133 @@ class CategoryIconHelper {
     'dividend': Icons.account_balance,
     'rental': Icons.home,
     'side_hustle': Icons.handyman,
+    'part_time': Icons.schedule,
+    'consulting': Icons.psychology,
+    'commission': Icons.sell,
+    'royalty': Icons.music_note,
+    'interest': Icons.savings,
 
-    // Expense Categories
+    // Expense Categories - Food & Dining
     'food': Icons.restaurant,
     'dining': Icons.restaurant,
+    'groceries': Icons.local_grocery_store,
+    'restaurant': Icons.local_dining,
+    'fast_food': Icons.fastfood,
+    'coffee': Icons.coffee,
+    'bakery': Icons.cake,
+    'snacks': Icons.icecream,
+    'delivery': Icons.delivery_dining,
+    'breakfast': Icons.breakfast_dining,
+    'lunch': Icons.lunch_dining,
+    'dinner': Icons.dinner_dining,
+    'pizza': Icons.local_pizza,
+
+    // Transportation
     'transportation': Icons.directions_car,
     'car': Icons.directions_car,
-    'shopping': Icons.shopping_bag,
-    'groceries': Icons.shopping_cart,
-    'entertainment': Icons.movie,
-    'health': Icons.local_hospital,
-    'medical': Icons.local_hospital,
-    'education': Icons.school,
-    'bills': Icons.receipt,
-    'utilities': Icons.electrical_services,
-    'rent': Icons.home,
-    'insurance': Icons.security,
     'fuel': Icons.local_gas_station,
-    'phone': Icons.phone,
-    'internet': Icons.wifi,
+    'taxi': Icons.local_taxi,
+    'train': Icons.train,
+    'bus': Icons.directions_bus,
+    'motorcycle': Icons.motorcycle,
+    'bike': Icons.pedal_bike,
+    'flight': Icons.flight,
+    'subway': Icons.directions_subway,
+    'parking': Icons.local_parking,
+
+    // Shopping & Personal
+    'shopping': Icons.shopping_bag,
+    'mall': Icons.local_mall,
     'clothing': Icons.checkroom,
     'beauty': Icons.face,
-    'fitness': Icons.fitness_center,
-    'travel': Icons.flight,
-    'subscription': Icons.subscriptions,
-    'charity': Icons.volunteer_activism,
-    'pets': Icons.pets,
-    'repairs': Icons.build,
-    'tax': Icons.gavel,
-    'others': Icons.more_horiz,
+    'skincare': Icons.spa,
+    'haircut': Icons.content_cut,
+    'laundry': Icons.local_laundry_service,
+    'dry_cleaning': Icons.dry_cleaning,
 
-    // Common child/sub-category hints (partial matches)
-    'sarapan': Icons.free_breakfast,
+    // Entertainment & Lifestyle
+    'entertainment': Icons.movie,
+    'movie': Icons.movie,
+    'gaming': Icons.sports_esports,
+    'music': Icons.music_note,
+    'sports': Icons.sports_soccer,
+    'fitness': Icons.fitness_center,
+    'gym': Icons.fitness_center,
+    'travel': Icons.flight,
+    'vacation': Icons.beach_access,
+    'hobby': Icons.palette,
+
+    // Health & Medical
+    'health': Icons.local_hospital,
+    'medical': Icons.medical_services,
+    'doctor': Icons.local_hospital,
+    'pharmacy': Icons.local_pharmacy,
+    'hospital': Icons.emergency,
+    'medicine': Icons.medication,
+    'therapy': Icons.psychology,
+    'dental': Icons.healing,
+    'checkup': Icons.medical_information,
+
+    // Education & Learning
+    'education': Icons.school,
+    'books': Icons.menu_book,
+    'course': Icons.auto_stories,
+    'training': Icons.science,
+    'school': Icons.school,
+    'university': Icons.school,
+    'tuition': Icons.calculate,
+
+    // Bills & Utilities
+    'bills': Icons.receipt,
+    'utilities': Icons.electrical_services,
+    'electricity': Icons.electric_bolt,
+    'water': Icons.water_drop,
+    'internet': Icons.wifi,
+    'phone': Icons.phone,
+    'gas': Icons.gas_meter,
+    'rent': Icons.home,
+    'mortgage': Icons.apartment,
+    'insurance': Icons.security,
+
+    // Family & Personal Care
+    'pets': Icons.pets,
+    'baby': Icons.baby_changing_station,
+    'childcare': Icons.child_friendly,
+    'elderly_care': Icons.elderly,
+    'personal_care': Icons.self_improvement,
+    'charity': Icons.volunteer_activism,
+
+    // Finance & Banking
+    'bank': Icons.account_balance,
+    'atm': Icons.local_atm,
+    'credit_card': Icons.credit_card,
+    'loan': Icons.payment,
+    'investment_fee': Icons.assessment,
+    'transfer': Icons.swap_horiz,
+    'exchange': Icons.currency_exchange,
+
+    // Home & Maintenance
+    'home_maintenance': Icons.handyman,
+    'repairs': Icons.build,
+    'cleaning': Icons.cleaning_services,
+    'gardening': Icons.local_florist,
+    'plumbing': Icons.plumbing,
+    'electrical': Icons.electrical_services,
+
+    // Subscriptions & Services
+    'subscription': Icons.subscriptions,
+    'software': Icons.computer,
+
+    // Miscellaneous
+    'tax': Icons.gavel,
+    'gift_giving': Icons.card_giftcard,
+    'celebration': Icons.celebration,
+    'office_supplies': Icons.inventory_2,
+    'others': Icons.more_horiz,
+    'miscellaneous': Icons.category,
+
+    // Common Indonesian terms
+    'sarapan': Icons.breakfast_dining,
     'makan siang': Icons.lunch_dining,
     'makan malam': Icons.dinner_dining,
     'kopi': Icons.coffee,
@@ -62,11 +157,8 @@ class CategoryIconHelper {
     'game': Icons.sports_esports,
     'musik': Icons.music_note,
     'event': Icons.event,
-    'skincare': Icons.spa,
-    'haircut': Icons.cut,
-    'salon': Icons.brush,
-    'gym': Icons.fitness_center,
-    'grooming': Icons.cut,
+    'salon': Icons.content_cut,
+    'grooming': Icons.content_cut,
     'makanan': Icons.pets,
     'buku': Icons.book,
     'kursus': Icons.school,
@@ -74,77 +166,275 @@ class CategoryIconHelper {
     'biaya admin': Icons.receipt_long,
     'biaya transfer': Icons.swap_horiz,
     'pajak': Icons.gavel,
-    'netflix': Icons.subscriptions,
-    'spotify': Icons.music_note,
-    'icloud': Icons.cloud,
+    'netflix_id': Icons.ondemand_video,
+    'spotify_id': Icons.music_note,
     'youtube': Icons.ondemand_video,
   };
 
-  // Available icons for selection (combination of Material + additional icons)
+  // Available icons for selection (comprehensive list matching CategoryIconPicker)
   static const List<IconData> availableIcons = [
-    // Common category icons
+    // Food & Dining
     Icons.restaurant,
-    Icons.directions_car,
-    Icons.shopping_bag,
-    Icons.shopping_cart,
-    Icons.movie,
-    Icons.local_hospital,
-    Icons.school,
-    Icons.work,
-    Icons.computer,
-    Icons.trending_up,
-    Icons.business,
-    Icons.card_giftcard,
-    Icons.home,
-    Icons.receipt,
-    Icons.electrical_services,
-    Icons.security,
-    Icons.local_gas_station,
-    Icons.phone,
-    Icons.wifi,
-    Icons.checkroom,
-    Icons.face,
-    Icons.fitness_center,
-    Icons.flight,
-    Icons.subscriptions,
-    Icons.volunteer_activism,
-    Icons.pets,
-    Icons.build,
-    Icons.gavel,
-    Icons.star,
-    Icons.account_balance,
-    Icons.handyman,
-
-    // Additional useful icons
-    Icons.coffee,
+    Icons.local_grocery_store,
     Icons.fastfood,
-    Icons.local_pizza,
+    Icons.coffee,
     Icons.cake,
-    Icons.directions_bus,
-    Icons.train,
-    Icons.two_wheeler,
+    Icons.local_dining,
+    Icons.lunch_dining,
+    Icons.breakfast_dining,
+    Icons.dinner_dining,
+    Icons.local_pizza,
+    Icons.icecream,
+    Icons.delivery_dining,
+    Icons.free_breakfast,
+    Icons.takeout_dining,
+    Icons.bakery_dining,
+    Icons.ramen_dining,
+    Icons.rice_bowl,
+    Icons.set_meal,
+
+    // Transportation
+    Icons.directions_car,
+    Icons.local_gas_station,
     Icons.local_taxi,
-    Icons.store,
-    Icons.local_mall,
-    Icons.sports_esports,
-    Icons.music_note,
-    Icons.book,
-    Icons.laptop,
-    Icons.smartphone,
-    Icons.tv,
-    Icons.sports,
-    Icons.beach_access,
-    Icons.camera_alt,
-    Icons.palette,
-    Icons.brush,
-    Icons.cut,
-    Icons.spa,
-    Icons.child_care,
-    Icons.elderly,
+    Icons.train,
+    Icons.directions_bus,
+    Icons.motorcycle,
+    Icons.pedal_bike,
+    Icons.flight,
+    Icons.directions_subway,
+    Icons.local_parking,
+    Icons.local_shipping,
+    Icons.airport_shuttle,
+    Icons.electric_car,
+    Icons.car_rental,
+    Icons.commute,
+    Icons.two_wheeler,
+
+    // Housing & Utilities
+    Icons.home,
+    Icons.apartment,
+    Icons.electric_bolt,
+    Icons.water_drop,
+    Icons.wifi,
+    Icons.phone,
+    Icons.gas_meter,
+    Icons.heat_pump,
+    Icons.ac_unit,
+    Icons.router,
+    Icons.lightbulb,
+    Icons.thermostat,
+    Icons.security,
+    Icons.house,
+    Icons.cottage,
+
+    // Health & Medical
     Icons.medical_services,
     Icons.local_pharmacy,
-    Icons.more_horiz,
+    Icons.local_hospital,
+    Icons.psychology,
+    Icons.fitness_center,
+    Icons.spa,
+    Icons.medical_information,
+    Icons.emergency,
+    Icons.healing,
+    Icons.medication,
+    Icons.vaccines,
+    Icons.monitor_heart,
+    Icons.health_and_safety,
+
+    // Education & Learning
+    Icons.school,
+    Icons.menu_book,
+    Icons.library_books,
+    Icons.auto_stories,
+    Icons.calculate,
+    Icons.science,
+    Icons.computer,
+    Icons.laptop,
+    Icons.tablet,
+    Icons.book,
+    Icons.quiz,
+    Icons.class_,
+    Icons.school_outlined,
+
+    // Shopping & Personal
+    Icons.shopping_bag,
+    Icons.shopping_cart,
+    Icons.local_mall,
+    Icons.checkroom,
+    Icons.dry_cleaning,
+    Icons.local_laundry_service,
+    Icons.content_cut,
+    Icons.face,
+    Icons.style,
+    Icons.watch,
+    Icons.diamond,
+    Icons.shopping_basket,
+    Icons.local_offer,
+    Icons.storefront,
+
+    // Entertainment & Lifestyle
+    Icons.movie,
+    Icons.sports_esports,
+    Icons.music_note,
+    Icons.theater_comedy,
+    Icons.sports_soccer,
+    Icons.sports_basketball,
+    Icons.sports_tennis,
+    Icons.pool,
+    Icons.hiking,
+    Icons.beach_access,
+    Icons.camera_alt,
+    Icons.photo_camera,
+    Icons.videocam,
+    Icons.sports,
+    Icons.sports_golf,
+    Icons.sports_baseball,
+    Icons.sports_football,
+    Icons.sports_volleyball,
+    Icons.surfing,
+    Icons.snowboarding,
+    Icons.downhill_skiing,
+    Icons.kayaking,
+    Icons.sailing,
+    Icons.paragliding,
+
+    // Family & Personal Care
+    Icons.pets,
+    Icons.baby_changing_station,
+    Icons.child_friendly,
+    Icons.elderly,
+    Icons.accessible,
+    Icons.pregnant_woman,
+    Icons.personal_injury,
+    Icons.self_improvement,
+    Icons.volunteer_activism,
+    Icons.favorite,
+    Icons.child_care,
+    Icons.stroller,
+
+    // Bills & Finance
+    Icons.receipt_long,
+    Icons.payment,
+    Icons.credit_card,
+    Icons.account_balance,
+    Icons.local_atm,
+    Icons.savings,
+    Icons.currency_exchange,
+    Icons.attach_money,
+    Icons.price_check,
+    Icons.receipt,
+    Icons.euro_symbol,
+    Icons.currency_yen,
+    Icons.currency_pound,
+    Icons.account_balance_wallet,
+
+    // Work & Employment
+    Icons.work,
+    Icons.business,
+    Icons.business_center,
+    Icons.work_outline,
+    Icons.badge,
+    Icons.engineering,
+    Icons.construction,
+    Icons.architecture,
+    Icons.design_services,
+    Icons.support_agent,
+    Icons.monetization_on,
+    Icons.trending_up,
+    Icons.sell,
+    Icons.price_change,
+    Icons.inventory,
+    Icons.store,
+    Icons.point_of_sale,
+    Icons.campaign,
+    Icons.handshake,
+    Icons.groups,
+
+    // Technology & Communication
+    Icons.smartphone,
+    Icons.tablet_mac,
+    Icons.desktop_mac,
+    Icons.headphones,
+    Icons.speaker,
+    Icons.tv,
+    Icons.games,
+    Icons.mouse,
+    Icons.keyboard,
+    Icons.cable,
+    Icons.cloud,
+    Icons.web,
+    Icons.code,
+    Icons.developer_mode,
+    Icons.api,
+
+    // Hobbies & Interests
+    Icons.palette,
+    Icons.brush,
+    Icons.piano,
+    Icons.audiotrack,
+    Icons.casino,
+    Icons.extension,
+    Icons.toys,
+    Icons.sports_handball,
+    Icons.format_paint,
+
+    // Gifts & Rewards
+    Icons.card_giftcard,
+    Icons.redeem,
+    Icons.celebration,
+    Icons.star,
+    Icons.military_tech,
+    Icons.emoji_events,
+    Icons.workspace_premium,
+
+    // Analytics & Reports
+    Icons.assessment,
+    Icons.bar_chart,
+    Icons.show_chart,
+    Icons.pie_chart,
+    Icons.analytics,
+    Icons.auto_graph,
+    Icons.insights,
+    Icons.track_changes,
+    Icons.query_stats,
+    Icons.timeline,
+    Icons.format_list_numbered,
+    Icons.checklist,
+    Icons.task_alt,
+
+    // Services & Maintenance
+    Icons.build,
+    Icons.handyman,
+    Icons.plumbing,
+    Icons.electrical_services,
+    Icons.cleaning_services,
+    Icons.local_florist,
+    Icons.inventory_2,
+    Icons.agriculture,
+    Icons.grass,
+    Icons.yard,
+    Icons.eco,
+    Icons.recycling,
+    Icons.nature,
+    Icons.park,
+    Icons.forest,
+
+    // Passive Income & Investment
+    Icons.autorenew,
+    Icons.repeat,
+    Icons.schedule,
+    Icons.access_time,
+    Icons.update,
+    Icons.sync,
+    Icons.landscape,
+    Icons.foundation,
+
+    // Common Categories
     Icons.category,
+    Icons.more_horiz,
+    Icons.event,
   ];
 
   // Get icon for category name (auto-detection)
@@ -176,23 +466,26 @@ class CategoryIconHelper {
     return getIconForCategory(parentName);
   }
 
-  // Get icon from stored icon data (from database)
+  // Get icon from stored codePoint (tree-shake friendly)
   static IconData getIconFromCodePoint(int? codePoint) {
     if (codePoint == null) return Icons.category;
 
-    // Create IconData directly from codePoint
-    // This ensures ANY valid Material Icon codePoint will work
-    try {
-      final iconData = IconData(
-        codePoint,
-        fontFamily: 'MaterialIcons',
-        fontPackage: null,
-      );
-      return iconData;
-    } catch (e) {
-      // Fallback to category icon if there's any error
-      return Icons.category;
+    // Find matching icon from our predefined list
+    for (final icon in availableIcons) {
+      if (icon.codePoint == codePoint) {
+        return icon;
+      }
     }
+
+    // If not found in available icons, check category icons mapping
+    for (final icon in _categoryIcons.values) {
+      if (icon.codePoint == codePoint) {
+        return icon;
+      }
+    }
+
+    // Fallback to default category icon
+    return Icons.category;
   }
 
   // Convert IconData to codePoint for storage
