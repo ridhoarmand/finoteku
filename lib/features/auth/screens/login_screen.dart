@@ -199,17 +199,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const SizedBox(height: 40),
+                          const SizedBox(height: 32),
                           // App Logo/Title
-                          SizedBox(
-                            height: 100,
-                            width: 100,
-                            child: Image.asset(
-                              'assets/icon.png',
-                              fit: BoxFit.cover,
+                          Center(
+                            child: SizedBox(
+                              height: 140,
+                              width: 140,
+                              child: Image.asset(
+                                'assets/icon.png',
+                                fit: BoxFit.contain,
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 20),
                           Text(
                             'Finoteku',
                             style: theme.textTheme.headlineLarge?.copyWith(
@@ -218,7 +220,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 12),
                           Text(
                             'Personal Finance Manager',
                             style: theme.textTheme.bodyLarge?.copyWith(
@@ -226,7 +228,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 48),
+                          const SizedBox(height: 40),
 
                           // Email Field
                           TextFormField(
