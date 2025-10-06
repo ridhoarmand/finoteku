@@ -160,9 +160,6 @@ class TransactionService {
       throw PermissionFailure('Unauthorized');
     }
 
-    final oldWalletId = existingTransaction.walletId;
-    final newWalletId = request.walletId ?? oldWalletId;
-
     try {
       final data = <String, dynamic>{};
       if (request.walletId != null) data['wallet_id'] = request.walletId;
@@ -189,13 +186,6 @@ class TransactionService {
           .single();
       final updated = Transaction.fromJson(_convertFromSupabase(response));
 
-      // Recalculate wallet balances (if changed)
-      if (oldWalletId != newWalletId) {
-        await recalcWalletBalance(oldWalletId, userId);
-        await recalcWalletBalance(newWalletId, userId);
-      } else {
-        await recalcWalletBalance(newWalletId, userId);
-      }
       return updated;
     } catch (e, st) {
       AppLogger.e('update transaction failed', error: e, stackTrace: st);

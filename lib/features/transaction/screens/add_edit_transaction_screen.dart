@@ -64,7 +64,9 @@ class _AddEditTransactionScreenState
     // If editing existing transaction, populate fields
     if (widget.initialTransaction != null) {
       final transaction = widget.initialTransaction!;
-      _amountController.text = transaction.amount.abs().toString();
+      // Use num to automatically format without unnecessary decimals
+      final num amount = transaction.amount.abs();
+      _amountController.text = amount.toString();
       _notesController.text = transaction.notes ?? '';
       _selectedDate = transaction.date;
       _isTransfer = false;
@@ -76,8 +78,13 @@ class _AddEditTransactionScreenState
     if (widget.initialTransfer != null) {
       final tr = widget.initialTransfer!;
       _isTransfer = true;
-      _amountController.text = tr.amount.abs().toString();
-      _feeController.text = tr.fee.abs().toString();
+      // Use num to automatically format without unnecessary decimals
+      final num amount = tr.amount.abs();
+      _amountController.text = amount.toString();
+
+      final num fee = tr.fee.abs();
+      _feeController.text = fee == 0 ? '' : fee.toString();
+
       _notesController.text = tr.notes ?? '';
       _selectedDate = tr.date;
       // Wallets will be assigned in didChangeDependencies
@@ -209,10 +216,10 @@ class _AddEditTransactionScreenState
 
               ...(!_isTransfer
                   ? [
-                      // Category Selection
-                      _buildCategorySection(user.id),
                       // Wallet Selection
                       _buildWalletSection(user.id),
+                      // Category Selection
+                      _buildCategorySection(user.id),
                     ]
                   : [
                       // Source wallet, destination wallet and optional fee for transfer
@@ -462,7 +469,8 @@ class _AddEditTransactionScreenState
 
     try {
       final user = ref.read(currentUserProvider).value!;
-      final amount = double.parse(_amountController.text);
+      final amountText = _amountController.text.trim();
+      final amount = double.parse(amountText);
       final notes = _notesController.text.trim();
 
       // Amount always stored as positive; category.type determines sign in analytics & wallet triggers

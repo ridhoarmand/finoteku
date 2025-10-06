@@ -58,7 +58,8 @@ class AmountSection extends ConsumerWidget {
               if (value?.isEmpty ?? true) {
                 return ref.tr(context, 'amount_validation_empty');
               }
-              final amount = double.tryParse(value!);
+              final cleanValue = value!.trim();
+              final amount = double.tryParse(cleanValue);
               if (amount == null || amount <= 0) {
                 return ref.tr(context, 'amount_validation_invalid');
               }
