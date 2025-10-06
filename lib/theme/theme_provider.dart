@@ -11,7 +11,7 @@ final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((
 class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   static const String _prefsKey = 'theme_mode';
 
-  ThemeModeNotifier() : super(ThemeMode.system) {
+  ThemeModeNotifier() : super(ThemeMode.light) {
     // Load saved theme preference asynchronously
     _loadThemePreference();
   }
@@ -26,8 +26,8 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
         state = ThemeMode.values[savedThemeModeIndex];
       }
     } catch (e) {
-      // If error loading preferences, keep default (system)
-      state = ThemeMode.system;
+      // If error loading preferences, keep default (light)
+      state = ThemeMode.light;
     }
   }
 
