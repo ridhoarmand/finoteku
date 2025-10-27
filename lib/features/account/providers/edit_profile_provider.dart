@@ -38,13 +38,15 @@ class EditProfileState {
   }
 }
 
-class EditProfileNotifier extends StateNotifier<EditProfileState> {
-  EditProfileNotifier() : super(const EditProfileState()) {
-    // Initialize data after constructor
-    Future.microtask(() => loadUserData());
-  }
-
+class EditProfileNotifier extends Notifier<EditProfileState> {
   final _imagePicker = ImagePicker();
+
+  @override
+  EditProfileState build() {
+    // Initialize data after build
+    Future.microtask(() => loadUserData());
+    return const EditProfileState();
+  }
 
   void setHasChanges(bool hasChanges) {
     state = state.copyWith(hasChanges: hasChanges);
@@ -243,6 +245,6 @@ class EditProfileNotifier extends StateNotifier<EditProfileState> {
   }
 }
 
-final editProfileProvider = StateNotifierProvider<EditProfileNotifier, EditProfileState>((ref) {
-  return EditProfileNotifier();
-});
+final editProfileProvider = NotifierProvider<EditProfileNotifier, EditProfileState>(
+  EditProfileNotifier.new,
+);

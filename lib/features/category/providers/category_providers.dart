@@ -5,7 +5,7 @@ import '../services/category_service.dart';
 import '../../../core/state/refresh_token.dart';
 
 // Unified refresh token for categories
-final categoryRefreshProvider = createRefreshTokenProvider();
+final categoryRefreshProvider = refreshTokenProvider();
 
 // Provider untuk CategoryService sudah didefinisikan di file service; gunakan langsung.
 // Alias for consistency with other features

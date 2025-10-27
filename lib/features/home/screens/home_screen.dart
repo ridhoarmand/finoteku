@@ -9,6 +9,7 @@ import '../../../core/localization/app_localizations.dart';
 import '../widgets/monthly_summary_section.dart';
 import '../widgets/recent_transactions_section.dart';
 import '../../../widgets/user_avatar_widget.dart';
+import '../../transaction/screens/add_edit_transaction_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -182,15 +183,9 @@ class HomeScreen extends ConsumerWidget {
                               InkWell(
                                 borderRadius: BorderRadius.circular(24),
                                 onTap: () {
-                                  final current = ref.read(
-                                    balanceVisibilityProvider,
-                                  );
                                   ref
-                                          .read(
-                                            balanceVisibilityProvider.notifier,
-                                          )
-                                          .state =
-                                      !current;
+                                      .read(balanceVisibilityProvider.notifier)
+                                      .toggle();
                                 },
                                 child: Padding(
                                   padding: const EdgeInsets.all(6),
@@ -303,6 +298,25 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
       ),
+      floatingActionButton: userId != null
+          ? FloatingActionButton(
+              onPressed: () async {
+                final result = await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const AddEditTransactionScreen(),
+                  ),
+                );
+
+                // Refresh data if transaction was added successfully
+                if (result == true) {
+                  // Trigger refresh for wallets and transactions
+                  ref.invalidate(activeWalletsProvider(userId));
+                  ref.invalidate(totalBalanceProvider(userId));
+                }
+              },
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 }

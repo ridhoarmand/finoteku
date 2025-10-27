@@ -7,20 +7,24 @@ const supportedLanguageCodes = ['en', 'id'];
 class AppLocaleState {
   final Locale effectiveLocale; // Locale used by MaterialApp
   final String
-  contentLanguageCode; // Language code for strings (may differ when fallback)
+      contentLanguageCode; // Language code for strings (may differ when fallback)
   const AppLocaleState({
     required this.effectiveLocale,
     required this.contentLanguageCode,
   });
 }
 
-class LocaleNotifier extends StateNotifier<AppLocaleState> {
-  LocaleNotifier() : super(_detectInitial()) {
+class LocaleNotifier extends Notifier<AppLocaleState> {
+  static const _prefsKey = 'app_locale_code';
+
+  @override
+  AppLocaleState build() {
+    // Keep provider alive to prevent multiple loads
+    ref.keepAlive();
     // Use microtask to avoid blocking the constructor
     Future.microtask(() => _loadSaved());
+    return _detectInitial();
   }
-
-  static const _prefsKey = 'app_locale_code';
 
   Future<void> _loadSaved() async {
     try {
@@ -74,10 +78,6 @@ class LocaleNotifier extends StateNotifier<AppLocaleState> {
   }
 }
 
-final appLocaleProvider = StateNotifierProvider<LocaleNotifier, AppLocaleState>(
-  (ref) {
-    // Keep provider alive to prevent multiple loads
-    ref.keepAlive();
-    return LocaleNotifier();
-  },
+final appLocaleProvider = NotifierProvider<LocaleNotifier, AppLocaleState>(
+  LocaleNotifier.new,
 );

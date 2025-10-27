@@ -19,7 +19,7 @@ final transactionRepositoryProvider = Provider<TransactionService>(
 );
 
 // Unified refresh trigger
-final transactionRefreshTriggerProvider = createRefreshTokenProvider();
+final transactionRefreshTriggerProvider = refreshTokenProvider();
 
 // Provider untuk daftar transactions berdasarkan user ID
 final transactionsProvider = FutureProvider.family<List<Transaction>, String>((

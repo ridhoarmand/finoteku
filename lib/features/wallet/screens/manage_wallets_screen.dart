@@ -24,7 +24,7 @@ class ManageWalletsScreen extends ConsumerWidget {
             icon: const Icon(Icons.add),
             onPressed: () {
               // Check if user is authenticated before showing dialog
-              final user = currentUser.valueOrNull;
+              final user = currentUser.value;
               if (user != null) {
                 _showAddWalletDialog(context, ref);
               } else {
@@ -189,7 +189,7 @@ class ManageWalletsScreen extends ConsumerWidget {
   }
 
   void _showAddWalletDialog(BuildContext context, WidgetRef ref) {
-    final user = ref.read(currentUserProvider).valueOrNull;
+    final user = ref.read(currentUserProvider).value;
     if (user == null) return;
     showDialog(
       context: context,

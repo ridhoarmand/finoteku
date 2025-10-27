@@ -70,11 +70,14 @@ class DeleteAccountState {
 
 /// State notifier untuk delete account process
 /// Menghandle UI logic dan state management untuk delete account flow
-class DeleteAccountNotifier extends StateNotifier<DeleteAccountState> {
-  final DeleteAccountService _deleteAccountService;
+class DeleteAccountNotifier extends Notifier<DeleteAccountState> {
+  late final DeleteAccountService _deleteAccountService;
 
-  DeleteAccountNotifier(this._deleteAccountService)
-    : super(const DeleteAccountState.initial());
+  @override
+  DeleteAccountState build() {
+    _deleteAccountService = ref.read(deleteAccountServiceProvider);
+    return const DeleteAccountState.initial();
+  }
 
   /// Start delete account process dengan password verification
   ///
@@ -131,7 +134,6 @@ class DeleteAccountNotifier extends StateNotifier<DeleteAccountState> {
 
 /// Provider untuk delete account state management
 final deleteAccountProvider =
-    StateNotifierProvider<DeleteAccountNotifier, DeleteAccountState>((ref) {
-      final service = ref.watch(deleteAccountServiceProvider);
-      return DeleteAccountNotifier(service);
-    });
+    NotifierProvider<DeleteAccountNotifier, DeleteAccountState>(
+      DeleteAccountNotifier.new,
+    );

@@ -26,6 +26,7 @@ import '../features/category/screens/category_selection_screen.dart';
 import '../features/category/screens/add_edit_category_screen.dart';
 import '../models/category.dart';
 import '../features/transaction/screens/wallet_selection_screen.dart';
+import '../features/transaction/screens/add_edit_transaction_screen.dart';
 import '../widgets/main_shell.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -260,6 +261,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           final title = state.uri.queryParameters['title'] ?? 'Select Category';
           return CategorySelectionScreen(userId: userId, title: title);
         },
+      ),
+      // Add transaction route
+      GoRoute(
+        path: '/transaction/add',
+        builder: (context, state) => const AddEditTransactionScreen(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

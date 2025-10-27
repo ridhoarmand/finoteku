@@ -5,13 +5,15 @@ import '../models/daily_notification.dart';
 import '../services/notification_service.dart';
 
 // Provider untuk list notifications
-final notificationListProvider = StateNotifierProvider<NotificationListNotifier, List<DailyNotification>>((ref) {
-  return NotificationListNotifier();
-});
+final notificationListProvider = NotifierProvider<NotificationListNotifier, List<DailyNotification>>(
+  NotificationListNotifier.new,
+);
 
-class NotificationListNotifier extends StateNotifier<List<DailyNotification>> {
-  NotificationListNotifier() : super([]) {
+class NotificationListNotifier extends Notifier<List<DailyNotification>> {
+  @override
+  List<DailyNotification> build() {
     loadNotifications();
+    return [];
   }
 
   Future<void> loadNotifications() async {

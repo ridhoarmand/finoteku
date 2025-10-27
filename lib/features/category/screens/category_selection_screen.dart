@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../models/category.dart';
 import '../providers/category_providers.dart';
-import '../widgets/category_form_dialog.dart';
+import '../screens/add_edit_category_screen.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../utils/category_icon_helper.dart';
 
@@ -94,31 +94,17 @@ class _CategorySelectionScreenState
     final isExpense = _tabController.index == 0;
     final categoryType = isExpense ? CategoryType.expense : CategoryType.income;
 
-    showDialog(
-      context: context,
-      builder: (_) => CategoryFormDialog(
-        title: isExpense
-            ? ref.tr(context, 'add_expense_category')
-            : ref.tr(context, 'add_income_category'),
-        categoryType: categoryType,
-        onSave: (name, color, icon, parentId) async {
-          try {
-            final request = CreateCategoryRequest(
-              name: name,
-              type: categoryType,
-              parentId: parentId,
-              iconCodePoint: icon?.codePoint,
-            );
-            await ref
-                .read(categoryRepositoryProvider)
-                .createCategory(widget.userId, request);
-            refreshCategoryProviders(ref);
-          } catch (e) {
-            rethrow;
-          }
-        },
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddEditCategoryScreen(categoryType: categoryType),
       ),
-    );
+    ).then((result) {
+      if (result == true) {
+        // Category was saved, refresh the list
+        refreshCategoryProviders(ref);
+      }
+    });
   }
 }
 
