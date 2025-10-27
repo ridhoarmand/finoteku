@@ -29,12 +29,13 @@ class SupabaseService {
       await Supabase.initialize(
         url: url,
         anonKey: anonKey,
-        debug: kDebugMode, // Only debug in debug mode
+        debug:
+            false, // Disabled for performance - was causing 300+ skipped frames
         authOptions: const FlutterAuthClientOptions(
           authFlowType: AuthFlowType.pkce,
         ),
         realtimeClientOptions: const RealtimeClientOptions(
-          logLevel: RealtimeLogLevel.info,
+          logLevel: RealtimeLogLevel.error, // Only errors, not info
         ),
       );
       _client = Supabase.instance.client;

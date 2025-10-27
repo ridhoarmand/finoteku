@@ -68,18 +68,20 @@ class _MyAppState extends ConsumerState<MyApp> {
         // Continue anyway for demo purposes
       }
 
-      // Initialize connectivity monitoring
-      try {
-        await ConnectivityService().initialize();
-        if (kDebugMode) {
-          print('✅ Connectivity service initialized');
-        }
-      } catch (e) {
-        if (kDebugMode) {
-          print('❌ Failed to initialize connectivity service: $e');
-        }
-        // Continue anyway - connectivity check is optional
-      }
+      // Initialize connectivity monitoring (deferred, non-blocking)
+      // Run in background to avoid blocking UI
+      ConnectivityService()
+          .initialize()
+          .then((_) {
+            if (kDebugMode) {
+              print('✅ Connectivity service initialized');
+            }
+          })
+          .catchError((e) {
+            if (kDebugMode) {
+              print('❌ Failed to initialize connectivity service: $e');
+            }
+          });
     } catch (e) {
       if (kDebugMode) {
         print('❌ Critical initialization error: $e');

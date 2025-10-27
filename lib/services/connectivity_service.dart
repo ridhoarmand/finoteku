@@ -60,11 +60,11 @@ class ConnectivityService {
   /// Verify actual internet connection by pinging a reliable server
   Future<bool> _checkActualInternetConnection() async {
     try {
-      // Try to reach Google DNS (very reliable)
+      // Try to reach Google DNS (very reliable) with short timeout
       final response = await http
           .get(Uri.parse('https://www.google.com'))
           .timeout(
-            const Duration(seconds: 5),
+            const Duration(seconds: 2), // Reduced from 5 to 2 seconds
             onTimeout: () => http.Response('Timeout', 408),
           );
 
@@ -83,10 +83,6 @@ class ConnectivityService {
     Duration retryDelay = const Duration(seconds: 2),
   }) async {
     for (int i = 0; i < maxRetries; i++) {
-      if (kDebugMode) {
-        print('🔄 Checking connectivity... Attempt ${i + 1}/$maxRetries');
-      }
-
       final isConnected = await checkConnectivity();
 
       if (isConnected) {
@@ -97,9 +93,6 @@ class ConnectivityService {
       }
 
       if (i < maxRetries - 1) {
-        if (kDebugMode) {
-          print('⏳ Waiting ${retryDelay.inSeconds}s before retry...');
-        }
         await Future.delayed(retryDelay);
       }
     }

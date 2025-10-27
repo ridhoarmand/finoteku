@@ -50,12 +50,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   void _initializeAnimations() {
     _logoController = AnimationController(
-      duration: const Duration(milliseconds: 600), // Reduced further
+      duration: const Duration(milliseconds: 300), // Reduced from 600ms
       vsync: this,
     );
 
     _textController = AnimationController(
-      duration: const Duration(milliseconds: 400), // Reduced further
+      duration: const Duration(milliseconds: 200), // Reduced from 400ms
       vsync: this,
     );
 
@@ -72,7 +72,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     // Start animations with optimal timing
     _logoController.forward();
-    Timer(const Duration(milliseconds: 200), () {
+    Timer(const Duration(milliseconds: 100), () {
+      // Reduced from 200ms
       if (mounted) _textController.forward();
     });
   }
@@ -118,15 +119,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     try {
       if (!mounted) return;
 
-      // Check connectivity first with retry mechanism
+      // Quick connectivity check (non-blocking)
       _updateStatus('Memeriksa koneksi...');
 
       try {
         final connectivityService = ref.read(connectivityServiceProvider);
-        final isConnected = await connectivityService.waitUntilOnline(
-          maxRetries: 5, // Reduced retries
-          retryDelay: const Duration(seconds: 1),
-        );
+        // Quick check only, no retry to avoid blocking
+        final isConnected = await connectivityService.checkConnectivity();
 
         if (!isConnected) {
           if (!mounted) return;
@@ -198,7 +197,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             }
 
             _updateStatus(_safeTranslate('ready'));
-            await Future.delayed(const Duration(milliseconds: 200));
+            // Reduced delay for faster navigation
+            await Future.delayed(const Duration(milliseconds: 100));
 
             if (mounted) context.go(destination);
           },
