@@ -5,9 +5,10 @@ import '../models/daily_notification.dart';
 import '../services/notification_service.dart';
 
 // Provider untuk list notifications
-final notificationListProvider = NotifierProvider<NotificationListNotifier, List<DailyNotification>>(
-  NotificationListNotifier.new,
-);
+final notificationListProvider =
+    NotifierProvider<NotificationListNotifier, List<DailyNotification>>(
+      NotificationListNotifier.new,
+    );
 
 class NotificationListNotifier extends Notifier<List<DailyNotification>> {
   @override
@@ -25,7 +26,11 @@ class NotificationListNotifier extends Notifier<List<DailyNotification>> {
     }
   }
 
-  Future<void> addNotification(String title, String body, TimeOfDay time) async {
+  Future<void> addNotification(
+    String title,
+    String body,
+    TimeOfDay time,
+  ) async {
     try {
       await NotificationService.addNotification(title, body, time);
       await loadNotifications();
@@ -63,6 +68,9 @@ class NotificationListNotifier extends Notifier<List<DailyNotification>> {
 }
 
 // Provider untuk sending test notification
-final testNotificationProvider = FutureProvider.autoDispose.family<void, void>((ref, _) async {
+final testNotificationProvider = FutureProvider.autoDispose.family<void, void>((
+  ref,
+  _,
+) async {
   await NotificationService.sendTestNotification();
 });

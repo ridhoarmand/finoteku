@@ -66,7 +66,6 @@ class _CategorySelectionScreenState
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddCategoryDialog(),
-        tooltip: ref.tr(context, 'category_add'),
         child: const Icon(Icons.add),
       ),
       body: TabBarView(

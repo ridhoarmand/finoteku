@@ -17,7 +17,7 @@ final faqDataProvider = Provider<List<FAQSection>>((ref) {
 class FAQSearchNotifier extends Notifier<String> {
   @override
   String build() => '';
-  
+
   void updateSearch(String query) => state = query;
   void clear() => state = '';
 }
@@ -30,14 +30,15 @@ final faqSearchProvider = NotifierProvider<FAQSearchNotifier, String>(
 class SelectedFAQCategoryNotifier extends Notifier<FAQCategory?> {
   @override
   FAQCategory? build() => null;
-  
+
   void selectCategory(FAQCategory? category) => state = category;
   void clear() => state = null;
 }
 
-final selectedFAQCategoryProvider = NotifierProvider<SelectedFAQCategoryNotifier, FAQCategory?>(
-  SelectedFAQCategoryNotifier.new,
-);
+final selectedFAQCategoryProvider =
+    NotifierProvider<SelectedFAQCategoryNotifier, FAQCategory?>(
+      SelectedFAQCategoryNotifier.new,
+    );
 
 // Filtered FAQ provider berdasarkan search dan category
 final filteredFAQProvider = Provider<List<FAQItem>>((ref) {

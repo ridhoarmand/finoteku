@@ -27,9 +27,9 @@ class IncomeExpenseToggle extends ConsumerWidget {
             child: GestureDetector(
               onTap: () {
                 if (state.type != ReportType.expense) {
-                  ref.read(reportStateProvider.notifier).updateState(
-                    state.copyWith(type: ReportType.expense),
-                  );
+                  ref
+                      .read(reportStateProvider.notifier)
+                      .updateState(state.copyWith(type: ReportType.expense));
                 }
               },
               child: Container(
@@ -59,9 +59,9 @@ class IncomeExpenseToggle extends ConsumerWidget {
             child: GestureDetector(
               onTap: () {
                 if (state.type != ReportType.income) {
-                  ref.read(reportStateProvider.notifier).updateState(
-                    state.copyWith(type: ReportType.income),
-                  );
+                  ref
+                      .read(reportStateProvider.notifier)
+                      .updateState(state.copyWith(type: ReportType.income));
                 }
               },
               child: Container(

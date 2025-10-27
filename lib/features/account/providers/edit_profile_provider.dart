@@ -65,7 +65,7 @@ class EditProfileNotifier extends Notifier<EditProfileState> {
       final user = SupabaseService.client.auth.currentUser;
       if (user != null) {
         final avatarUrl = user.userMetadata?['avatar_url'];
-        
+
         state = state.copyWith(
           avatarUrl: avatarUrl,
           error: null, // Clear any previous errors
@@ -109,12 +109,9 @@ class EditProfileNotifier extends Notifier<EditProfileState> {
         maxHeight: 512,
         imageQuality: 70,
       );
-      
+
       if (image != null) {
-        state = state.copyWith(
-          imageFile: File(image.path),
-          hasChanges: true,
-        );
+        state = state.copyWith(imageFile: File(image.path), hasChanges: true);
       }
     } catch (e) {
       state = state.copyWith(error: 'Failed to pick image: ${e.toString()}');
@@ -122,11 +119,7 @@ class EditProfileNotifier extends Notifier<EditProfileState> {
   }
 
   void removePhoto() {
-    state = state.copyWith(
-      imageFile: null,
-      avatarUrl: null,
-      hasChanges: true,
-    );
+    state = state.copyWith(imageFile: null, avatarUrl: null, hasChanges: true);
   }
 
   Future<String?> uploadAvatar(WidgetRef ref) async {
@@ -144,10 +137,11 @@ class EditProfileNotifier extends Notifier<EditProfileState> {
           final pathSegments = uri.pathSegments;
           if (pathSegments.length >= 3) {
             // URL format: .../storage/v1/object/public/avatars/{user_id}/filename
-            final oldFileName = '${pathSegments[pathSegments.length - 2]}/${pathSegments.last}';
-            await SupabaseService.client.storage
-                .from('avatars')
-                .remove([oldFileName]);
+            final oldFileName =
+                '${pathSegments[pathSegments.length - 2]}/${pathSegments.last}';
+            await SupabaseService.client.storage.from('avatars').remove([
+              oldFileName,
+            ]);
           }
         } catch (e) {
           // Continue if deletion fails - not critical
@@ -156,8 +150,9 @@ class EditProfileNotifier extends Notifier<EditProfileState> {
       }
 
       // Use folder structure: {user_id}/avatar_{timestamp}.jpg
-      final fileName = '${user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      
+      final fileName =
+          '${user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
       await SupabaseService.client.storage
           .from('avatars')
           .upload(fileName, state.imageFile!);
@@ -168,23 +163,31 @@ class EditProfileNotifier extends Notifier<EditProfileState> {
 
       // Cache the uploaded image
       final imageCacheService = ref.read(imageCacheServiceProvider);
-      await imageCacheService.cacheLocalImage(state.imageFile!, publicUrl, user.id);
+      await imageCacheService.cacheLocalImage(
+        state.imageFile!,
+        publicUrl,
+        user.id,
+      );
 
       return publicUrl;
     } catch (e) {
       String errorMessage = 'Failed to upload image: ${e.toString()}';
-      
+
       // Provide more specific error messages
       if (e.toString().contains('StorageException')) {
-        if (e.toString().contains('403') || e.toString().contains('Unauthorized')) {
-          errorMessage = 'Upload failed: Please check if the avatars bucket exists and has correct permissions in Supabase Dashboard';
+        if (e.toString().contains('403') ||
+            e.toString().contains('Unauthorized')) {
+          errorMessage =
+              'Upload failed: Please check if the avatars bucket exists and has correct permissions in Supabase Dashboard';
         } else if (e.toString().contains('404')) {
-          errorMessage = 'Upload failed: The avatars bucket does not exist. Please create it in Supabase Dashboard';
+          errorMessage =
+              'Upload failed: The avatars bucket does not exist. Please create it in Supabase Dashboard';
         } else if (e.toString().contains('413')) {
-          errorMessage = 'Upload failed: Image file is too large. Please choose a smaller image';
+          errorMessage =
+              'Upload failed: Image file is too large. Please choose a smaller image';
         }
       }
-      
+
       state = state.copyWith(error: errorMessage);
       return null;
     }
@@ -229,7 +232,7 @@ class EditProfileNotifier extends Notifier<EditProfileState> {
 
       // Refresh the current user provider
       ref.invalidate(currentUserProvider);
-      
+
       return true;
     } catch (e) {
       state = state.copyWith(
@@ -245,6 +248,7 @@ class EditProfileNotifier extends Notifier<EditProfileState> {
   }
 }
 
-final editProfileProvider = NotifierProvider<EditProfileNotifier, EditProfileState>(
-  EditProfileNotifier.new,
-);
+final editProfileProvider =
+    NotifierProvider<EditProfileNotifier, EditProfileState>(
+      EditProfileNotifier.new,
+    );

@@ -7,7 +7,7 @@ const supportedLanguageCodes = ['en', 'id'];
 class AppLocaleState {
   final Locale effectiveLocale; // Locale used by MaterialApp
   final String
-      contentLanguageCode; // Language code for strings (may differ when fallback)
+  contentLanguageCode; // Language code for strings (may differ when fallback)
   const AppLocaleState({
     required this.effectiveLocale,
     required this.contentLanguageCode,
