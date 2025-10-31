@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../utils/thousand_separator_formatter.dart';
 
 class AmountSection extends ConsumerWidget {
   final TextEditingController controller;
@@ -52,13 +53,15 @@ class AmountSection extends ConsumerWidget {
             onFieldSubmitted: (_) => onSubmitted(),
             onTapOutside: (_) => onTapOutside(),
             inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+              FilteringTextInputFormatter.digitsOnly,
+              ThousandSeparatorFormatter(),
             ],
             validator: (value) {
               if (value?.isEmpty ?? true) {
                 return ref.tr(context, 'amount_validation_empty');
               }
-              final cleanValue = value!.trim();
+              // Remove thousand separators before parsing
+              final cleanValue = value!.trim().replaceAll('.', '');
               final amount = double.tryParse(cleanValue);
               if (amount == null || amount <= 0) {
                 return ref.tr(context, 'amount_validation_invalid');
