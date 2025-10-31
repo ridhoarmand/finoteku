@@ -481,18 +481,19 @@ class TransactionDetailScreen extends ConsumerWidget {
   ) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: Text(ref.tr(context, 'delete_transaction_title')),
           content: Text(ref.tr(context, 'delete_transaction_confirm')),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.of(dialogContext).pop(),
               child: Text(ref.tr(context, 'cancel')),
             ),
             FilledButton(
               onPressed: () async {
-                Navigator.of(context).pop(); // Close dialog
+                Navigator.of(dialogContext).pop(); // Close dialog first
+                // Use the screen context, not dialog context
                 await _deleteTransaction(context, ref, transaction.id, userId);
               },
               style: FilledButton.styleFrom(
@@ -518,9 +519,8 @@ class TransactionDetailScreen extends ConsumerWidget {
       await repo.deleteTransaction(transactionId, userId);
 
       // Invalidate related providers to refresh data
-      refreshTransactionProviders(ref); // bumps all transaction lists
+      refreshTransactionProviders(ref);
       // Family providers require params; rely on refresh trigger instead of raw invalidation
-
       // Also refresh wallet providers to update balances
       refreshWalletProviders(ref);
 
@@ -531,7 +531,7 @@ class TransactionDetailScreen extends ConsumerWidget {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.of(context).pop(); // Go back to transaction list
+        Navigator.of(context).pop(); // Go back to previous screen
       }
     } catch (e) {
       if (context.mounted) {
