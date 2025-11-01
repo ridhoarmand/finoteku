@@ -11,6 +11,7 @@ import '../../category/theme/category_theme.dart';
 import '../../transaction/screens/transaction_detail_screen.dart';
 import '../../transfer/screens/transfer_detail_screen.dart';
 import '../../transaction/widgets/ledger_transfer_card.dart';
+import '../providers/home_providers.dart';
 
 class RecentTransactionsSection extends ConsumerWidget {
   final String userId;
@@ -23,6 +24,7 @@ class RecentTransactionsSection extends ConsumerWidget {
     final walletsAsync = ref.watch(
       walletsProvider(userId),
     ); // Use all wallets for transfers
+    final selectedWalletId = ref.watch(selectedHomeWalletProvider);
 
     final theme = Theme.of(context);
 
@@ -43,7 +45,22 @@ class RecentTransactionsSection extends ConsumerWidget {
         ),
       ),
       data: (entries) {
-        if (entries.isEmpty) {
+        // Filter entries: only expenses (signedAmount < 0) and by selected wallet
+        final filteredEntries = entries.where((entry) {
+          // Only show expenses (negative signedAmount) and exclude transfers
+          if (entry.signedAmount >= 0 || entry.transferId != null) {
+            return false;
+          }
+
+          // Filter by selected wallet
+          if (selectedWalletId != null && entry.walletId != selectedWalletId) {
+            return false;
+          }
+
+          return true;
+        }).toList();
+
+        if (filteredEntries.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -131,7 +148,7 @@ class RecentTransactionsSection extends ConsumerWidget {
                   return '$weekdayName, ${date.day} $monthName ${date.year}';
                 }
 
-                final sorted = [...entries]
+                final sorted = [...filteredEntries]
                   ..sort((a, b) => b.date.compareTo(a.date));
                 // Limit to first 6 items for home screen
                 final limitedEntries = sorted.take(6).toList();

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,7 @@ import 'dart:async';
 
 import '../notification/services/notification_service.dart';
 import '../../services/user_service.dart';
+import '../../services/connectivity_provider.dart';
 import '../../core/localization/app_localizations.dart';
 import '../auth/services/auth_service.dart';
 import '../onboarding/providers/onboarding_provider.dart';
@@ -48,12 +50,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   void _initializeAnimations() {
     _logoController = AnimationController(
-      duration: const Duration(milliseconds: 600), // Reduced further
+      duration: const Duration(milliseconds: 300), // Reduced from 600ms
       vsync: this,
     );
 
     _textController = AnimationController(
-      duration: const Duration(milliseconds: 400), // Reduced further
+      duration: const Duration(milliseconds: 200), // Reduced from 400ms
       vsync: this,
     );
 
@@ -70,7 +72,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     // Start animations with optimal timing
     _logoController.forward();
-    Timer(const Duration(milliseconds: 200), () {
+    Timer(const Duration(milliseconds: 100), () {
+      // Reduced from 200ms
       if (mounted) _textController.forward();
     });
   }
@@ -114,6 +117,30 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   Future<void> _initializeApp() async {
     try {
+      if (!mounted) return;
+
+      // Quick connectivity check (non-blocking)
+      _updateStatus('Memeriksa koneksi...');
+
+      try {
+        final connectivityService = ref.read(connectivityServiceProvider);
+        // Quick check only, no retry to avoid blocking
+        final isConnected = await connectivityService.checkConnectivity();
+
+        if (!isConnected) {
+          if (!mounted) return;
+          _updateStatus('Tidak dapat terhubung ke internet');
+          // Show retry dialog
+          await _showRetryDialog();
+          return;
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('⚠️ Connectivity check skipped: $e');
+        }
+        // Continue even if connectivity check fails
+      }
+
       if (!mounted) return;
       _updateStatus(_safeTranslate('initializing_services'));
 
@@ -170,7 +197,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             }
 
             _updateStatus(_safeTranslate('ready'));
-            await Future.delayed(const Duration(milliseconds: 200));
+            // Reduced delay for faster navigation
+            await Future.delayed(const Duration(milliseconds: 100));
 
             if (mounted) context.go(destination);
           },
@@ -203,6 +231,44 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     }
   }
 
+  // Show retry dialog when connection fails
+  Future<void> _showRetryDialog() async {
+    if (!mounted) return;
+
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.wifi_off, color: Colors.red),
+              SizedBox(width: 12),
+              Text('Tidak Ada Koneksi'),
+            ],
+          ),
+          content: const Text(
+            'Aplikasi ini memerlukan koneksi internet untuk berjalan. '
+            'Pastikan Anda terhubung ke internet dan coba lagi.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Retry initialization
+                if (mounted) {
+                  _isInitialized = false;
+                  _initializeApp();
+                }
+              },
+              child: const Text('Coba Lagi'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _logoController.dispose();
@@ -212,8 +278,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Get theme mode to ensure consistent background
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.white,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

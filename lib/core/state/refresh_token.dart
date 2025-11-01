@@ -1,12 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Generic refresh token (integer counter) to force rebuild of dependent providers.
-class RefreshToken extends StateNotifier<int> {
-  RefreshToken() : super(0);
+// A simple notifier that bumps an integer to trigger refreshes
+class RefreshToken extends Notifier<int> {
+  @override
+  int build() => 0;
+
   void bump() => state = state + 1;
 }
 
-typedef RefreshTokenProvider = StateNotifierProvider<RefreshToken, int>;
+typedef RefreshTokenProvider = NotifierProvider<RefreshToken, int>;
 
-RefreshTokenProvider createRefreshTokenProvider() =>
-    StateNotifierProvider<RefreshToken, int>((ref) => RefreshToken());
+RefreshTokenProvider refreshTokenProvider() =>
+    NotifierProvider<RefreshToken, int>(RefreshToken.new);

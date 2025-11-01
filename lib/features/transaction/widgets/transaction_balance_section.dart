@@ -138,9 +138,7 @@ class TransactionBalanceSection extends ConsumerWidget {
                 InkWell(
                   borderRadius: BorderRadius.circular(16),
                   onTap: () {
-                    final current = ref.read(balanceVisibilityProvider);
-                    ref.read(balanceVisibilityProvider.notifier).state =
-                        !current;
+                    ref.read(balanceVisibilityProvider.notifier).toggle();
                   },
                   child: Container(
                     padding: const EdgeInsets.all(6),

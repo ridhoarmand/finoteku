@@ -8,15 +8,45 @@ final reportServiceProvider = Provider<ReportService>((ref) {
   return const ReportService();
 });
 
-// State provider untuk report state
-final reportStateProvider = StateProvider<ReportState>((ref) {
-  return ReportState(
-    selectedMonth: DateTime.now(),
-    period: ReportPeriod.monthly,
-    type: ReportType.expense,
-    showDetailCategories: false,
-  );
-});
+// State notifier untuk report state
+class ReportStateNotifier extends Notifier<ReportState> {
+  @override
+  ReportState build() {
+    return ReportState(
+      selectedMonth: DateTime.now(),
+      period: ReportPeriod.monthly,
+      type: ReportType.expense,
+      showDetailCategories: false,
+    );
+  }
+
+  void updateState(ReportState newState) {
+    state = newState;
+  }
+
+  void updateSelectedMonth(DateTime month) {
+    state = state.copyWith(selectedMonth: month);
+  }
+
+  void toggleType() {
+    final newType = state.type == ReportType.income
+        ? ReportType.expense
+        : ReportType.income;
+    state = state.copyWith(type: newType);
+  }
+
+  void toggleDetailCategories() {
+    state = state.copyWith(showDetailCategories: !state.showDetailCategories);
+  }
+
+  void updatePeriod(ReportPeriod period) {
+    state = state.copyWith(period: period);
+  }
+}
+
+final reportStateProvider = NotifierProvider<ReportStateNotifier, ReportState>(
+  ReportStateNotifier.new,
+);
 
 // Report data provider
 final reportDataProvider = FutureProvider.family<ReportData, String>((
@@ -46,42 +76,40 @@ final canGoToPreviousPeriodProvider = Provider<bool>((ref) {
   // Allow going back up to 2 years
   final twoYearsAgo = DateTime.now().subtract(const Duration(days: 730));
 
-  switch (state.period) {
-    case ReportPeriod.weekly:
-      final previousWeek = state.selectedMonth.subtract(
-        const Duration(days: 7),
-      );
-      return previousWeek.isAfter(twoYearsAgo);
-    case ReportPeriod.monthly:
-      final previousMonth = DateTime(
-        state.selectedMonth.year,
-        state.selectedMonth.month - 1,
-      );
-      return previousMonth.isAfter(twoYearsAgo);
-    case ReportPeriod.yearly:
-      final previousYear = DateTime(state.selectedMonth.year - 1);
-      return previousYear.isAfter(twoYearsAgo);
-  }
+  return switch (state.period) {
+    ReportPeriod.weekly =>
+      state.selectedMonth
+          .subtract(const Duration(days: 7))
+          .isAfter(twoYearsAgo),
+    ReportPeriod.monthly => DateTime(
+      state.selectedMonth.year,
+      state.selectedMonth.month - 1,
+    ).isAfter(twoYearsAgo),
+    ReportPeriod.yearly => DateTime(
+      state.selectedMonth.year - 1,
+    ).isAfter(twoYearsAgo),
+  };
 });
 
 final canGoToNextPeriodProvider = Provider<bool>((ref) {
   final state = ref.watch(reportStateProvider);
   final now = DateTime.now();
 
-  switch (state.period) {
-    case ReportPeriod.weekly:
+  return switch (state.period) {
+    ReportPeriod.weekly => () {
       final nextWeek = state.selectedMonth.add(const Duration(days: 7));
       return nextWeek.isBefore(now) || _isSameWeek(nextWeek, now);
-    case ReportPeriod.monthly:
+    }(),
+    ReportPeriod.monthly => () {
       final nextMonth = DateTime(
         state.selectedMonth.year,
         state.selectedMonth.month + 1,
       );
       return nextMonth.month <= now.month && nextMonth.year <= now.year;
-    case ReportPeriod.yearly:
-      final nextYear = DateTime(state.selectedMonth.year + 1);
-      return nextYear.year <= now.year;
-  }
+    }(),
+    ReportPeriod.yearly =>
+      DateTime(state.selectedMonth.year + 1).year <= now.year,
+  };
 });
 
 // Helper function to check if two dates are in the same week
@@ -96,71 +124,44 @@ bool _isSameWeek(DateTime date1, DateTime date2) {
 // Navigation functions
 void goToPreviousPeriod(WidgetRef ref) {
   final state = ref.read(reportStateProvider);
-  DateTime newPeriod;
 
-  switch (state.period) {
-    case ReportPeriod.weekly:
-      newPeriod = state.selectedMonth.subtract(const Duration(days: 7));
-      break;
-    case ReportPeriod.monthly:
-      newPeriod = DateTime(
-        state.selectedMonth.year,
-        state.selectedMonth.month - 1,
-      );
-      break;
-    case ReportPeriod.yearly:
-      newPeriod = DateTime(state.selectedMonth.year - 1);
-      break;
-  }
+  final newPeriod = switch (state.period) {
+    ReportPeriod.weekly => state.selectedMonth.subtract(
+      const Duration(days: 7),
+    ),
+    ReportPeriod.monthly => DateTime(
+      state.selectedMonth.year,
+      state.selectedMonth.month - 1,
+    ),
+    ReportPeriod.yearly => DateTime(state.selectedMonth.year - 1),
+  };
 
-  ref.read(reportStateProvider.notifier).state = state.copyWith(
-    selectedMonth: newPeriod,
-  );
+  ref.read(reportStateProvider.notifier).updateSelectedMonth(newPeriod);
 }
 
 void goToNextPeriod(WidgetRef ref) {
   final state = ref.read(reportStateProvider);
-  DateTime newPeriod;
 
-  switch (state.period) {
-    case ReportPeriod.weekly:
-      newPeriod = state.selectedMonth.add(const Duration(days: 7));
-      break;
-    case ReportPeriod.monthly:
-      newPeriod = DateTime(
-        state.selectedMonth.year,
-        state.selectedMonth.month + 1,
-      );
-      break;
-    case ReportPeriod.yearly:
-      newPeriod = DateTime(state.selectedMonth.year + 1);
-      break;
-  }
+  final newPeriod = switch (state.period) {
+    ReportPeriod.weekly => state.selectedMonth.add(const Duration(days: 7)),
+    ReportPeriod.monthly => DateTime(
+      state.selectedMonth.year,
+      state.selectedMonth.month + 1,
+    ),
+    ReportPeriod.yearly => DateTime(state.selectedMonth.year + 1),
+  };
 
-  ref.read(reportStateProvider.notifier).state = state.copyWith(
-    selectedMonth: newPeriod,
-  );
+  ref.read(reportStateProvider.notifier).updateSelectedMonth(newPeriod);
 }
 
 void toggleReportType(WidgetRef ref) {
-  final state = ref.read(reportStateProvider);
-  final newType = state.type == ReportType.income
-      ? ReportType.expense
-      : ReportType.income;
-
-  ref.read(reportStateProvider.notifier).state = state.copyWith(type: newType);
+  ref.read(reportStateProvider.notifier).toggleType();
 }
 
 void toggleDetailCategories(WidgetRef ref) {
-  final state = ref.read(reportStateProvider);
-  ref.read(reportStateProvider.notifier).state = state.copyWith(
-    showDetailCategories: !state.showDetailCategories,
-  );
+  ref.read(reportStateProvider.notifier).toggleDetailCategories();
 }
 
 void changePeriodType(WidgetRef ref, ReportPeriod newPeriod) {
-  final state = ref.read(reportStateProvider);
-  ref.read(reportStateProvider.notifier).state = state.copyWith(
-    period: newPeriod,
-  );
+  ref.read(reportStateProvider.notifier).updatePeriod(newPeriod);
 }

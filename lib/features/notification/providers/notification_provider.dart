@@ -5,13 +5,16 @@ import '../models/daily_notification.dart';
 import '../services/notification_service.dart';
 
 // Provider untuk list notifications
-final notificationListProvider = StateNotifierProvider<NotificationListNotifier, List<DailyNotification>>((ref) {
-  return NotificationListNotifier();
-});
+final notificationListProvider =
+    NotifierProvider<NotificationListNotifier, List<DailyNotification>>(
+      NotificationListNotifier.new,
+    );
 
-class NotificationListNotifier extends StateNotifier<List<DailyNotification>> {
-  NotificationListNotifier() : super([]) {
+class NotificationListNotifier extends Notifier<List<DailyNotification>> {
+  @override
+  List<DailyNotification> build() {
     loadNotifications();
+    return [];
   }
 
   Future<void> loadNotifications() async {
@@ -23,7 +26,11 @@ class NotificationListNotifier extends StateNotifier<List<DailyNotification>> {
     }
   }
 
-  Future<void> addNotification(String title, String body, TimeOfDay time) async {
+  Future<void> addNotification(
+    String title,
+    String body,
+    TimeOfDay time,
+  ) async {
     try {
       await NotificationService.addNotification(title, body, time);
       await loadNotifications();
@@ -61,6 +68,9 @@ class NotificationListNotifier extends StateNotifier<List<DailyNotification>> {
 }
 
 // Provider untuk sending test notification
-final testNotificationProvider = FutureProvider.autoDispose.family<void, void>((ref, _) async {
+final testNotificationProvider = FutureProvider.autoDispose.family<void, void>((
+  ref,
+  _,
+) async {
   await NotificationService.sendTestNotification();
 });

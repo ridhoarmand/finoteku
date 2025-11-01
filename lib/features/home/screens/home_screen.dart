@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../utils/currency_formatter.dart';
 import '../../../services/supabase_service.dart';
 import '../../wallet/providers/wallet_providers.dart';
-import '../../../core/state/balance_visibility_provider.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../widgets/monthly_summary_section.dart';
 import '../widgets/recent_transactions_section.dart';
+import '../widgets/home_balance_card.dart';
 import '../../../widgets/user_avatar_widget.dart';
+import '../../transaction/screens/add_edit_transaction_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -102,148 +102,78 @@ class HomeScreen extends ConsumerWidget {
               if (userId != null)
                 Consumer(
                   builder: (context, ref, child) {
-                    final totalBalanceAsync = ref.watch(
-                      totalBalanceProvider(userId),
-                    );
-                    final isVisible = ref.watch(balanceVisibilityProvider);
-
-                    return Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Theme.of(context).colorScheme.primary,
-                            Theme.of(
-                              context,
-                            ).colorScheme.primary.withValues(alpha: 0.8),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            ref.tr(context, 'total_balance'),
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: Colors.white70),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: totalBalanceAsync.when(
-                                  data: (balance) => FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      isVisible
-                                          ? CurrencyFormatter.format(
-                                              balance,
-                                              'IDR',
-                                            )
-                                          : '••••••••',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineMedium
-                                          ?.copyWith(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                    ),
-                                  ),
-                                  loading: () => const Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: SizedBox.square(
-                                      dimension: 26,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 3,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                  error: (error, stackTrace) => Text(
-                                    isVisible
-                                        ? CurrencyFormatter.format(0, 'IDR')
-                                        : '••••••••',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .headlineMedium
-                                        ?.copyWith(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              InkWell(
-                                borderRadius: BorderRadius.circular(24),
-                                onTap: () {
-                                  final current = ref.read(
-                                    balanceVisibilityProvider,
-                                  );
-                                  ref
-                                          .read(
-                                            balanceVisibilityProvider.notifier,
-                                          )
-                                          .state =
-                                      !current;
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.all(6),
-                                  child: Icon(
-                                    isVisible
-                                        ? Icons.visibility
-                                        : Icons.visibility_off,
-                                    color: Colors.white70,
-                                    size: 24,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
+                    final walletsAsync = ref.watch(walletsProvider(userId));
+                    return HomeBalanceCard(walletsAsync: walletsAsync);
                   },
                 )
               else
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Theme.of(context).colorScheme.primary,
-                        Theme.of(
-                          context,
-                        ).colorScheme.primary.withValues(alpha: 0.8),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Theme.of(context).colorScheme.primary,
+                          Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.88),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.25),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
                       ],
                     ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        ref.tr(context, 'total_balance'),
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        ref.tr(context, 'login_required_balance'),
-                        style: Theme.of(context).textTheme.headlineMedium
-                            ?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.account_balance_wallet_outlined,
+                              size: 16,
+                              color: Colors.white.withValues(alpha: 0.8),
                             ),
-                      ),
-                    ],
+                            const SizedBox(width: 6),
+                            Text(
+                              ref.tr(context, 'total_balance'),
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.85),
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 13,
+                                  ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          ref.tr(context, 'login_required_balance'),
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3,
+                                fontSize: 28,
+                              ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               const SizedBox(height: 16),
@@ -303,6 +233,25 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
       ),
+      floatingActionButton: userId != null
+          ? FloatingActionButton(
+              onPressed: () async {
+                final result = await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const AddEditTransactionScreen(),
+                  ),
+                );
+
+                // Refresh data if transaction was added successfully
+                if (result == true) {
+                  // Trigger refresh for wallets and transactions
+                  ref.invalidate(activeWalletsProvider(userId));
+                  ref.invalidate(totalBalanceProvider(userId));
+                }
+              },
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 }

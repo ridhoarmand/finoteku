@@ -11,6 +11,7 @@ import '../../wallet/providers/wallet_providers.dart';
 import '../../../services/supabase_service.dart';
 import '../../../utils/currency_formatter.dart';
 import '../../../utils/category_icon_helper.dart';
+import '../../../utils/thousand_separator_formatter.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../widgets/category_selector_sheet.dart';
 import '../widgets/date_section.dart';
@@ -66,7 +67,9 @@ class _AddEditTransactionScreenState
       final transaction = widget.initialTransaction!;
       // Use num to automatically format without unnecessary decimals
       final num amount = transaction.amount.abs();
-      _amountController.text = amount.toString();
+      _amountController.text = _formatWithThousandSeparator(
+        amount.toInt().toString(),
+      );
       _notesController.text = transaction.notes ?? '';
       _selectedDate = transaction.date;
       _isTransfer = false;
@@ -80,15 +83,37 @@ class _AddEditTransactionScreenState
       _isTransfer = true;
       // Use num to automatically format without unnecessary decimals
       final num amount = tr.amount.abs();
-      _amountController.text = amount.toString();
+      _amountController.text = _formatWithThousandSeparator(
+        amount.toInt().toString(),
+      );
 
       final num fee = tr.fee.abs();
-      _feeController.text = fee == 0 ? '' : fee.toString();
+      _feeController.text = fee == 0
+          ? ''
+          : _formatWithThousandSeparator(fee.toInt().toString());
 
       _notesController.text = tr.notes ?? '';
       _selectedDate = tr.date;
       // Wallets will be assigned in didChangeDependencies
     }
+  }
+
+  /// Helper method to format numbers with thousand separators
+  String _formatWithThousandSeparator(String digitsOnly) {
+    if (digitsOnly.isEmpty) return '';
+
+    final buffer = StringBuffer();
+    final int length = digitsOnly.length;
+
+    for (int i = 0; i < length; i++) {
+      // Add separator every 3 digits from the right
+      if (i > 0 && (length - i) % 3 == 0) {
+        buffer.write('.');
+      }
+      buffer.write(digitsOnly[i]);
+    }
+
+    return buffer.toString();
   }
 
   @override
@@ -335,7 +360,8 @@ class _AddEditTransactionScreenState
               controller: _feeController,
               keyboardType: TextInputType.number,
               inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                FilteringTextInputFormatter.digitsOnly,
+                ThousandSeparatorFormatter(),
               ],
               decoration: InputDecoration(
                 hintText: ref.tr(context, 'fee_hint'),
@@ -469,7 +495,7 @@ class _AddEditTransactionScreenState
 
     try {
       final user = ref.read(currentUserProvider).value!;
-      final amountText = _amountController.text.trim();
+      final amountText = _amountController.text.trim().replaceAll('.', '');
       final amount = double.parse(amountText);
       final notes = _notesController.text.trim();
 
@@ -496,7 +522,7 @@ class _AddEditTransactionScreenState
           );
           return;
         }
-        final feeText = _feeController.text.trim();
+        final feeText = _feeController.text.trim().replaceAll('.', '');
         final fee = feeText.isEmpty ? 0.0 : double.tryParse(feeText) ?? 0.0;
         final userId = ref.read(currentUserProvider).value!.id;
         final transferSvc = ref.read(transferServiceProvider);

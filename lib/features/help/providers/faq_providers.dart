@@ -13,11 +13,32 @@ final faqDataProvider = Provider<List<FAQSection>>((ref) {
   return faqService.getAllFAQs();
 });
 
-// Search provider untuk FAQ
-final faqSearchProvider = StateProvider<String>((ref) => '');
+// Search notifier untuk FAQ
+class FAQSearchNotifier extends Notifier<String> {
+  @override
+  String build() => '';
 
-// Selected category provider untuk filter
-final selectedFAQCategoryProvider = StateProvider<FAQCategory?>((ref) => null);
+  void updateSearch(String query) => state = query;
+  void clear() => state = '';
+}
+
+final faqSearchProvider = NotifierProvider<FAQSearchNotifier, String>(
+  FAQSearchNotifier.new,
+);
+
+// Selected category notifier untuk filter
+class SelectedFAQCategoryNotifier extends Notifier<FAQCategory?> {
+  @override
+  FAQCategory? build() => null;
+
+  void selectCategory(FAQCategory? category) => state = category;
+  void clear() => state = null;
+}
+
+final selectedFAQCategoryProvider =
+    NotifierProvider<SelectedFAQCategoryNotifier, FAQCategory?>(
+      SelectedFAQCategoryNotifier.new,
+    );
 
 // Filtered FAQ provider berdasarkan search dan category
 final filteredFAQProvider = Provider<List<FAQItem>>((ref) {

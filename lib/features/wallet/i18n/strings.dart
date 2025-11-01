@@ -47,6 +47,8 @@ final StrMap walletStringsEn = {
   'wallet_no_visible': 'No visible wallets',
   'wallet_no_hidden': 'No hidden wallets',
   'error_loading_wallets': 'Error loading wallets',
+  'all_wallets': 'All Wallets',
+  'select_wallet': 'Select Wallet',
 
   // Details
   'wallet_details_title': 'Wallet Details',
@@ -112,6 +114,8 @@ final StrMap walletStringsId = {
   'wallet_no_visible': 'Tidak ada dompet terlihat',
   'wallet_no_hidden': 'Tidak ada dompet tersembunyi',
   'error_loading_wallets': 'Gagal memuat dompet',
+  'all_wallets': 'Semua Dompet',
+  'select_wallet': 'Pilih Dompet',
 
   // Details
   'wallet_details_title': 'Detail Dompet',

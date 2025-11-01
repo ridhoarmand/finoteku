@@ -11,7 +11,7 @@ final walletRepositoryProvider = Provider<WalletService>(
 );
 
 // Unified refresh token for wallets
-final walletRefreshTriggerProvider = createRefreshTokenProvider();
+final walletRefreshTriggerProvider = refreshTokenProvider();
 
 // Provider untuk daftar wallets berdasarkan user ID dengan smart sync
 final walletsProvider = FutureProvider.family<List<Wallet>, String>((

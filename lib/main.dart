@@ -9,6 +9,7 @@ import 'core/localization/locale_provider.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_provider.dart';
 import 'services/supabase_service.dart';
+import 'services/connectivity_service.dart';
 import 'utils/environment.dart';
 
 void main() async {
@@ -34,36 +35,58 @@ class _MyAppState extends ConsumerState<MyApp> {
   }
 
   Future<void> _initializeApp() async {
-    // Initialize timezone database (light operation)
-    tz.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
-
-    // Initialize environment variables first (must be sequential)
-    await Environment.initialize();
-
-    // Validate environment configuration
-    if (!Environment.validateConfig()) {
-      if (kDebugMode) {
-        print('⚠️ Environment configuration validation failed');
-        print('📝 Please check your .env file configuration');
-      }
-    }
-
-    // Initialize Supabase after environment is loaded
     try {
-      await SupabaseService.initialize(
-        url: Environment.supabaseUrl,
-        anonKey: Environment.supabaseAnonKey,
-      );
-      if (kDebugMode) {
-        print('✅ Supabase initialized successfully');
+      // Initialize timezone database (light operation)
+      tz.initializeTimeZones();
+      tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
+
+      // Initialize environment variables first (must be sequential)
+      await Environment.initialize();
+
+      // Validate environment configuration
+      if (!Environment.validateConfig()) {
+        if (kDebugMode) {
+          print('⚠️ Environment configuration validation failed');
+          print('📝 Please check your .env file configuration');
+        }
       }
+
+      // Initialize Supabase after environment is loaded
+      try {
+        await SupabaseService.initialize(
+          url: Environment.supabaseUrl,
+          anonKey: Environment.supabaseAnonKey,
+        );
+        if (kDebugMode) {
+          print('✅ Supabase initialized successfully');
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Failed to initialize Supabase: $e');
+          print('📝 Please configure your Supabase credentials in .env file');
+        }
+        // Continue anyway for demo purposes
+      }
+
+      // Initialize connectivity monitoring (deferred, non-blocking)
+      // Run in background to avoid blocking UI
+      ConnectivityService()
+          .initialize()
+          .then((_) {
+            if (kDebugMode) {
+              print('✅ Connectivity service initialized');
+            }
+          })
+          .catchError((e) {
+            if (kDebugMode) {
+              print('❌ Failed to initialize connectivity service: $e');
+            }
+          });
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Failed to initialize Supabase: $e');
-        print('📝 Please configure your Supabase credentials in .env file');
+        print('❌ Critical initialization error: $e');
       }
-      // Continue anyway for demo purposes
+      // Continue to show app even with initialization errors
     }
 
     if (mounted) {
@@ -77,8 +100,12 @@ class _MyAppState extends ConsumerState<MyApp> {
   Widget build(BuildContext context) {
     if (!_isInitialized) {
       return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light,
+        darkTheme: AppTheme.dark,
+        themeMode: ThemeMode.system,
         home: Scaffold(
-          backgroundColor: const Color(0xFF1E3A8A), // Primary blue
+          backgroundColor: Theme.of(context).colorScheme.surface,
           body: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
