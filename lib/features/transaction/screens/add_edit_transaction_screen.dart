@@ -65,10 +65,13 @@ class _AddEditTransactionScreenState
     // If editing existing transaction, populate fields
     if (widget.initialTransaction != null) {
       final transaction = widget.initialTransaction!;
-      // Use num to automatically format without unnecessary decimals
-      final num amount = transaction.amount.abs();
+      final double amount = transaction.amount.abs();
+      // Format dengan menghilangkan desimal jika .00
+      final String amountStr = amount == amount.toInt()
+          ? amount.toInt().toString()
+          : amount.toString();
       _amountController.text = _formatWithThousandSeparator(
-        amount.toInt().toString(),
+        amountStr.replaceAll('.', ''),
       );
       _notesController.text = transaction.notes ?? '';
       _selectedDate = transaction.date;
@@ -81,16 +84,26 @@ class _AddEditTransactionScreenState
     if (widget.initialTransfer != null) {
       final tr = widget.initialTransfer!;
       _isTransfer = true;
-      // Use num to automatically format without unnecessary decimals
-      final num amount = tr.amount.abs();
+      final double amount = tr.amount.abs();
+      // Format dengan menghilangkan desimal jika .00
+      final String amountStr = amount == amount.toInt()
+          ? amount.toInt().toString()
+          : amount.toString();
       _amountController.text = _formatWithThousandSeparator(
-        amount.toInt().toString(),
+        amountStr.replaceAll('.', ''),
       );
 
-      final num fee = tr.fee.abs();
-      _feeController.text = fee == 0
-          ? ''
-          : _formatWithThousandSeparator(fee.toInt().toString());
+      final double fee = tr.fee.abs();
+      if (fee > 0) {
+        final String feeStr = fee == fee.toInt()
+            ? fee.toInt().toString()
+            : fee.toString();
+        _feeController.text = _formatWithThousandSeparator(
+          feeStr.replaceAll('.', ''),
+        );
+      } else {
+        _feeController.text = '';
+      }
 
       _notesController.text = tr.notes ?? '';
       _selectedDate = tr.date;
@@ -502,6 +515,27 @@ class _AddEditTransactionScreenState
       // Amount always stored as positive; category.type determines sign in analytics & wallet triggers
       final finalAmount = amount.abs();
 
+      // Validasi saldo untuk expense dan transfer
+      if (!_isTransfer &&
+          _selectedCategory != null &&
+          _selectedCategory!.type == CategoryType.expense) {
+        // Cek apakah saldo wallet cukup untuk pengeluaran
+        final currentBalance = _selectedWallet!.balance;
+        final newBalance = currentBalance - finalAmount;
+
+        if (newBalance < 0) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(ref.tr(context, 'insufficient_balance_error')),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+      }
+
       if (_isTransfer) {
         // Handle transfer flow
         if (_toWallet == null) {
@@ -524,6 +558,25 @@ class _AddEditTransactionScreenState
         }
         final feeText = _feeController.text.trim().replaceAll('.', '');
         final fee = feeText.isEmpty ? 0.0 : double.tryParse(feeText) ?? 0.0;
+
+        // Validasi saldo wallet sumber untuk transfer + fee
+        final currentBalance = _selectedWallet!.balance;
+        final totalDeduction = finalAmount + fee.abs();
+        final newBalance = currentBalance - totalDeduction;
+
+        if (newBalance < 0) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  ref.tr(context, 'insufficient_balance_for_transfer'),
+                ),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
         final userId = ref.read(currentUserProvider).value!.id;
         final transferSvc = ref.read(transferServiceProvider);
         if (widget.initialTransfer != null) {

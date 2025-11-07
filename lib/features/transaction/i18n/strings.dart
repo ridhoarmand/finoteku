@@ -78,6 +78,10 @@ final StrMap transactionStringsEn = {
   'add_new_wallet': 'Add New Wallet',
   'create_new_wallet': 'Create a new wallet',
   'no_wallets_yet': 'No wallets yet. Create one to continue.',
+  'insufficient_balance_error':
+      'Insufficient balance in wallet. Your balance would go negative.',
+  'insufficient_balance_for_transfer':
+      'Insufficient balance in source wallet for transfer and fee.',
 };
 
 final StrMap transactionStringsId = {
@@ -159,4 +163,7 @@ final StrMap transactionStringsId = {
   'add_new_wallet': 'Tambah Dompet Baru',
   'create_new_wallet': 'Buat dompet baru',
   'no_wallets_yet': 'Belum ada dompet. Buat satu untuk melanjutkan.',
+  'insufficient_balance_error': 'Saldo tidak cukup. Saldo tidak boleh minus.',
+  'insufficient_balance_for_transfer':
+      'Saldo tidak cukup untuk transfer dan biaya admin.',
 };
