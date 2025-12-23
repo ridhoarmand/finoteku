@@ -64,6 +64,52 @@ const Map<String, String> accountStringsEn = {
 
   // Wallet & Categories section
   'wallet_categories_section': 'Wallet & Categories',
+
+  // Change Password Screen
+  'change_password_title': 'Change Password',
+  'change_password_header': 'Change Password',
+  'change_password_description':
+      'Choose a new secure password for your account.',
+  'new_password': 'New Password',
+  'confirm_new_password': 'Confirm New Password',
+  'change_password_button': 'Change Password',
+  'password_changed_success': 'Password changed successfully!',
+  'password_required': 'Please enter a new password',
+  'password_min_length': 'Password must be at least 6 characters',
+  'password_confirm_required': 'Please confirm your new password',
+  'passwords_not_match': 'Passwords do not match',
+  'security_tips': 'Security Tips',
+  'security_tips_content':
+      '• Use a password with at least 6 characters\n• Include uppercase, lowercase, numbers, and symbols\n• Don\'t reuse passwords from other accounts\n• Consider using a password manager',
+  'password_error_too_short': 'Password should be at least 6 characters long.',
+  'password_error_same':
+      'New password should be different from the current password.',
+  'password_error_network':
+      'Network error. Please check your connection and try again.',
+  'password_error_timeout': 'Request timeout. Please try again.',
+  'password_error_generic': 'Failed to change password. Please try again.',
+
+  // Delete Account Dialog
+  'delete_account_title': 'Delete Account',
+  'delete_permanent_action': 'Permanent Action',
+  'delete_warning_message':
+      'This action cannot be undone. All your data will be permanently deleted.',
+  'delete_data_summary': 'Data to be deleted',
+  'delete_wallets': 'Wallets',
+  'delete_categories': 'Categories',
+  'delete_transactions': 'Transactions',
+  'delete_transfers': 'Transfers',
+  'delete_account_label': 'Account',
+  'delete_enter_password': 'Enter your password to confirm:',
+  'delete_password_hint': 'Password',
+  'delete_password_required': 'Password is required',
+  'delete_cancel': 'Cancel',
+  'delete_confirm_button': 'Delete Account',
+  'delete_final_title': 'Final Confirmation',
+  'delete_final_message':
+      'Are you absolutely sure you want to delete your account? This action cannot be undone.',
+  'delete_yes_delete': 'Yes, Delete',
+  'delete_success': 'Account deleted successfully. You have been signed out.',
 };
 
 const Map<String, String> accountStringsId = {
@@ -129,4 +175,49 @@ const Map<String, String> accountStringsId = {
 
   // Wallet & Categories section
   'wallet_categories_section': 'Dompet & Kategori',
+
+  // Change Password Screen
+  'change_password_title': 'Ganti Password',
+  'change_password_header': 'Ganti Password',
+  'change_password_description':
+      'Pilih password baru yang aman untuk akun Anda.',
+  'new_password': 'Password Baru',
+  'confirm_new_password': 'Konfirmasi Password Baru',
+  'change_password_button': 'Ganti Password',
+  'password_changed_success': 'Password berhasil diubah!',
+  'password_required': 'Masukkan password baru',
+  'password_min_length': 'Password minimal 6 karakter',
+  'password_confirm_required': 'Konfirmasi password baru Anda',
+  'passwords_not_match': 'Password tidak cocok',
+  'security_tips': 'Tips Keamanan',
+  'security_tips_content':
+      '• Gunakan password minimal 6 karakter\n• Kombinasikan huruf besar, kecil, angka, dan simbol\n• Jangan gunakan password yang sama di akun lain\n• Pertimbangkan menggunakan pengelola password',
+  'password_error_too_short': 'Password minimal 6 karakter.',
+  'password_error_same': 'Password baru harus berbeda dari password saat ini.',
+  'password_error_network':
+      'Kesalahan jaringan. Periksa koneksi Anda dan coba lagi.',
+  'password_error_timeout': 'Waktu habis. Silakan coba lagi.',
+  'password_error_generic': 'Gagal mengubah password. Silakan coba lagi.',
+
+  // Delete Account Dialog
+  'delete_account_title': 'Hapus Akun',
+  'delete_permanent_action': 'Tindakan Permanen',
+  'delete_warning_message':
+      'Tindakan ini tidak dapat dibatalkan. Semua data Anda akan dihapus secara permanen.',
+  'delete_data_summary': 'Data yang akan dihapus',
+  'delete_wallets': 'Dompet',
+  'delete_categories': 'Kategori',
+  'delete_transactions': 'Transaksi',
+  'delete_transfers': 'Transfer',
+  'delete_account_label': 'Akun',
+  'delete_enter_password': 'Masukkan password Anda untuk konfirmasi:',
+  'delete_password_hint': 'Password',
+  'delete_password_required': 'Password wajib diisi',
+  'delete_cancel': 'Batal',
+  'delete_confirm_button': 'Hapus Akun',
+  'delete_final_title': 'Konfirmasi Akhir',
+  'delete_final_message':
+      'Apakah Anda benar-benar yakin ingin menghapus akun Anda? Tindakan ini tidak dapat dibatalkan.',
+  'delete_yes_delete': 'Ya, Hapus',
+  'delete_success': 'Akun berhasil dihapus. Anda telah keluar.',
 };

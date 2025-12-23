@@ -11,18 +11,18 @@ class MainShell extends ConsumerWidget {
 
   int _getCurrentIndex(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
-    switch (location) {
-      case '/home':
-        return 0;
-      case '/transaction':
-        return 1;
-      case '/reports':
-        return 2;
-      case '/account':
-        return 3;
-      default:
-        return 0;
+
+    // Use startsWith to match nested routes
+    if (location.startsWith('/account')) {
+      return 3;
+    } else if (location.startsWith('/reports')) {
+      return 2;
+    } else if (location.startsWith('/transaction')) {
+      return 1;
+    } else if (location.startsWith('/home')) {
+      return 0;
     }
+    return 0;
   }
 
   Future<bool> _onWillPop(BuildContext context, WidgetRef ref) async {

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/delete_account_provider.dart';
 import '../../auth/services/auth_service.dart';
 import '../../../services/supabase_service.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class DeleteAccountDialog extends ConsumerStatefulWidget {
   const DeleteAccountDialog({super.key});
@@ -44,7 +45,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
         children: [
           Icon(Icons.warning_amber_rounded, color: Colors.red[600], size: 28),
           const SizedBox(width: 8),
-          const Text('Delete Account'),
+          Text(ref.tr(context, 'delete_account_title')),
         ],
       ),
       content: SingleChildScrollView(
@@ -72,7 +73,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Permanent Action',
+                        ref.tr(context, 'delete_permanent_action'),
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.red[700],
@@ -82,7 +83,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'This action cannot be undone. All your data will be permanently deleted.',
+                    ref.tr(context, 'delete_warning_message'),
                     style: TextStyle(color: Colors.red[600], fontSize: 13),
                   ),
                 ],
@@ -111,10 +112,10 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                     children: [
                       Icon(Icons.data_usage, color: Colors.grey[600], size: 20),
                       const SizedBox(width: 8),
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          'Data to be deleted',
-                          style: TextStyle(fontWeight: FontWeight.w600),
+                          ref.tr(context, 'delete_data_summary'),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
                       Icon(
@@ -139,22 +140,22 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                   child: Column(
                     children: [
                       _buildDataRow(
-                        'Wallets',
+                        ref.tr(context, 'delete_wallets'),
                         deleteState.dataSummary!.walletsCount,
                         Icons.account_balance_wallet,
                       ),
                       _buildDataRow(
-                        'Categories',
+                        ref.tr(context, 'delete_categories'),
                         deleteState.dataSummary!.categoriesCount,
                         Icons.category,
                       ),
                       _buildDataRow(
-                        'Transactions',
+                        ref.tr(context, 'delete_transactions'),
                         deleteState.dataSummary!.transactionsCount,
                         Icons.receipt_long,
                       ),
                       _buildDataRow(
-                        'Transfers',
+                        ref.tr(context, 'delete_transfers'),
                         deleteState.dataSummary!.transfersCount,
                         Icons.swap_horiz,
                       ),
@@ -168,7 +169,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
 
             // Account info
             Text(
-              'Account: ${user?.email ?? 'Unknown'}',
+              '${ref.tr(context, 'delete_account_label')}: ${user?.email ?? 'Unknown'}',
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             ),
 
@@ -180,16 +181,19 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Enter your password to confirm:',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  Text(
+                    ref.tr(context, 'delete_enter_password'),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
-                      hintText: 'Password',
+                      hintText: ref.tr(context, 'delete_password_hint'),
                       border: const OutlineInputBorder(),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 12,
@@ -210,7 +214,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Password is required';
+                        return ref.tr(context, 'delete_password_required');
                       }
                       return null;
                     },
@@ -245,7 +249,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
               : () {
                   Navigator.of(context).pop();
                 },
-          child: const Text('Cancel'),
+          child: Text(ref.tr(context, 'delete_cancel')),
         ),
         ElevatedButton(
           onPressed: deleteState.isLoading ? null : _handleDeleteAccount,
@@ -262,7 +266,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
                 )
-              : const Text('Delete Account'),
+              : Text(ref.tr(context, 'delete_confirm_button')),
         ),
       ],
     );
@@ -319,10 +323,8 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
       if (!mounted) return;
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Account deleted successfully. You have been signed out.',
-          ),
+        SnackBar(
+          content: Text(ref.tr(context, 'delete_success')),
           backgroundColor: Colors.green,
         ),
       );
@@ -341,14 +343,12 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
     return await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Final Confirmation'),
-            content: const Text(
-              'Are you absolutely sure you want to delete your account? This action cannot be undone.',
-            ),
+            title: Text(ref.tr(context, 'delete_final_title')),
+            content: Text(ref.tr(context, 'delete_final_message')),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
+                child: Text(ref.tr(context, 'delete_cancel')),
               ),
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(true),
@@ -356,7 +356,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                   backgroundColor: Colors.red[600],
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('Yes, Delete'),
+                child: Text(ref.tr(context, 'delete_yes_delete')),
               ),
             ],
           ),

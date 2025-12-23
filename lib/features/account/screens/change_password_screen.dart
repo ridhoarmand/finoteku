@@ -2,19 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../auth/services/auth_service.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class ChangePasswordScreen extends ConsumerStatefulWidget {
   const ChangePasswordScreen({super.key});
 
   @override
-  ConsumerState<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
+  ConsumerState<ChangePasswordScreen> createState() =>
+      _ChangePasswordScreenState();
 }
 
 class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  
+
   bool _isLoading = false;
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
@@ -35,18 +37,18 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
 
     try {
       final authService = ref.read(authServiceProvider);
-      
+
       // Update to new password
       await authService.updatePassword(_newPasswordController.text);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Password changed successfully!'),
+          SnackBar(
+            content: Text(ref.tr(context, 'password_changed_success')),
             backgroundColor: Colors.green,
           ),
         );
-        
+
         // Navigate back to account screen
         context.pop();
       }
@@ -70,15 +72,15 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
 
   String _getErrorMessage(String errorString) {
     if (errorString.contains('Password should be at least 6 characters')) {
-      return 'Password should be at least 6 characters long.';
+      return ref.tr(context, 'password_error_too_short');
     } else if (errorString.contains('New password should be different')) {
-      return 'New password should be different from the current password.';
+      return ref.tr(context, 'password_error_same');
     } else if (errorString.contains('Network')) {
-      return 'Network error. Please check your connection and try again.';
+      return ref.tr(context, 'password_error_network');
     } else if (errorString.contains('timeout')) {
-      return 'Request timeout. Please try again.';
+      return ref.tr(context, 'password_error_timeout');
     } else {
-      return 'Failed to change password. Please try again.';
+      return ref.tr(context, 'password_error_generic');
     }
   }
 
@@ -88,7 +90,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Change Password'),
+        title: Text(ref.tr(context, 'change_password_title')),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
@@ -110,7 +112,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Change Password',
+                  ref.tr(context, 'change_password_header'),
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -118,7 +120,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Choose a new secure password for your account.',
+                  ref.tr(context, 'change_password_description'),
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -131,7 +133,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                   controller: _newPasswordController,
                   obscureText: _obscureNewPassword,
                   decoration: InputDecoration(
-                    labelText: 'New Password',
+                    labelText: ref.tr(context, 'new_password'),
                     prefixIcon: const Icon(Icons.lock),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -148,10 +150,10 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                   ),
                   validator: (value) {
                     if (value?.isEmpty ?? true) {
-                      return 'Please enter a new password';
+                      return ref.tr(context, 'password_required');
                     }
                     if (value!.length < 6) {
-                      return 'Password must be at least 6 characters';
+                      return ref.tr(context, 'password_min_length');
                     }
                     return null;
                   },
@@ -163,7 +165,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                   controller: _confirmPasswordController,
                   obscureText: _obscureConfirmPassword,
                   decoration: InputDecoration(
-                    labelText: 'Confirm New Password',
+                    labelText: ref.tr(context, 'confirm_new_password'),
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -180,10 +182,10 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                   ),
                   validator: (value) {
                     if (value?.isEmpty ?? true) {
-                      return 'Please confirm your new password';
+                      return ref.tr(context, 'password_confirm_required');
                     }
                     if (value != _newPasswordController.text) {
-                      return 'Passwords do not match';
+                      return ref.tr(context, 'passwords_not_match');
                     }
                     return null;
                   },
@@ -199,7 +201,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Change Password'),
+                      : Text(ref.tr(context, 'change_password_button')),
                 ),
                 const SizedBox(height: 16),
 
@@ -222,7 +224,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Security Tips',
+                            ref.tr(context, 'security_tips'),
                             style: theme.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
@@ -231,10 +233,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '• Use a password with at least 6 characters\n'
-                        '• Include uppercase, lowercase, numbers, and symbols\n'
-                        '• Don\'t reuse passwords from other accounts\n'
-                        '• Consider using a password manager',
+                        ref.tr(context, 'security_tips_content'),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
