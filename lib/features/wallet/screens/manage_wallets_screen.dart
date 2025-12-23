@@ -322,11 +322,11 @@ class ManageWalletsScreen extends ConsumerWidget {
             ),
             _detailRow(
               ref.tr(context, 'wallet_created_label'),
-              wallet.createdAt.toLocal().toString(),
+              _formatSimpleDate(wallet.createdAt.toLocal()),
             ),
             _detailRow(
               ref.tr(context, 'wallet_updated_label'),
-              wallet.updatedAt.toLocal().toString(),
+              _formatSimpleDate(wallet.updatedAt.toLocal()),
             ),
           ],
         ),
@@ -338,6 +338,25 @@ class ManageWalletsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// Format date to simple format: "23 Des 2023"
+  String _formatSimpleDate(DateTime date) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 
   Widget _detailRow(String label, String value) {

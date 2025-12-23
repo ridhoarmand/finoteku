@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/wallet.dart';
 import '../../../utils/wallet_icon_helper.dart';
+import '../../../utils/currency_formatter.dart';
 import '../../../core/localization/app_localizations.dart';
 
 class WalletFormDialog extends ConsumerStatefulWidget {
@@ -46,7 +48,10 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
     if (widget.initialData != null) {
       _nameController.text = widget.initialData!.name ?? '';
       if (widget.initialData!.balance != null) {
-        _balanceController.text = widget.initialData!.balance!.toString();
+        // Format balance with thousand separators
+        _balanceController.text = CurrencyFormatter.formatForInput(
+          widget.initialData!.balance!,
+        );
       }
       _selectedCurrency = widget.initialData!.currency ?? 'IDR';
       _selectedIcon = widget.initialData!.icon;
@@ -87,14 +92,20 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
                 decoration: InputDecoration(
                   labelText: ref.tr(context, 'wallet_balance_label'),
                   border: const OutlineInputBorder(),
-                  prefixText: 'Rp ', // normalize to IDR style
+                  prefixText: 'Rp ',
+                  hintText: '0',
                 ),
                 keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[\d\.]')),
+                  _ThousandSeparatorFormatter(),
+                ],
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return ref.tr(context, 'wallet_balance_required');
                   }
-                  if (double.tryParse(value) == null) {
+                  final parsed = CurrencyFormatter.parse(value);
+                  if (parsed == null) {
                     return ref.tr(context, 'wallet_number_invalid');
                   }
                   return null;
@@ -136,17 +147,6 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
                     onPressed: _showIconSelectionDialog,
                     child: Text(ref.tr(context, 'wallet_select_icon')),
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Checkbox(
-                    value: !_isHidden,
-                    onChanged: (value) =>
-                        setState(() => _isHidden = !(value ?? true)),
-                  ),
-                  Text(ref.tr(context, 'wallet_visible')),
                 ],
               ),
             ],
@@ -272,7 +272,7 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
     try {
-      final balance = double.parse(_balanceController.text);
+      final balance = CurrencyFormatter.parse(_balanceController.text) ?? 0;
       if (widget.initialData != null) {
         final request = UpdateWalletRequest(
           name: _nameController.text.trim(),
@@ -315,5 +315,88 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+}
+
+/// TextInputFormatter for adding thousand separators as user types
+/// Preserves cursor position for better editing experience
+class _ThousandSeparatorFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) {
+      return newValue;
+    }
+
+    // Get cursor position from new value (where user wants cursor to be)
+    final newCursorPos = newValue.selection.baseOffset;
+
+    // Remove existing separators
+    final cleanNew = newValue.text.replaceAll('.', '');
+
+    // Parse to number
+    final number = int.tryParse(cleanNew);
+    if (number == null && cleanNew.isNotEmpty) {
+      return oldValue;
+    }
+
+    if (number == null || number == 0) {
+      return const TextEditingValue(
+        text: '',
+        selection: TextSelection.collapsed(offset: 0),
+      );
+    }
+
+    // Format with thousand separators
+    final formatted = _formatWithThousandSeparator(number);
+
+    // Calculate how many separators were before cursor in new (unformatted) value
+    final separatorsBeforeCursorInNew = newValue.text
+        .substring(0, newCursorPos.clamp(0, newValue.text.length))
+        .replaceAll(RegExp(r'[^.]'), '')
+        .length;
+
+    // Calculate digits before cursor (excluding separators)
+    final digitsBeforeCursor = newCursorPos - separatorsBeforeCursorInNew;
+
+    // Now count how many characters (including new separators) to reach that many digits
+    int finalCursorPos = 0;
+    int digitsSeen = 0;
+    for (
+      int i = 0;
+      i < formatted.length && digitsSeen < digitsBeforeCursor;
+      i++
+    ) {
+      finalCursorPos++;
+      if (formatted[i] != '.') {
+        digitsSeen++;
+      }
+    }
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(
+        offset: finalCursorPos.clamp(0, formatted.length),
+      ),
+    );
+  }
+
+  String _formatWithThousandSeparator(int number) {
+    final text = number.toString();
+    final buffer = StringBuffer();
+    int count = 0;
+
+    for (int i = text.length - 1; i >= 0; i--) {
+      buffer.write(text[i]);
+      count++;
+      if (count == 3 && i > 0) {
+        buffer.write('.');
+        count = 0;
+      }
+    }
+
+    return buffer.toString().split('').reversed.join();
   }
 }

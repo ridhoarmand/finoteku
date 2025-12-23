@@ -105,4 +105,25 @@ class CurrencyFormatter {
       return '${sign}Rp ${absAmount.toStringAsFixed(0)}';
     }
   }
+
+  /// Parse formatted currency string back to double
+  /// Handles Indonesian format where . is thousand separator
+  static double? parse(String text) {
+    if (text.isEmpty) return null;
+    // Remove currency symbols and whitespace
+    String cleanText = text.replaceAll(RegExp(r'[Rp\s]'), '');
+    // Remove thousand separators (dots in Indonesian format)
+    cleanText = cleanText.replaceAll('.', '');
+    // Replace comma with dot for decimal (if any)
+    cleanText = cleanText.replaceAll(',', '.');
+    return double.tryParse(cleanText);
+  }
+
+  /// Format for input field display (with thousand separators)
+  static String formatForInput(double amount, {bool withSymbol = false}) {
+    final formatter = NumberFormat('#,###', 'id_ID');
+    final formatted = formatter.format(amount.abs());
+    final sign = amount < 0 ? '-' : '';
+    return withSymbol ? 'Rp $sign$formatted' : '$sign$formatted';
+  }
 }
