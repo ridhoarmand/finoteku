@@ -12,6 +12,8 @@ import 'services/supabase_service.dart';
 import 'services/connectivity_service.dart';
 import 'utils/environment.dart';
 
+import 'features/notification/services/notification_service.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -37,8 +39,16 @@ class _MyAppState extends ConsumerState<MyApp> {
   Future<void> _initializeApp() async {
     try {
       // Initialize timezone database (light operation)
+      // Note: NotificationService also handles this rigorously
       tz.initializeTimeZones();
       tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
+
+      // Initialize Notification Service (CRITICAL)
+      // Must be done early to setup channels and icon resources
+      await NotificationService.initialize();
+      if (kDebugMode) {
+        print('✅ Notification Service initialized');
+      }
 
       // Initialize environment variables first (must be sequential)
       await Environment.initialize();

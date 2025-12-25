@@ -62,6 +62,12 @@
 -keep class * extends androidx.work.InputMerger
 -keep class androidx.work.** { *; }
 
+# Flutter Local Notifications (CRITICAL FIX)
+-keep class com.dexterous.flutterlocalnotifications.** { *; }
+-keepnames class com.dexterous.flutterlocalnotifications.** { *; }
+-keepclassmembers class com.dexterous.flutterlocalnotifications.** { *; }
+-keep public class * extends android.content.BroadcastReceiver
+
 # Additional optimizations for smaller APK
 -optimizationpasses 5
 -dontpreverify

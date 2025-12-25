@@ -25,10 +25,11 @@ class _NotificationDialogState extends State<NotificationDialog> {
   void initState() {
     super.initState();
     _titleController = TextEditingController(
-      text: widget.notification?.title ?? '',
+      text: widget.notification?.title ?? 'Pengingat Harian',
     );
     _bodyController = TextEditingController(
-      text: widget.notification?.body ?? '',
+      text:
+          widget.notification?.body ?? 'Jangan lupa catat pengeluaran kamu! 💰',
     );
     _selectedTime =
         widget.notification?.time ?? const TimeOfDay(hour: 19, minute: 0);
@@ -47,25 +48,24 @@ class _NotificationDialogState extends State<NotificationDialog> {
       title: Text(
         widget.notification == null ? 'Tambah Notifikasi' : 'Edit Notifikasi',
       ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildTitleField(),
-          const SizedBox(height: 16),
-          _buildBodyField(),
-          const SizedBox(height: 16),
-          _buildTimeSelector(),
-        ],
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildTitleField(),
+            const SizedBox(height: 16),
+            _buildBodyField(),
+            const SizedBox(height: 16),
+            _buildTimeSelector(),
+          ],
+        ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Batal'),
         ),
-        ElevatedButton(
-          onPressed: _save,
-          child: const Text('Simpan'),
-        ),
+        FilledButton(onPressed: _save, child: const Text('Simpan')),
       ],
     );
   }
@@ -75,7 +75,9 @@ class _NotificationDialogState extends State<NotificationDialog> {
       controller: _titleController,
       decoration: const InputDecoration(
         labelText: 'Judul',
+        hintText: 'Contoh: Pengingat Harian',
         border: OutlineInputBorder(),
+        prefixIcon: Icon(Icons.title),
       ),
     );
   }
@@ -85,40 +87,68 @@ class _NotificationDialogState extends State<NotificationDialog> {
       controller: _bodyController,
       decoration: const InputDecoration(
         labelText: 'Pesan',
+        hintText: 'Contoh: Jangan lupa catat pengeluaran!',
         border: OutlineInputBorder(),
+        prefixIcon: Icon(Icons.message),
       ),
-      maxLines: 3,
+      maxLines: 2,
     );
   }
 
   Widget _buildTimeSelector() {
     return InkWell(
       onTap: _selectTime,
+      borderRadius: BorderRadius.circular(8),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           border: Border.all(color: Colors.grey),
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           children: [
-            const Icon(Icons.access_time),
-            const SizedBox(width: 8),
-            Text(
-              'Waktu: ${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}',
+            const Icon(Icons.access_time, color: Colors.blue),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Waktu Notifikasi',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                Text(
+                  '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
+            const Spacer(),
+            const Icon(Icons.edit, size: 18, color: Colors.grey),
           ],
         ),
       ),
     );
   }
 
-  void _selectTime() async {
+  Future<void> _selectTime() async {
     final time = await showTimePicker(
       context: context,
       initialTime: _selectedTime,
+      builder: (context, child) {
+        // Force 24-hour format
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+          child: child!,
+        );
+      },
     );
+
+    if (!mounted) return;
+
     if (time != null) {
       setState(() {
         _selectedTime = time;
@@ -127,8 +157,10 @@ class _NotificationDialogState extends State<NotificationDialog> {
   }
 
   void _save() {
-    if (_titleController.text.trim().isEmpty ||
-        _bodyController.text.trim().isEmpty) {
+    final title = _titleController.text.trim();
+    final body = _bodyController.text.trim();
+
+    if (title.isEmpty || body.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Judul dan pesan tidak boleh kosong'),
@@ -138,11 +170,7 @@ class _NotificationDialogState extends State<NotificationDialog> {
       return;
     }
 
-    widget.onSave(
-      _titleController.text.trim(),
-      _bodyController.text.trim(),
-      _selectedTime,
-    );
+    widget.onSave(title, body, _selectedTime);
     Navigator.of(context).pop();
   }
 }

@@ -3,14 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/edit_profile_provider.dart';
+import '../../../../core/services/permission_service.dart';
 
 class ProfileAvatarWidget extends ConsumerWidget {
   final TextEditingController fullNameController;
 
-  const ProfileAvatarWidget({
-    super.key,
-    required this.fullNameController,
-  });
+  const ProfileAvatarWidget({super.key, required this.fullNameController});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -35,38 +33,43 @@ class ProfileAvatarWidget extends ConsumerWidget {
                         ),
                       )
                     : (profileState.avatarUrl != null
-                        ? ClipOval(
-                            child: CachedNetworkImage(
-                              imageUrl: profileState.avatarUrl!,
-                              width: 100,
-                              height: 100,
-                              fit: BoxFit.cover,
-                              placeholder: (context, url) => CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: theme.colorScheme.onPrimary,
-                              ),
-                              errorWidget: (context, url, error) => Text(
-                                fullNameController.text.isNotEmpty
-                                    ? fullNameController.text.substring(0, 1).toUpperCase()
-                                    : 'U',
-                                style: TextStyle(
-                                  color: theme.colorScheme.onPrimary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 32,
+                          ? ClipOval(
+                              child: CachedNetworkImage(
+                                imageUrl: profileState.avatarUrl!,
+                                width: 100,
+                                height: 100,
+                                fit: BoxFit.cover,
+                                placeholder: (context, url) =>
+                                    CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: theme.colorScheme.onPrimary,
+                                    ),
+                                errorWidget: (context, url, error) => Text(
+                                  fullNameController.text.isNotEmpty
+                                      ? fullNameController.text
+                                            .substring(0, 1)
+                                            .toUpperCase()
+                                      : 'U',
+                                  style: TextStyle(
+                                    color: theme.colorScheme.onPrimary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 32,
+                                  ),
                                 ),
                               ),
-                            ),
-                          )
-                        : Text(
-                            fullNameController.text.isNotEmpty
-                                ? fullNameController.text.substring(0, 1).toUpperCase()
-                                : 'U',
-                            style: TextStyle(
-                              color: theme.colorScheme.onPrimary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 32,
-                            ),
-                          )),
+                            )
+                          : Text(
+                              fullNameController.text.isNotEmpty
+                                  ? fullNameController.text
+                                        .substring(0, 1)
+                                        .toUpperCase()
+                                  : 'U',
+                              style: TextStyle(
+                                color: theme.colorScheme.onPrimary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 32,
+                              ),
+                            )),
               ),
               Positioned(
                 bottom: 0,
@@ -111,7 +114,10 @@ class ProfileAvatarWidget extends ConsumerWidget {
     );
   }
 
-  Future<void> _showImagePickerModal(BuildContext context, WidgetRef ref) async {
+  Future<void> _showImagePickerModal(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     final profileState = ref.read(editProfileProvider);
     final profileNotifier = ref.read(editProfileProvider.notifier);
 
@@ -124,9 +130,9 @@ class ProfileAvatarWidget extends ConsumerWidget {
               padding: const EdgeInsets.all(16.0),
               child: Text(
                 'Select Photo',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
             ),
             ListTile(
@@ -139,10 +145,14 @@ class ProfileAvatarWidget extends ConsumerWidget {
               title: const Text('Gallery'),
               onTap: () => Navigator.of(context).pop(ImageSource.gallery),
             ),
-            if (profileState.imageFile != null || profileState.avatarUrl != null)
+            if (profileState.imageFile != null ||
+                profileState.avatarUrl != null)
               ListTile(
                 leading: const Icon(Icons.delete, color: Colors.red),
-                title: const Text('Remove Photo', style: TextStyle(color: Colors.red)),
+                title: const Text(
+                  'Remove Photo',
+                  style: TextStyle(color: Colors.red),
+                ),
                 onTap: () {
                   profileNotifier.removePhoto();
                   Navigator.of(context).pop();
@@ -155,18 +165,35 @@ class ProfileAvatarWidget extends ConsumerWidget {
     );
 
     if (source != null) {
-      await profileNotifier.pickImage(source);
-      
-      // Show error if any
-      final error = ref.read(editProfileProvider).error;
-      if (error != null && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error),
-            backgroundColor: Colors.red,
-          ),
-        );
-        profileNotifier.clearError();
+      bool hasPermission = false;
+
+      if (source == ImageSource.camera) {
+        hasPermission = await PermissionService().requestCameraPermission();
+      } else if (source == ImageSource.gallery) {
+        hasPermission = await PermissionService().requestStoragePermissions();
+      }
+
+      if (hasPermission) {
+        await profileNotifier.pickImage(source);
+
+        // Show error if any
+        final error = ref.read(editProfileProvider).error;
+        if (error != null && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(error), backgroundColor: Colors.red),
+          );
+          profileNotifier.clearError();
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Izin diperlukan untuk mengakses foto/kamera'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
       }
     }
   }
