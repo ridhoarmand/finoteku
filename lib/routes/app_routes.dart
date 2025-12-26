@@ -29,6 +29,8 @@ import '../features/transaction/screens/wallet_selection_screen.dart';
 import '../features/transaction/screens/add_edit_transaction_screen.dart';
 import '../widgets/main_shell.dart';
 
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final routerProvider = Provider<GoRouter>((ref) {
   // Keep router instance alive to prevent recreations
   ref.keepAlive();
@@ -39,6 +41,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.watch(onboardingProvider);
 
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/',
     debugLogDiagnostics: false, // Keep false for production
     redirect: (context, state) {

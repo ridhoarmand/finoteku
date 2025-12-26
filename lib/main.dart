@@ -45,7 +45,7 @@ class _MyAppState extends ConsumerState<MyApp> {
 
       // Initialize Notification Service (CRITICAL)
       // Must be done early to setup channels and icon resources
-      await NotificationService.initialize();
+      await NotificationService.initialize(navigatorKey: rootNavigatorKey);
       if (kDebugMode) {
         print('✅ Notification Service initialized');
       }

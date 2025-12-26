@@ -8,6 +8,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import 'dart:convert';
 import 'package:uuid/uuid.dart';
+import 'package:go_router/go_router.dart';
 
 import '../models/daily_notification.dart';
 import '../../../services/user_service.dart';
@@ -20,10 +21,15 @@ class NotificationService {
   static List<DailyNotification> _notificationsList = [];
   static UserService? _userService;
 
-  static Future<void> initialize({UserService? userService}) async {
+  static GlobalKey<NavigatorState>? _navigatorKey;
+
+  static Future<void> initialize({
+    UserService? userService,
+    GlobalKey<NavigatorState>? navigatorKey,
+  }) async {
     try {
       _userService = userService;
-      // ... (kode timezone) ...
+      _navigatorKey = navigatorKey;
 
       // Initialize timezone
       try {
@@ -71,12 +77,34 @@ class NotificationService {
         requestAlertPermission: true,
       );
 
-      const initSettings = InitializationSettings(
-        android: androidSettings,
-        iOS: iosSettings,
+      // Add Linux Settings
+      final linuxSettings = LinuxInitializationSettings(
+        defaultActionName: 'Open notification',
       );
 
-      await _notifications.initialize(initSettings);
+      final initSettings = InitializationSettings(
+        android: androidSettings,
+        iOS: iosSettings,
+        linux: linuxSettings,
+      );
+
+      await _notifications.initialize(
+        initSettings,
+        onDidReceiveNotificationResponse: (NotificationResponse response) {
+          debugPrint(
+            '🔔 Notification clicked with payload: ${response.payload}',
+          );
+          if (response.payload == 'transaction_add' && _navigatorKey != null) {
+            // Navigate to add transaction screen
+            // Using GoRouter logic if navigatorKey context is available
+            final context = _navigatorKey!.currentContext;
+            if (context != null) {
+              // Gunakan GoRouter untuk navigasi
+              context.push('/transaction/add');
+            }
+          }
+        },
+      );
 
       // Create the notification channel explicitly
       final androidPlugin = _notifications
@@ -374,10 +402,11 @@ class NotificationService {
       );
 
       await _notifications.show(
-        999,
+        0,
         'Test Notification',
-        'This is a test notification from Finoteku',
+        'Coba klik notifikasi ini untuk input transaksi!',
         details,
+        payload: 'transaction_add',
       );
       debugPrint('✅ Test notification sent');
     } catch (e) {
@@ -442,7 +471,7 @@ class NotificationService {
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           // Removed uiLocalNotificationDateInterpretation due to compilation error
           // The plugin version resolved may treat this as optional or implicit
-          payload: 'test_scheduled',
+          payload: 'transaction_add',
         );
         debugPrint('✅ Scheduled with EXACT mode');
       } catch (exactError) {
@@ -453,11 +482,11 @@ class NotificationService {
         await _notifications.zonedSchedule(
           998,
           'Test Scheduled (Inexact)',
-          'Notifikasi terjadwal berhasil! (10 detik, inexact)',
+          'Klik untuk input transaksi!',
           scheduledTime,
           details,
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-          payload: 'test_scheduled',
+          payload: 'transaction_add',
         );
         debugPrint('✅ Scheduled with INEXACT mode');
       }
