@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'utils/desktop_window.dart'
+    if (dart.library.html) 'utils/desktop_window_stub.dart';
 import 'routes/app_routes.dart';
 import 'core/localization/locale_provider.dart';
 import 'theme/app_theme.dart';
@@ -16,6 +18,9 @@ import 'features/notification/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Configure desktop window (no-op on web/mobile)
+  await configureDesktopWindow();
 
   runApp(ProviderScope(child: MyApp()));
 }
@@ -39,16 +44,8 @@ class _MyAppState extends ConsumerState<MyApp> {
   Future<void> _initializeApp() async {
     try {
       // Initialize timezone database (light operation)
-      // Note: NotificationService also handles this rigorously
       tz.initializeTimeZones();
       tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
-
-      // Initialize Notification Service (CRITICAL)
-      // Must be done early to setup channels and icon resources
-      await NotificationService.initialize(navigatorKey: rootNavigatorKey);
-      if (kDebugMode) {
-        print('✅ Notification Service initialized');
-      }
 
       // Initialize environment variables first (must be sequential)
       await Environment.initialize();
@@ -78,20 +75,36 @@ class _MyAppState extends ConsumerState<MyApp> {
         // Continue anyway for demo purposes
       }
 
-      // Initialize connectivity monitoring (deferred, non-blocking)
-      // Run in background to avoid blocking UI
-      ConnectivityService()
-          .initialize()
-          .then((_) {
-            if (kDebugMode) {
-              print('✅ Connectivity service initialized');
-            }
-          })
-          .catchError((e) {
-            if (kDebugMode) {
-              print('❌ Failed to initialize connectivity service: $e');
-            }
-          });
+      // Initialize platform-specific services in background (non-blocking)
+      // Skip on web to avoid channel buffer warnings
+      if (!kIsWeb) {
+        // Initialize Notification Service (CRITICAL on mobile/desktop)
+        NotificationService.initialize(navigatorKey: rootNavigatorKey)
+            .then((_) {
+              if (kDebugMode) {
+                print('✅ Notification Service initialized');
+              }
+            })
+            .catchError((e) {
+              if (kDebugMode) {
+                print('❌ Failed to initialize notifications: $e');
+              }
+            });
+
+        // Initialize connectivity monitoring (deferred, non-blocking)
+        ConnectivityService()
+            .initialize()
+            .then((_) {
+              if (kDebugMode) {
+                print('✅ Connectivity service initialized');
+              }
+            })
+            .catchError((e) {
+              if (kDebugMode) {
+                print('❌ Failed to initialize connectivity service: $e');
+              }
+            });
+      }
     } catch (e) {
       if (kDebugMode) {
         print('❌ Critical initialization error: $e');

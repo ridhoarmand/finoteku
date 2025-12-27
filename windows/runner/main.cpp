@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <flutter/dart_project.h>
 #include <flutter/flutter_view_controller.h>
 #include <windows.h>
@@ -25,8 +26,26 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
   FlutterWindow window(project);
-  Win32Window::Point origin(10, 10);
-  Win32Window::Size size(1280, 720);
+
+  // Center the window and use a phone-portrait friendly size (slightly wider).
+  const int desired_width = 560;   // phone-ish width + a bit extra
+  const int desired_height = 960;  // phone-ish portrait height
+
+  const int screen_width = ::GetSystemMetrics(SM_CXSCREEN);
+  const int screen_height = ::GetSystemMetrics(SM_CYSCREEN);
+
+  // Leave a margin so the window is always fully visible and buttons reachable.
+  const int max_width = std::max(400, screen_width - 120);
+  const int max_height = std::max(600, screen_height - 160);
+
+  const int width = std::min(desired_width, max_width);
+  const int height = std::min(desired_height, max_height);
+
+  const int origin_x = std::max(0, (screen_width - width) / 2);
+  const int origin_y = std::max(0, (screen_height - height) / 2);
+
+  Win32Window::Point origin(origin_x, origin_y);
+  Win32Window::Size size(width, height);
   if (!window.Create(L"finoteku", origin, size)) {
     return EXIT_FAILURE;
   }

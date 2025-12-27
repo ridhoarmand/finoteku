@@ -36,6 +36,12 @@ class ConnectivityService {
   /// Check if device has internet connectivity
   Future<bool> checkConnectivity() async {
     try {
+      // Web: skip plugin + HTTP checks to avoid CORS/unsupported issues.
+      if (kIsWeb) {
+        _updateConnectionStatus(true);
+        return true;
+      }
+
       final connectivityResult = await _connectivity.checkConnectivity();
 
       // If no connectivity at all
@@ -62,9 +68,9 @@ class ConnectivityService {
     try {
       // Try to reach Google DNS (very reliable) with short timeout
       final response = await http
-          .get(Uri.parse('https://www.google.com'))
+          .get(Uri.parse('https://clients3.google.com/generate_204'))
           .timeout(
-            const Duration(seconds: 2), // Reduced from 5 to 2 seconds
+            const Duration(seconds: 2),
             onTimeout: () => http.Response('Timeout', 408),
           );
 

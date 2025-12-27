@@ -1,11 +1,11 @@
 {
-    "name": "finoteku",
-    "short_name": "finoteku",
+    "name": "Finoteku - Manajemen Keuangan Pribadi",
+    "short_name": "Finoteku",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#ffffff",
+    "theme_color": "#6200EA",
+    "description": "Aplikasi pencatatan keuangan pribadi yang membantu Anda mengelola keuangan dengan mudah.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

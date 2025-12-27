@@ -119,26 +119,30 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     try {
       if (!mounted) return;
 
-      // Quick connectivity check (non-blocking)
-      _updateStatus('Memeriksa koneksi...');
+      // Quick connectivity check (non-blocking). Skip on web to avoid CORS/flags.
+      if (kIsWeb) {
+        _updateStatus(_safeTranslate('initializing_services'));
+      } else {
+        _updateStatus('Memeriksa koneksi...');
 
-      try {
-        final connectivityService = ref.read(connectivityServiceProvider);
-        // Quick check only, no retry to avoid blocking
-        final isConnected = await connectivityService.checkConnectivity();
+        try {
+          final connectivityService = ref.read(connectivityServiceProvider);
+          // Quick check only, no retry to avoid blocking
+          final isConnected = await connectivityService.checkConnectivity();
 
-        if (!isConnected) {
-          if (!mounted) return;
-          _updateStatus('Tidak dapat terhubung ke internet');
-          // Show retry dialog
-          await _showRetryDialog();
-          return;
+          if (!isConnected) {
+            if (!mounted) return;
+            _updateStatus('Tidak dapat terhubung ke internet');
+            // Show retry dialog
+            await _showRetryDialog();
+            return;
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('⚠️ Connectivity check skipped: $e');
+          }
+          // Continue even if connectivity check fails
         }
-      } catch (e) {
-        if (kDebugMode) {
-          print('⚠️ Connectivity check skipped: $e');
-        }
-        // Continue even if connectivity check fails
       }
 
       if (!mounted) return;
