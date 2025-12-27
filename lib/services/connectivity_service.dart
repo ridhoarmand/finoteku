@@ -66,15 +66,16 @@ class ConnectivityService {
   /// Verify actual internet connection by pinging a reliable server
   Future<bool> _checkActualInternetConnection() async {
     try {
-      // Try to reach Google DNS (very reliable) with short timeout
+      // Try to reach Google's generate_204 endpoint (returns 204 when online)
       final response = await http
           .get(Uri.parse('https://clients3.google.com/generate_204'))
           .timeout(
-            const Duration(seconds: 2),
+            const Duration(seconds: 3),
             onTimeout: () => http.Response('Timeout', 408),
           );
 
-      return response.statusCode == 200;
+      // Consider 204 (expected) and 200 as online to be robust
+      return response.statusCode == 204 || response.statusCode == 200;
     } catch (e) {
       if (kDebugMode) {
         print('❌ Internet connection check failed: $e');
