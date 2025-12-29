@@ -203,7 +203,7 @@ class EditProfileNotifier extends Notifier<EditProfileState> {
     try {
       final user = SupabaseService.client.auth.currentUser;
       if (user == null) {
-        throw Exception('User not found');
+        throw Exception('user_not_found');
       }
 
       // Upload avatar if image is selected
@@ -235,9 +235,24 @@ class EditProfileNotifier extends Notifier<EditProfileState> {
 
       return true;
     } catch (e) {
+      // Try to localize known error messages
+      String errorMsg = e.toString();
+      if (errorMsg.contains('user_not_found')) {
+        errorMsg = 'error_loading_user';
+      } else if (errorMsg.contains('StorageException')) {
+        if (errorMsg.contains('403') || errorMsg.contains('Unauthorized')) {
+          errorMsg = 'avatar_upload_permission_error';
+        } else if (errorMsg.contains('404')) {
+          errorMsg = 'avatar_upload_not_found_error';
+        } else if (errorMsg.contains('413')) {
+          errorMsg = 'avatar_upload_too_large_error';
+        }
+      } else {
+        errorMsg = 'error_saving_profile';
+      }
       state = state.copyWith(
         isLoading: false,
-        error: 'Failed to update profile: ${e.toString()}',
+        error: errorMsg,
       );
       return false;
     }

@@ -2,6 +2,18 @@
 // Keep this file free of imports to avoid circular dependencies.
 
 const Map<String, String> accountStringsEn = {
+  'logout': 'Logout',
+  'logout_title': 'Logout',
+  'logout_confirm_message': 'Are you sure you want to logout?',
+  'logout_failed': 'Logout failed: {0}',
+  'save_changes': 'Save Changes',
+  'saving': 'Saving...',
+  'avatar_upload_permission_error':
+      'Upload failed: Please check if the avatars bucket exists and has correct permissions in Supabase Dashboard',
+  'avatar_upload_not_found_error':
+      'Upload failed: The avatars bucket does not exist. Please create it in Supabase Dashboard',
+  'avatar_upload_too_large_error':
+      'Upload failed: Image file is too large. Please choose a smaller image',
   // Account screen
   'account_title': 'Account',
   'account_settings': 'Account Settings',
@@ -24,6 +36,13 @@ const Map<String, String> accountStringsEn = {
   'error_loading_user': 'Error loading user data',
   'profile_updated_successfully': 'Profile updated successfully',
   'error_saving_profile': 'Error saving profile',
+  'photo_new_selected': 'New photo selected',
+  'photo_tap_to_change': 'Tap camera icon to change photo',
+  'photo_select_title': 'Select Photo',
+  'photo_camera': 'Camera',
+  'photo_gallery': 'Gallery',
+  'photo_remove': 'Remove Photo',
+  'photo_permission_required': 'Permission required to access photos/camera',
 
   // Account actions
   'change_password': 'Change Password',
@@ -115,6 +134,18 @@ const Map<String, String> accountStringsEn = {
 };
 
 const Map<String, String> accountStringsId = {
+  'logout': 'Keluar',
+  'logout_title': 'Keluar',
+  'logout_confirm_message': 'Apakah Anda yakin ingin keluar?',
+  'logout_failed': 'Gagal keluar: {0}',
+  'save_changes': 'Simpan Perubahan',
+  'saving': 'Menyimpan...',
+  'avatar_upload_permission_error':
+      'Gagal mengunggah: Periksa apakah bucket avatar ada dan sudah memiliki izin di Supabase Dashboard',
+  'avatar_upload_not_found_error':
+      'Gagal mengunggah: Bucket avatar tidak ditemukan. Silakan buat di Supabase Dashboard',
+  'avatar_upload_too_large_error':
+      'Gagal mengunggah: Ukuran gambar terlalu besar. Pilih gambar yang lebih kecil',
   // Account screen
   'account_title': 'Akun',
   'account_settings': 'Pengaturan Akun',
@@ -137,6 +168,13 @@ const Map<String, String> accountStringsId = {
   'error_loading_user': 'Gagal memuat data pengguna',
   'profile_updated_successfully': 'Profil berhasil diperbarui',
   'error_saving_profile': 'Gagal menyimpan profil',
+  'photo_new_selected': 'Foto baru dipilih',
+  'photo_tap_to_change': 'Ketuk ikon kamera untuk ubah foto',
+  'photo_select_title': 'Pilih Foto',
+  'photo_camera': 'Kamera',
+  'photo_gallery': 'Galeri',
+  'photo_remove': 'Hapus Foto',
+  'photo_permission_required': 'Izin diperlukan untuk mengakses foto/kamera',
 
   // Account actions
   'change_password': 'Ganti Password',

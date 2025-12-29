@@ -36,7 +36,9 @@ class SaveProfileButton extends ConsumerWidget {
                 ),
               )
             : const Icon(Icons.save),
-        label: Text(profileState.isLoading ? 'Saving...' : 'Save Changes'),
+        label: Text(profileState.isLoading
+            ? ref.tr(context, 'saving')
+            : ref.tr(context, 'save_changes')),
         style: FilledButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 16),
           backgroundColor: profileState.hasChanges || profileState.isLoading
@@ -76,7 +78,7 @@ class SaveProfileButton extends ConsumerWidget {
       } else if (error != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${ref.tr(context, 'error_saving_profile')}: $error'),
+            content: Text(ref.tr(context, error)),
             backgroundColor: Colors.red,
           ),
         );

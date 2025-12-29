@@ -44,10 +44,7 @@ final Map<String, StrMap> _strings = {
   },
 };
 
-String translate(BuildContext context, WidgetRef ref, String key) {
-  final localeState = ref.watch(appLocaleProvider);
-  final lang = localeState.contentLanguageCode;
-
+String _lookup(String lang, String key) {
   // Try exact match first
   final exact = _strings[lang]?[key];
   if (exact != null) return exact;
@@ -63,6 +60,17 @@ String translate(BuildContext context, WidgetRef ref, String key) {
   return _strings['en']?[key] ?? key;
 }
 
+String translate(BuildContext context, WidgetRef ref, String key) {
+  final localeState = ref.watch(appLocaleProvider);
+  return _lookup(localeState.contentLanguageCode, key);
+}
+
+String translateRead(WidgetRef ref, String key) {
+  final localeState = ref.read(appLocaleProvider);
+  return _lookup(localeState.contentLanguageCode, key);
+}
+
 extension TranslateRef on WidgetRef {
   String tr(BuildContext context, String key) => translate(context, this, key);
+  String trRead(String key) => translateRead(this, key);
 }

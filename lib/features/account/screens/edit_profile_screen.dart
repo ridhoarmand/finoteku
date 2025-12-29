@@ -44,7 +44,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading user data: ${e.toString()}'),
+            content: Text(
+              '${ref.tr(context, 'error_loading_user')}: ${e.toString()}'
+            ),
             backgroundColor: Colors.red,
           ),
         );

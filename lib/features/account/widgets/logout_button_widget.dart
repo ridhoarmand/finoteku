@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../auth/services/auth_service.dart';
 import '../../../services/supabase_service.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class LogoutButtonWidget extends ConsumerWidget {
   const LogoutButtonWidget({super.key});
@@ -19,16 +20,16 @@ class LogoutButtonWidget extends ConsumerWidget {
           final shouldLogout = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('Logout'),
-              content: const Text('Are you sure you want to logout?'),
+              title: Text(ref.trRead('logout_title')),
+              content: Text(ref.trRead('logout_confirm_message')),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
+                  child: Text(ref.trRead('cancel')),
                 ),
                 FilledButton(
                   onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Logout'),
+                  child: Text(ref.trRead('logout')),
                 ),
               ],
             ),
@@ -58,7 +59,11 @@ class LogoutButtonWidget extends ConsumerWidget {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Logout failed: ${e.toString()}'),
+                    content: Text(
+                      ref
+                          .trRead('logout_failed')
+                          .replaceFirst('{0}', e.toString()),
+                    ),
                     backgroundColor: Colors.red,
                   ),
                 );
@@ -67,7 +72,7 @@ class LogoutButtonWidget extends ConsumerWidget {
           }
         },
         icon: const Icon(Icons.logout),
-        label: const Text('Logout'),
+        label: Text(ref.tr(context, 'logout')),
         style: FilledButton.styleFrom(
           backgroundColor: Colors.red,
           foregroundColor: Colors.white,

@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/edit_profile_provider.dart';
 import '../../../../core/services/permission_service.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class ProfileAvatarWidget extends ConsumerWidget {
   final TextEditingController fullNameController;
@@ -98,8 +99,8 @@ class ProfileAvatarWidget extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(
             profileState.imageFile != null
-                ? 'New photo selected'
-                : 'Tap camera icon to change photo',
+                ? ref.tr(context, 'photo_new_selected')
+                : ref.tr(context, 'photo_tap_to_change'),
             style: theme.textTheme.bodySmall?.copyWith(
               color: profileState.imageFile != null
                   ? theme.colorScheme.primary
@@ -129,7 +130,7 @@ class ProfileAvatarWidget extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
-                'Select Photo',
+                ref.trRead('photo_select_title'),
                 style: Theme.of(
                   context,
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
@@ -137,21 +138,21 @@ class ProfileAvatarWidget extends ConsumerWidget {
             ),
             ListTile(
               leading: const Icon(Icons.photo_camera),
-              title: const Text('Camera'),
+              title: Text(ref.trRead('photo_camera')),
               onTap: () => Navigator.of(context).pop(ImageSource.camera),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library),
-              title: const Text('Gallery'),
+              title: Text(ref.trRead('photo_gallery')),
               onTap: () => Navigator.of(context).pop(ImageSource.gallery),
             ),
             if (profileState.imageFile != null ||
                 profileState.avatarUrl != null)
               ListTile(
                 leading: const Icon(Icons.delete, color: Colors.red),
-                title: const Text(
-                  'Remove Photo',
-                  style: TextStyle(color: Colors.red),
+                title: Text(
+                  ref.trRead('photo_remove'),
+                  style: const TextStyle(color: Colors.red),
                 ),
                 onTap: () {
                   profileNotifier.removePhoto();
@@ -187,10 +188,10 @@ class ProfileAvatarWidget extends ConsumerWidget {
       } else {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Izin diperlukan untuk mengakses foto/kamera'),
+            SnackBar(
+              content: Text(ref.trRead('photo_permission_required')),
               backgroundColor: Colors.orange,
-              duration: Duration(seconds: 2),
+              duration: const Duration(seconds: 2),
             ),
           );
         }
