@@ -47,7 +47,20 @@ final Map<String, StrMap> _strings = {
 String translate(BuildContext context, WidgetRef ref, String key) {
   final localeState = ref.watch(appLocaleProvider);
   final lang = localeState.contentLanguageCode;
-  return _strings[lang]?[key] ?? key;
+
+  // Try exact match first
+  final exact = _strings[lang]?[key];
+  if (exact != null) return exact;
+
+  // Fallback: try base language code (e.g., en-US -> en)
+  final baseLang = lang.split('-').first;
+  if (baseLang != lang) {
+    final base = _strings[baseLang]?[key];
+    if (base != null) return base;
+  }
+
+  // Final fallback to English to avoid showing raw keys
+  return _strings['en']?[key] ?? key;
 }
 
 extension TranslateRef on WidgetRef {

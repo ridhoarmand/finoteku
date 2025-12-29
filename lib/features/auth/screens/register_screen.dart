@@ -47,10 +47,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Registration successful! Please check your email to verify your account.',
-            ),
+          SnackBar(
+            content: Text(ref.tr(context, 'registration_success')),
             backgroundColor: Colors.green,
           ),
         );
@@ -60,7 +58,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${ref.tr(context, 'registration_failed')}: ${e.toString()}'),
+            content: Text(
+              '${ref.tr(context, 'registration_failed')}: ${e.toString()}',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -96,7 +96,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               children: [
                 // Header
                 Text(
-                  'Join Finoteku',
+                  ref.tr(context, 'register_header_title'),
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -104,7 +104,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Create your account to start managing your finances',
+                  ref.tr(context, 'register_header_subtitle'),
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
