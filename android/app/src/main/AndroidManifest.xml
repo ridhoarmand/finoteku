@@ -43,6 +43,14 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
+            <!-- Deep link for Supabase email confirmation / magic link -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="id.ridhoarmand.finoteku" android:host="auth" android:pathPrefix="/callback" />
+            </intent-filter>
         </activity>
         
         <!-- Receiver untuk boot completed dan alarm -->

@@ -21,6 +21,7 @@ class AuthService {
       final response = await _supabase.auth.signUp(
         email: email,
         password: password,
+        emailRedirectTo: 'id.ridhoarmand.finoteku://auth/callback',
         data: {'full_name': fullName},
       );
 
