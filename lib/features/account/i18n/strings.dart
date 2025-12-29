@@ -110,6 +110,8 @@ const Map<String, String> accountStringsEn = {
       'Are you absolutely sure you want to delete your account? This action cannot be undone.',
   'delete_yes_delete': 'Yes, Delete',
   'delete_success': 'Account deleted successfully. You have been signed out.',
+  'delete_error_incorrect_password': 'Incorrect password. Please try again.',
+  'delete_error_failed': 'Failed to delete account. Please try again.',
 };
 
 const Map<String, String> accountStringsId = {
@@ -220,4 +222,6 @@ const Map<String, String> accountStringsId = {
       'Apakah Anda benar-benar yakin ingin menghapus akun Anda? Tindakan ini tidak dapat dibatalkan.',
   'delete_yes_delete': 'Ya, Hapus',
   'delete_success': 'Akun berhasil dihapus. Anda telah keluar.',
+  'delete_error_incorrect_password': 'Password salah. Silakan coba lagi.',
+  'delete_error_failed': 'Gagal menghapus akun. Silakan coba lagi.',
 };

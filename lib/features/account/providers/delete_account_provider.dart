@@ -93,7 +93,7 @@ class DeleteAccountNotifier extends Notifier<DeleteAccountState> {
       if (!isPasswordValid) {
         state = state.copyWith(
           isLoading: false,
-          error: 'Incorrect password. Please try again.',
+          error: 'delete_error_incorrect_password',
         );
         return false;
       }

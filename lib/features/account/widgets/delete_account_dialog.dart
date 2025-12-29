@@ -234,7 +234,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  deleteState.error!,
+                  ref.tr(context, deleteState.error!),
                   style: TextStyle(color: Colors.red[700], fontSize: 13),
                 ),
               ),
@@ -321,20 +321,19 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
       await Future.delayed(const Duration(milliseconds: 500));
 
       if (!mounted) return;
+
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(ref.tr(context, 'delete_success')),
           backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
         ),
       );
 
-      // Clear navigation stack and navigate to login page
+      // Navigate to login - GoRouter will handle the redirect properly
       if (context.mounted) {
-        while (context.canPop()) {
-          context.pop();
-        }
-        context.pushReplacement('/login');
+        context.go('/login');
       }
     }
   }
