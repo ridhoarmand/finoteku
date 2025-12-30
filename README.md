@@ -1,5 +1,7 @@
 # Finoteku - Personal Finance Management App
 
+<img width="500" height="500" alt="icon" src="https://github.com/user-attachments/assets/b93bf38a-b4ff-4ab9-8178-58f080446742" />
+
 **Finoteku** adalah aplikasi manajemen keuangan pribadi yang dirancang dengan focus pada kesederhanaan dan kemudahan penggunaan. Aplikasi ini dibangun menggunakan Flutter dengan backend Supabase untuk memberikan pengalaman yang modern dan reliable.
 
 *Developed by Ridho Armansyah*

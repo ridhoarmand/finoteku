@@ -105,6 +105,10 @@ const Map<String, String> accountStringsEn = {
   'password_min_length': 'Password must be at least 6 characters',
   'password_confirm_required': 'Please confirm your new password',
   'passwords_not_match': 'Passwords do not match',
+  'current_password': 'Current Password',
+  'current_password_placeholder': 'Enter current password',
+  'current_password_required': 'Current password is required',
+  'error_current_password_incorrect': 'Incorrect current password',
   'security_tips': 'Security Tips',
   'security_tips_content':
       '• Use a password with at least 6 characters\n• Include uppercase, lowercase, numbers, and symbols\n• Don\'t reuse passwords from other accounts\n• Consider using a password manager',
@@ -245,6 +249,10 @@ const Map<String, String> accountStringsId = {
   'password_min_length': 'Password minimal 6 karakter',
   'password_confirm_required': 'Konfirmasi password baru Anda',
   'passwords_not_match': 'Password tidak cocok',
+  'current_password': 'Password Saat Ini',
+  'current_password_placeholder': 'Masukkan password saat ini',
+  'current_password_required': 'Password saat ini wajib diisi',
+  'error_current_password_incorrect': 'Password saat ini salah',
   'security_tips': 'Tips Keamanan',
   'security_tips_content':
       '• Gunakan password minimal 6 karakter\n• Kombinasikan huruf besar, kecil, angka, dan simbol\n• Jangan gunakan password yang sama di akun lain\n• Pertimbangkan menggunakan pengelola password',

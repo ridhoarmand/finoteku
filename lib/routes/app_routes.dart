@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
+import '../features/auth/screens/reset_password_screen.dart';
 import '../features/auth/services/auth_service.dart';
 import '../features/onboarding/providers/onboarding_provider.dart';
 import '../features/onboarding/providers/language_preference_provider.dart';
@@ -39,6 +41,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.watch(currentAuthProvider);
   ref.watch(hasLanguagePreferenceProvider);
   ref.watch(onboardingProvider);
+  final authState = ref.watch(authStateProvider);
 
   return GoRouter(
     navigatorKey: rootNavigatorKey,
@@ -47,6 +50,16 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final location = state.matchedLocation;
       debugPrint('🚦 Router redirect check: $location');
+
+      // Check for password recovery event specifically (Priority High)
+      // This must be checked before other logic to ensure the reset screen opens
+      final authEvent = authState.asData?.value.event;
+      if (authEvent == AuthChangeEvent.passwordRecovery) {
+        debugPrint(
+          '🔑 Password recovery event detected, redirecting to reset password',
+        );
+        return '/reset-password';
+      }
 
       // Allow splash screen to handle initial routing
       if (location == '/') return null;
@@ -76,11 +89,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         '/login/forgot-password',
         '/onboarding',
         '/language-selection',
+        '/reset-password',
       ];
       final isPublicRoute = publicRoutes.contains(location);
 
       // Handle language preference check
-      return hasLanguagePreferenceAsync.when(
+      // Handle language preference check
+      final redirectResult = hasLanguagePreferenceAsync.when(
         data: (hasLangPref) {
           debugPrint(
             '📝 Lang pref: $hasLangPref, Onboarding: $hasSeenOnboarding',
@@ -145,8 +160,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           return '/language-selection';
         },
       );
+
+      return redirectResult;
     },
     routes: [
+      GoRoute(
+        path: '/reset-password',
+        builder: (context, state) => const ResetPasswordScreen(),
+      ),
       GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
       GoRoute(
         path: '/language-selection',

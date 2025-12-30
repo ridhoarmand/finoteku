@@ -37,6 +37,12 @@ const Map<String, String> authStringsEn = {
   'back_to_login': 'Back to Login',
   'reset_email_sent': 'Reset email sent successfully!',
   'failed_to_send_reset_email': 'Failed to send reset email',
+  'reset_password_new_title': 'Set New Password',
+  'reset_password_new_subtitle': 'Enter your new password below.',
+  'new_password_label': 'New Password',
+  'save_password_button': 'Save Password',
+  'password_reset_success':
+      'Password reset successfully! Please login with your new password.',
 
   // Validation messages
   'email_required': 'Email is required',
@@ -94,6 +100,12 @@ const Map<String, String> authStringsId = {
   'back_to_login': 'Kembali ke Login',
   'reset_email_sent': 'Email reset berhasil dikirim!',
   'failed_to_send_reset_email': 'Gagal mengirim email reset',
+  'reset_password_new_title': 'Atur Kata Sandi Baru',
+  'reset_password_new_subtitle': 'Masukkan kata sandi baru Anda di bawah ini.',
+  'new_password_label': 'Kata Sandi Baru',
+  'save_password_button': 'Simpan Kata Sandi',
+  'password_reset_success':
+      'Kata sandi berhasil direset! Silakan login dengan kata sandi baru Anda.',
 
   // Validation messages
   'email_required': 'Email harus diisi',

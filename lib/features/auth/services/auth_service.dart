@@ -91,11 +91,33 @@ class AuthService {
   /// Reset password
   Future<void> resetPassword(String email) async {
     try {
-      await _supabase.auth.resetPasswordForEmail(email);
+      await _supabase.auth.resetPasswordForEmail(
+        email,
+        redirectTo: 'id.ridhoarmand.finoteku://auth/callback',
+      );
     } on AuthException catch (e) {
       throw AuthException(e.message);
     } catch (e) {
       throw Exception('Unexpected error during password reset: $e');
+    }
+  }
+
+  /// Verify current password by attempting to sign in
+  Future<bool> verifyPassword(String password) async {
+    try {
+      final user = currentUser;
+      if (user == null || user.email == null) return false;
+
+      final response = await _supabase.auth.signInWithPassword(
+        email: user.email,
+        password: password,
+      );
+      return response.user != null;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('⚠️ Password verification failed: $e');
+      }
+      return false;
     }
   }
 
