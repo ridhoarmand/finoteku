@@ -17,11 +17,29 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final _emailController = TextEditingController();
   bool _isLoading = false;
   bool _emailSent = false;
+  int _cooldownSeconds = 0;
 
   @override
   void dispose() {
     _emailController.dispose();
     super.dispose();
+  }
+
+  void _startCooldown() {
+    setState(() {
+      _cooldownSeconds = 60;
+    });
+
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(seconds: 1));
+      if (!mounted) return false;
+
+      setState(() {
+        _cooldownSeconds--;
+      });
+
+      return _cooldownSeconds > 0;
+    });
   }
 
   Future<void> _handleResetPassword() async {
@@ -39,11 +57,11 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         setState(() {
           _emailSent = true;
         });
+        _startCooldown();
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Password reset email sent! Please check your inbox.',
-            ),
+          SnackBar(
+            content: Text(ref.tr(context, 'reset_email_sent')),
             backgroundColor: Colors.green,
           ),
         );
@@ -52,7 +70,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${ref.tr(context, 'failed_to_send_reset_email')}: ${e.toString()}'),
+            content: Text(
+              '${ref.tr(context, 'failed_to_send_reset_email')}: ${e.toString()}',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -150,9 +170,15 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 ] else ...[
                   // Success actions
                   FilledButton.icon(
-                    onPressed: _handleResetPassword,
+                    onPressed: _cooldownSeconds > 0
+                        ? null
+                        : _handleResetPassword,
                     icon: const Icon(Icons.refresh),
-                    label: Text(ref.tr(context, 'resend_email')),
+                    label: Text(
+                      _cooldownSeconds > 0
+                          ? 'Wait $_cooldownSeconds s'
+                          : ref.tr(context, 'resend_email'),
+                    ),
                   ),
                   const SizedBox(height: 16),
                 ],
