@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import '../../../core/localization/app_localizations.dart';
 
@@ -57,11 +58,24 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       }
     } catch (e) {
       if (mounted) {
+        String displayError;
+        String rawMessage = e.toString();
+
+        if (e is AuthException) {
+          rawMessage = e.message;
+        }
+
+        // Check for specific error keys
+        if (rawMessage.contains('password_error_same') ||
+            rawMessage.contains('New password should be different')) {
+          displayError = ref.tr(context, 'password_error_same');
+        } else {
+          // General error - use the clean message if it was AuthException
+          displayError = rawMessage;
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${ref.tr(context, 'error')}: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(displayError), backgroundColor: Colors.red),
         );
       }
     } finally {

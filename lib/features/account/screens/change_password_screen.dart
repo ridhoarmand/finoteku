@@ -95,7 +95,8 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   String _getErrorMessage(String errorString) {
     if (errorString.contains('Password should be at least 6 characters')) {
       return ref.tr(context, 'password_error_too_short');
-    } else if (errorString.contains('New password should be different')) {
+    } else if (errorString.contains('password_error_same') ||
+        errorString.contains('New password should be different')) {
       return ref.tr(context, 'password_error_same');
     } else if (errorString.contains('Network')) {
       return ref.tr(context, 'password_error_network');
@@ -203,6 +204,9 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                     }
                     if (value!.length < 6) {
                       return ref.tr(context, 'password_min_length');
+                    }
+                    if (value == _currentPasswordController.text) {
+                      return ref.tr(context, 'password_error_same');
                     }
                     return null;
                   },

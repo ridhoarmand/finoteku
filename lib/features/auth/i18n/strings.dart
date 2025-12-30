@@ -59,6 +59,7 @@ const Map<String, String> authStringsEn = {
   'wrong_password': 'Wrong password',
   'email_already_in_use': 'Email is already in use',
   'weak_password': 'Password is too weak',
+  'password_error_same': 'New password cannot be the same as old password',
   'network_error': 'Network error. Please check your connection.',
   'unknown_error': 'An unknown error occurred',
 };
@@ -122,6 +123,8 @@ const Map<String, String> authStringsId = {
   'wrong_password': 'Kata sandi salah',
   'email_already_in_use': 'Email sudah digunakan',
   'weak_password': 'Kata sandi terlalu lemah',
+  'password_error_same':
+      'Kata sandi baru tidak boleh sama dengan kata sandi lama',
   'network_error': 'Kesalahan jaringan. Silakan periksa koneksi Anda.',
   'unknown_error': 'Terjadi kesalahan yang tidak diketahui',
 };

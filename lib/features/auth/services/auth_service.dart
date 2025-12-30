@@ -129,6 +129,10 @@ class AuthService {
       );
       return response;
     } on AuthException catch (e) {
+      if (e.message ==
+          'New password should be different from the old password.') {
+        throw const AuthException('password_error_same');
+      }
       throw AuthException(e.message);
     } catch (e) {
       throw Exception('Unexpected error during password update: $e');
