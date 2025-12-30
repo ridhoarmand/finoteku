@@ -44,6 +44,14 @@ const Map<String, String> accountStringsEn = {
   'photo_remove': 'Remove Photo',
   'photo_permission_required': 'Permission required to access photos/camera',
 
+  // Discard changes dialog
+  'discard_changes_title': 'Discard Changes?',
+  'discard_changes_confirm':
+      'You have unsaved changes. Are you sure you want to leave without saving?',
+  'discard_action': 'Discard',
+  'cancel': 'Cancel',
+  'dismiss': 'Dismiss',
+
   // Account actions
   'change_password': 'Change Password',
   'change_password_sub': 'Update your account password',
@@ -175,6 +183,14 @@ const Map<String, String> accountStringsId = {
   'photo_gallery': 'Galeri',
   'photo_remove': 'Hapus Foto',
   'photo_permission_required': 'Izin diperlukan untuk mengakses foto/kamera',
+
+  // Discard changes dialog
+  'discard_changes_title': 'Buang Perubahan?',
+  'discard_changes_confirm':
+      'Anda memiliki perubahan yang belum disimpan. Yakin ingin keluar tanpa menyimpan?',
+  'discard_action': 'Buang',
+  'cancel': 'Batal',
+  'dismiss': 'Tutup',
 
   // Account actions
   'change_password': 'Ganti Password',

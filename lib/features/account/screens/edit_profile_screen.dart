@@ -45,7 +45,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '${ref.tr(context, 'error_loading_user')}: ${e.toString()}'
+              '${ref.tr(context, 'error_loading_user')}: ${e.toString()}',
             ),
             backgroundColor: Colors.red,
           ),
@@ -157,18 +157,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final shouldDiscard = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Discard Changes?'),
-        content: const Text(
-          'You have unsaved changes. Are you sure you want to leave without saving?',
-        ),
+        title: Text(ref.tr(context, 'discard_changes_title')),
+        content: Text(ref.tr(context, 'discard_changes_confirm')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(ref.tr(context, 'cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Discard'),
+            child: Text(ref.tr(context, 'discard_action')),
           ),
         ],
       ),

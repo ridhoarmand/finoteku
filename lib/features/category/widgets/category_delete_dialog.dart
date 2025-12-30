@@ -4,6 +4,7 @@ import '../../../models/category.dart';
 import '../../../services/supabase_service.dart';
 import '../providers/category_providers.dart';
 import '../services/category_service.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class CategoryDeleteDialog extends ConsumerWidget {
   final Category category;
@@ -19,7 +20,7 @@ class CategoryDeleteDialog extends ConsumerWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Delete Category',
+              ref.tr(context, 'delete_category_title'),
               style: const TextStyle(color: Colors.red),
             ),
           ),
@@ -30,20 +31,20 @@ class CategoryDeleteDialog extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Category: ${category.name}',
+            '${ref.tr(context, 'category_name')}: ${category.name}',
             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Are you sure you want to delete this category? This action cannot be undone.',
-            style: TextStyle(fontSize: 14),
+          Text(
+            ref.tr(context, 'delete_category_confirm'),
+            style: const TextStyle(fontSize: 14),
           ),
         ],
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(ref.tr(context, 'cancel')),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
@@ -51,7 +52,7 @@ class CategoryDeleteDialog extends ConsumerWidget {
             backgroundColor: Colors.red,
             foregroundColor: Colors.white,
           ),
-          child: const Text('Delete'),
+          child: Text(ref.tr(context, 'delete')),
         ),
       ],
     );
@@ -72,7 +73,7 @@ class CategoryDeleteDialog extends ConsumerWidget {
       try {
         final userId = SupabaseService.currentUserId;
         if (userId == null) {
-          throw Exception('User not authenticated');
+          throw Exception(ref.tr(context, 'user_not_authenticated'));
         }
 
         // Show loading
@@ -103,13 +104,11 @@ class CategoryDeleteDialog extends ConsumerWidget {
 
         // Show success message
         if (context.mounted) {
+          final msg = ref
+              .tr(context, 'category_deleted_success')
+              .replaceAll('{category}', category.name);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                '✅ Category "${category.name}" deleted successfully',
-              ),
-              backgroundColor: Colors.green,
-            ),
+            SnackBar(content: Text('✅ $msg'), backgroundColor: Colors.green),
           );
         }
       } catch (e) {
@@ -120,11 +119,11 @@ class CategoryDeleteDialog extends ConsumerWidget {
 
         // Show error message
         if (context.mounted) {
+          final msg = ref
+              .tr(context, 'category_delete_failed')
+              .replaceAll('{error}', e.toString());
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('❌ Failed to delete category: $e'),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text('❌ $msg'), backgroundColor: Colors.red),
           );
         }
       }

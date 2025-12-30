@@ -88,42 +88,131 @@ class TransactionDetailScreen extends ConsumerWidget {
   ) {
     final theme = Theme.of(context);
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Amount Card
-          Consumer(
-            builder: (context, ref, _) {
-              final categoryAsync = transaction.categoryId != null
-                  ? ref.watch(
-                      categoryProvider((
-                        categoryId: transaction.categoryId!,
-                        userId: userId,
-                      )),
-                    )
-                  : const AsyncValue.data(null);
-              return categoryAsync.when(
-                data: (category) {
-                  final isIncome = category?.type == CategoryType.income;
-                  final color = isIncome
-                      ? CategoryTheme.income
-                      : CategoryTheme.expense;
-                  final icon = category?.iconCodePoint != null
-                      ? CategoryIconHelper.getIconFromCodePoint(
-                          category!.iconCodePoint,
-                        )
-                      : (isIncome ? Icons.trending_up : Icons.trending_down);
-                  return Card(
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Amount Card
+            Consumer(
+              builder: (context, ref, _) {
+                final categoryAsync = transaction.categoryId != null
+                    ? ref.watch(
+                        categoryProvider((
+                          categoryId: transaction.categoryId!,
+                          userId: userId,
+                        )),
+                      )
+                    : const AsyncValue.data(null);
+                return categoryAsync.when(
+                  data: (category) {
+                    final isIncome = category?.type == CategoryType.income;
+                    final color = isIncome
+                        ? CategoryTheme.income
+                        : CategoryTheme.expense;
+                    final icon = category?.iconCodePoint != null
+                        ? CategoryIconHelper.getIconFromCodePoint(
+                            category!.iconCodePoint,
+                          )
+                        : (isIncome ? Icons.trending_up : Icons.trending_down);
+                    return Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 30,
+                              backgroundColor: color.withValues(alpha: 0.2),
+                              child: Icon(icon, color: color, size: 32),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isIncome
+                                        ? ref.tr(context, 'income')
+                                        : ref.tr(context, 'expense'),
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                  Text(
+                                    CurrencyFormatter.format(
+                                      transaction.amount.abs(),
+                                      'IDR',
+                                    ),
+                                    style: theme.textTheme.headlineSmall
+                                        ?.copyWith(
+                                          color: color,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                  loading: () => Card(
                     child: Padding(
                       padding: const EdgeInsets.all(20.0),
                       child: Row(
                         children: [
                           CircleAvatar(
                             radius: 30,
-                            backgroundColor: color.withValues(alpha: 0.2),
-                            child: Icon(icon, color: color, size: 32),
+                            backgroundColor: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest
+                                .withValues(alpha: 0.3),
+                            child: Icon(
+                              Icons.category,
+                              color: Theme.of(context).colorScheme.primary,
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  height: 16,
+                                  width: 80,
+                                  color: Colors.black12,
+                                ),
+                                Container(
+                                  height: 20,
+                                  width: 120,
+                                  color: Colors.black12,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  error: (e, st) => Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 30,
+                            backgroundColor: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest
+                                .withValues(alpha: 0.3),
+                            child: Icon(
+                              Icons.category,
+                              color: Theme.of(context).colorScheme.primary,
+                              size: 28,
+                            ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -131,9 +220,7 @@ class TransactionDetailScreen extends ConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  isIncome
-                                      ? ref.tr(context, 'income')
-                                      : ref.tr(context, 'expense'),
+                                  ref.tr(context, 'details_title'),
                                   style: theme.textTheme.bodyMedium?.copyWith(
                                     color: Colors.grey[600],
                                   ),
@@ -144,10 +231,7 @@ class TransactionDetailScreen extends ConsumerWidget {
                                     'IDR',
                                   ),
                                   style: theme.textTheme.headlineSmall
-                                      ?.copyWith(
-                                        color: color,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                      ?.copyWith(fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
@@ -155,147 +239,107 @@ class TransactionDetailScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
-                  );
-                },
-                loading: () => Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 30,
-                          backgroundColor: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest
-                              .withValues(alpha: 0.3),
-                          child: Icon(
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            // Details Section
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ref.tr(context, 'details_title'),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Date
+                    _buildDetailRow(
+                      ref.tr(context, 'date_label'),
+                      _formatDate(context, ref, transaction.date),
+                      Icons.calendar_today,
+                    ),
+
+                    const Divider(),
+
+                    // Category
+                    if (transaction.categoryId != null)
+                      ref
+                          .watch(
+                            categoryProvider((
+                              categoryId: transaction.categoryId!,
+                              userId: userId,
+                            )),
+                          )
+                          .when(
+                            data: (category) => Column(
+                              children: [
+                                _buildDetailRow(
+                                  ref.tr(context, 'category_label'),
+                                  category?.name ??
+                                      ref.tr(context, 'uncategorized'),
+                                  _getCategoryIcon(category?.iconCodePoint),
+                                ),
+                                const Divider(),
+                              ],
+                            ),
+                            loading: () => Column(
+                              children: [
+                                _buildDetailRow(
+                                  ref.tr(context, 'category_label'),
+                                  ref.tr(context, 'loading_ellipsis'),
+                                  Icons.category,
+                                ),
+                                const Divider(),
+                              ],
+                            ),
+                            error: (error, stack) => Column(
+                              children: [
+                                _buildDetailRow(
+                                  ref.tr(context, 'category_label'),
+                                  ref.tr(context, 'error_loading_category'),
+                                  Icons.category,
+                                ),
+                                const Divider(),
+                              ],
+                            ),
+                          )
+                    else
+                      Column(
+                        children: [
+                          _buildDetailRow(
+                            ref.tr(context, 'category_label'),
+                            ref.tr(context, 'no_category'),
                             Icons.category,
-                            color: Theme.of(context).colorScheme.primary,
-                            size: 28,
                           ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                height: 16,
-                                width: 80,
-                                color: Colors.black12,
-                              ),
-                              Container(
-                                height: 20,
-                                width: 120,
-                                color: Colors.black12,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                error: (e, st) => Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 30,
-                          backgroundColor: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest
-                              .withValues(alpha: 0.3),
-                          child: Icon(
-                            Icons.category,
-                            color: Theme.of(context).colorScheme.primary,
-                            size: 28,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                ref.tr(context, 'details_title'),
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              Text(
-                                CurrencyFormatter.format(
-                                  transaction.amount.abs(),
-                                  'IDR',
-                                ),
-                                style: theme.textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
+                          const Divider(),
+                        ],
+                      ),
 
-          const SizedBox(height: 16),
-
-          // Details Section
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    ref.tr(context, 'details_title'),
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Notes
-                  _buildDetailRow(
-                    ref.tr(context, 'notes'),
-                    transaction.notes ?? ref.tr(context, 'no_notes'),
-                    Icons.note,
-                  ),
-
-                  const Divider(),
-
-                  // Date
-                  _buildDetailRow(
-                    ref.tr(context, 'date_label'),
-                    _formatDate(context, ref, transaction.date),
-                    Icons.calendar_today,
-                  ),
-
-                  const Divider(),
-
-                  // Category
-                  if (transaction.categoryId != null)
+                    // Wallet
                     ref
                         .watch(
-                          categoryProvider((
-                            categoryId: transaction.categoryId!,
+                          walletProvider((
+                            walletId: transaction.walletId,
                             userId: userId,
                           )),
                         )
                         .when(
-                          data: (category) => Column(
+                          data: (wallet) => Column(
                             children: [
                               _buildDetailRow(
-                                ref.tr(context, 'category_label'),
-                                category?.name ??
-                                    ref.tr(context, 'uncategorized'),
-                                _getCategoryIcon(category?.iconCodePoint),
+                                ref.tr(context, 'wallet_label'),
+                                wallet?.name ??
+                                    ref.tr(context, 'wallet_unknown'),
+                                _getWalletIcon(wallet?.icon),
                               ),
                               const Divider(),
                             ],
@@ -303,9 +347,9 @@ class TransactionDetailScreen extends ConsumerWidget {
                           loading: () => Column(
                             children: [
                               _buildDetailRow(
-                                ref.tr(context, 'category_label'),
+                                ref.tr(context, 'wallet_label'),
                                 ref.tr(context, 'loading_ellipsis'),
-                                Icons.category,
+                                Icons.account_balance_wallet,
                               ),
                               const Divider(),
                             ],
@@ -313,115 +357,74 @@ class TransactionDetailScreen extends ConsumerWidget {
                           error: (error, stack) => Column(
                             children: [
                               _buildDetailRow(
-                                ref.tr(context, 'category_label'),
-                                ref.tr(context, 'error_loading_category'),
-                                Icons.category,
+                                ref.tr(context, 'wallet_label'),
+                                ref.tr(context, 'wallet_loading_error'),
+                                Icons.account_balance_wallet,
                               ),
                               const Divider(),
                             ],
                           ),
-                        )
-                  else
-                    Column(
-                      children: [
-                        _buildDetailRow(
-                          ref.tr(context, 'category_label'),
-                          ref.tr(context, 'no_category'),
-                          Icons.category,
                         ),
-                        const Divider(),
-                      ],
+
+                    // Created Date
+                    _buildDetailRow(
+                      ref.tr(context, 'wallet_created_label'),
+                      _formatDateTime(context, ref, transaction.createdAt),
+                      Icons.access_time,
                     ),
 
-                  // Wallet
-                  ref
-                      .watch(
-                        walletProvider((
-                          walletId: transaction.walletId,
-                          userId: userId,
-                        )),
-                      )
-                      .when(
-                        data: (wallet) => Column(
-                          children: [
-                            _buildDetailRow(
-                              ref.tr(context, 'wallet_label'),
-                              wallet?.name ?? ref.tr(context, 'wallet_unknown'),
-                              _getWalletIcon(wallet?.icon),
-                            ),
-                            const Divider(),
-                          ],
-                        ),
-                        loading: () => Column(
-                          children: [
-                            _buildDetailRow(
-                              ref.tr(context, 'wallet_label'),
-                              ref.tr(context, 'loading_ellipsis'),
-                              Icons.account_balance_wallet,
-                            ),
-                            const Divider(),
-                          ],
-                        ),
-                        error: (error, stack) => Column(
-                          children: [
-                            _buildDetailRow(
-                              ref.tr(context, 'wallet_label'),
-                              ref.tr(context, 'wallet_loading_error'),
-                              Icons.account_balance_wallet,
-                            ),
-                            const Divider(),
-                          ],
-                        ),
+                    if (transaction.updatedAt != transaction.createdAt) ...[
+                      const Divider(),
+                      _buildDetailRow(
+                        ref.tr(context, 'wallet_updated_label'),
+                        _formatDateTime(context, ref, transaction.updatedAt),
+                        Icons.update,
                       ),
+                    ],
 
-                  // Created Date
-                  _buildDetailRow(
-                    ref.tr(context, 'wallet_created_label'),
-                    _formatDateTime(context, ref, transaction.createdAt),
-                    Icons.access_time,
-                  ),
-
-                  if (transaction.updatedAt != transaction.createdAt) ...[
                     const Divider(),
+
+                    // Notes (Moved to bottom)
                     _buildDetailRow(
-                      ref.tr(context, 'wallet_updated_label'),
-                      _formatDateTime(context, ref, transaction.updatedAt),
-                      Icons.update,
+                      ref.tr(context, 'notes'),
+                      transaction.notes ?? ref.tr(context, 'no_notes'),
+                      Icons.note,
                     ),
                   ],
-                ],
+                ),
               ),
             ),
-          ),
 
-          const Spacer(),
+            const Spacer(),
 
-          // Action Buttons
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _editTransaction(context, ref, transaction),
-                  icon: const Icon(Icons.edit),
-                  label: Text(ref.tr(context, 'edit')),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: () =>
-                      _showDeleteDialog(context, ref, transaction, userId),
-                  icon: const Icon(Icons.delete),
-                  label: Text(ref.tr(context, 'delete')),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
+            // Action Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () =>
+                        _editTransaction(context, ref, transaction),
+                    icon: const Icon(Icons.edit),
+                    label: Text(ref.tr(context, 'edit')),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(width: 16),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () =>
+                        _showDeleteDialog(context, ref, transaction, userId),
+                    icon: const Icon(Icons.delete),
+                    label: Text(ref.tr(context, 'delete')),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -430,6 +433,7 @@ class TransactionDetailScreen extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, size: 20, color: Colors.grey[600]),
           const SizedBox(width: 12),

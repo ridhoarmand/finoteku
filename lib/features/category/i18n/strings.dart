@@ -47,6 +47,15 @@ const Map<String, String> categoryStringsEn = {
   'example_education_main': '📚 Education (Main Category)',
   'example_tuition_sub': '  └── 🏫 Tuition Fee (Sub-category)',
   'example_books_sub': '  └── 📖 Books (Sub-category)',
+
+  // Delete category dialog
+  'delete_category_title': 'Delete Category',
+  'delete_category_confirm':
+      'Are you sure you want to delete this category? This action cannot be undone.',
+  'category_deleted_success': 'Category "{category}" deleted successfully',
+  'category_delete_failed': 'Failed to delete category: {error}',
+  'cancel': 'Cancel',
+  'delete': 'Delete',
 };
 
 const Map<String, String> categoryStringsId = {
@@ -95,4 +104,13 @@ const Map<String, String> categoryStringsId = {
   'example_education_main': '📚 Pendidikan (Kategori Utama)',
   'example_tuition_sub': '  └── 🏫 Bayar Sekolah (Sub-kategori)',
   'example_books_sub': '  └── 📖 Beli Buku (Sub-kategori)',
+
+  // Delete category dialog
+  'delete_category_title': 'Hapus Kategori',
+  'delete_category_confirm':
+      'Apakah Anda yakin ingin menghapus kategori ini? Tindakan ini tidak dapat dibatalkan.',
+  'category_deleted_success': 'Kategori "{category}" berhasil dihapus',
+  'category_delete_failed': 'Gagal menghapus kategori: {error}',
+  'cancel': 'Batal',
+  'delete': 'Hapus',
 };

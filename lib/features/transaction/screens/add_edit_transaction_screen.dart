@@ -520,10 +520,42 @@ class _AddEditTransactionScreenState
           _selectedCategory != null &&
           _selectedCategory!.type == CategoryType.expense) {
         // Cek apakah saldo wallet cukup untuk pengeluaran
-        final currentBalance = _selectedWallet!.balance;
-        final newBalance = currentBalance - finalAmount;
+        double effectiveBalance = _selectedWallet!.balance;
 
-        if (newBalance < 0) {
+        if (widget.initialTransaction != null &&
+            widget.initialTransaction!.walletId == _selectedWallet!.id) {
+          final categories = ref.read(categoriesProvider(user.id)).value ?? [];
+          bool isOldTransactionExpense = false;
+
+          // Try to determine based on category
+          if (widget.initialTransaction!.categoryId == _selectedCategory!.id) {
+            isOldTransactionExpense =
+                _selectedCategory!.type == CategoryType.expense;
+          } else {
+            try {
+              final oldCat = categories.firstWhere(
+                (c) => c.id == widget.initialTransaction!.categoryId,
+              );
+              isOldTransactionExpense = oldCat.type == CategoryType.expense;
+            } catch (_) {
+              // Fallback: Check sign. If negative, likely expense.
+              isOldTransactionExpense = widget.initialTransaction!.amount < 0;
+            }
+          }
+
+          if (isOldTransactionExpense) {
+            // Refund Expense: Add back the absolute amount
+            effectiveBalance += widget.initialTransaction!.amount.abs();
+          } else {
+            // Refund Income: Remove the absolute amount
+            effectiveBalance -= widget.initialTransaction!.amount.abs();
+          }
+        }
+
+        final newBalance = effectiveBalance - finalAmount;
+
+        // Toleransi floating point error
+        if (newBalance < -0.01) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
