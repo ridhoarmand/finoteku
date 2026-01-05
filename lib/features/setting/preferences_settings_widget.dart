@@ -14,16 +14,22 @@ class PreferencesSettingsWidget extends ConsumerWidget {
       title: t('preferences'),
       children: [
         SettingsTileWidget(
-          icon: Icons.notifications_outlined,
-          title: t('notifications'),
-          subtitle: t('notifications_sub'),
-          onTap: () => context.push('/account/notifications'),
+          icon: Icons.telegram,
+          title: 'Chat Bot',
+          subtitle: 'Catat transaksi via Telegram',
+          onTap: () => context.push('/account/bot-settings'),
         ),
         SettingsTileWidget(
           icon: Icons.dark_mode_outlined,
           title: t('dark_mode'),
           subtitle: t('dark_mode_sub'),
           onTap: () => context.push('/account/theme-settings'),
+        ),
+        SettingsTileWidget(
+          icon: Icons.notifications_outlined,
+          title: t('notifications'),
+          subtitle: t('notifications_sub'),
+          onTap: () => context.push('/account/notifications'),
         ),
         SettingsTileWidget(
           icon: Icons.language_outlined,

@@ -29,6 +29,7 @@ import '../features/category/screens/add_edit_category_screen.dart';
 import '../models/category.dart';
 import '../features/transaction/screens/wallet_selection_screen.dart';
 import '../features/transaction/screens/add_edit_transaction_screen.dart';
+import '../features/bot/bot_settings_screen.dart';
 import '../widgets/main_shell.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -240,6 +241,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: 'help-faq',
                 builder: (context, state) => const FAQScreen(),
               ),
+              GoRoute(
+                path: 'bot-settings',
+                builder: (context, state) => const BotSettingsScreen(),
+              ),
             ],
           ),
         ],
@@ -336,6 +341,7 @@ class AppRoutes {
   static const String themeSettings = '/account/theme-settings';
   static const String notifications = '/account/notifications';
   static const String helpFAQ = '/account/help-faq';
+  static const String botSettings = '/account/bot-settings';
   static const String manageWallets = '/wallets/manage';
   static const String selectWallet = '/wallets/select';
   static const String manageCategories = '/categories/manage';
