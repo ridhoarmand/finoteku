@@ -100,27 +100,40 @@ export async function handleQuery(supabase: SupabaseClient, telegramToken: strin
 
   // Handle transaction history query
   if (intent === 'query_transactions') {
-    const { data: transactions, error } = await supabase
-      .from('transactions')
-      .select('amount, description, date, categories!inner(name, type)')
+    console.log('Fetching ledger entries for userId:', userId);
+    
+    const { data: entries, error } = await supabase
+      .from('ledger_entries')
+      .select('*')
       .eq('user_id', userId)
       .order('date', { ascending: false })
-      .limit(10);
+      .limit(5);
 
-    if (error || !transactions || transactions.length === 0) {
+    console.log('Ledger entries result:', { entries, error });
+
+    if (error) {
+      console.error('Error fetching ledger entries:', error);
+      await sendTelegramMessage(telegramToken, chatId, `❌ Error: ${error.message}`);
+      return new Response('Error', { status: 500 });
+    }
+
+    if (!entries || entries.length === 0) {
       await sendTelegramMessage(telegramToken, chatId, '📋 <b>Riwayat Transaksi</b>\n\nBelum ada transaksi yang tercatat.');
       return new Response('OK', { status: 200 });
     }
 
-    let message = '📋 <b>Riwayat Transaksi (10 Terakhir)</b>\n\n';
-    for (const t of transactions) {
-      const cat = (t as any).categories;
-      const emoji = cat.type === 'expense' ? '💸' : '💰';
-      const sign = cat.type === 'expense' ? '-' : '+';
-      const dateStr = new Date(t.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-      message += `${emoji} ${dateStr} - ${cat.name}\n`;
-      message += `   ${sign}${formatCurrency(Math.abs(t.amount))}`;
-      if (t.description) message += ` • ${t.description}`;
+    let message = '📋 <b>Riwayat Transaksi (5 Terakhir)</b>\n\n';
+    for (const entry of entries) {
+      const amount = Math.abs(Number(entry.amount));
+      const emoji = entry.amount < 0 ? '💸' : '💰';
+      const dateStr = new Date(entry.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+      
+      const category = entry.category_name || entry.description || 'Transfer';
+      const sign = entry.amount < 0 ? '-' : '+';
+      
+      message += `${emoji} ${dateStr} • ${category}\n`;
+      message += `   ${sign}${formatCurrency(amount)}`;
+      if (entry.notes) message += ` • ${entry.notes}`;
       message += '\n\n';
     }
 
