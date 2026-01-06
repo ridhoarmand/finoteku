@@ -9,7 +9,7 @@ export interface ParsedTransaction {
   dateOffset: number;
 }
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 export interface GeminiUserContext {
   incomeCategories: string[];
@@ -132,6 +132,114 @@ PENTING:
 4. HANYA RETURN JSON VALID.`;
 }
 
+/**
+ * Interface for transaction update parsed by AI
+ */
+export interface ParsedTransactionUpdate {
+  amount?: number;
+  notes?: string;
+  categoryHint?: string;
+  walletHint?: string;
+  dateOffset?: number;
+}
+
+/**
+ * Build prompt for parsing transaction update requests
+ */
+function buildUpdatePrompt(currentTransaction: { amount: number; notes: string; category: string; wallet: string; date: string }, context: GeminiUserContext): string {
+  return `Kamu adalah parser untuk UPDATE transaksi keuangan.
+
+TRANSAKSI SAAT INI:
+- Nominal: Rp${currentTransaction.amount.toLocaleString('id-ID')}
+- Catatan: "${currentTransaction.notes}"
+- Kategori: ${currentTransaction.category}
+- Wallet: ${currentTransaction.wallet}
+- Tanggal: ${currentTransaction.date}
+
+TUGAS: Parse permintaan user untuk mengubah transaksi ini.
+Return JSON dengan field yang ingin diubah saja:
+{
+  "amount": number atau null (jika tidak berubah),
+  "notes": string atau null (jika tidak berubah),
+  "categoryHint": string atau null (jika tidak berubah),
+  "walletHint": string atau null (jika tidak berubah),
+  "dateOffset": number atau null (0=hari ini, -1=kemarin, 1=besok)
+}
+
+CONTOH INPUT & OUTPUT:
+- "nominal jadi 50k" → {"amount": 50000}
+- "ganti jadi 100rb" → {"amount": 100000}
+- "catatan ganti Makan Siang" → {"notes": "Makan Siang"}
+- "WLS ganti Es Krim Walls" → {"notes": "${currentTransaction.notes.replace(/WLS/gi, 'Es Krim Walls')}"}
+- "pengeluaran jadi 41k dan WLS ganti Es Krim Walls" → {"amount": 41000, "notes": "${currentTransaction.notes.replace(/WLS/gi, 'Es Krim Walls')}"}
+- "pakai BCA" → {"walletHint": "BCA"}
+- "kategori Makanan" → {"categoryHint": "Makanan"}
+- "kemarin" → {"dateOffset": -1}
+
+ATURAN:
+1. NOMINAL: k/rb = ribuan, jt/m = jutaan
+2. NOTES: Jika user minta ganti sebagian text, modifikasi notes yang ada
+3. Hanya return field yang berubah, sisanya null atau tidak disertakan
+
+KATEGORI TERSEDIA: ${[...context.incomeCategories, ...context.expenseCategories].join(', ') || 'Umum'}
+WALLET TERSEDIA: ${context.walletNames.join(', ') || 'Cash'}
+
+HANYA RETURN JSON VALID.`;
+}
+
+/**
+ * Parse transaction update request using Gemini AI
+ */
+export async function parseTransactionUpdate(
+  text: string,
+  apiKey: string,
+  currentTransaction: { amount: number; notes: string; category: string; wallet: string; date: string },
+  context: GeminiUserContext
+): Promise<ParsedTransactionUpdate | null> {
+  const prompt = buildUpdatePrompt(currentTransaction, context);
+
+  try {
+    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [{ text: prompt }, { text: `PERMINTAAN UPDATE: "${text}"` }],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.1,
+          response_mime_type: 'application/json',
+        },
+      }),
+    });
+
+    const data = await response.json();
+    if (!data.candidates || data.candidates.length === 0) {
+      console.error('No candidates from Gemini for update parsing');
+      return null;
+    }
+
+    const rawText = data.candidates[0].content.parts[0].text;
+    const jsonStr = rawText.replace(/```json\n?|\n?```/g, '').trim();
+    const result = JSON.parse(jsonStr);
+
+    console.log('Parsed update result:', result);
+
+    return {
+      amount: result.amount ? Number(result.amount) : undefined,
+      notes: result.notes || undefined,
+      categoryHint: result.categoryHint || undefined,
+      walletHint: result.walletHint || undefined,
+      dateOffset: result.dateOffset !== null && result.dateOffset !== undefined ? Number(result.dateOffset) : undefined,
+    };
+  } catch (error) {
+    console.error('Gemini update parse error:', error);
+    return null;
+  }
+}
+
 export async function parseWithGemini(text: string, apiKey: string, context: GeminiUserContext, examples: TransactionExample[] = [], noteStyle?: NoteStyle): Promise<ParsedTransaction | null> {
   const systemPrompt = buildSystemPrompt(context, examples, noteStyle);
 
@@ -147,7 +255,7 @@ export async function parseWithGemini(text: string, apiKey: string, context: Gem
         ],
         generationConfig: {
           temperature: 0.1,
-          responseMimeType: 'application/json',
+          response_mime_type: 'application/json',
         },
       }),
     });
@@ -179,6 +287,7 @@ export async function parseWithGemini(text: string, apiKey: string, context: Gem
  */
 export async function parseImageWithGemini(base64Image: string, apiKey: string, context: GeminiUserContext): Promise<ParsedTransaction | null> {
   const prompt = buildVisionPrompt(context);
+  console.log('parseImageWithGemini start, img length:', base64Image.length);
 
   try {
     const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
@@ -191,7 +300,7 @@ export async function parseImageWithGemini(base64Image: string, apiKey: string, 
               { text: prompt },
               {
                 inline_data: {
-                  mime_type: 'image/jpeg', // Assume converted to jpeg or generic handling
+                  mime_type: 'image/jpeg',
                   data: base64Image,
                 },
               },
@@ -200,19 +309,36 @@ export async function parseImageWithGemini(base64Image: string, apiKey: string, 
         ],
         generationConfig: {
           temperature: 0.1,
-          responseMimeType: 'application/json',
+          response_mime_type: 'application/json',
         },
       }),
     });
 
-    const data = await response.json();
-    if (!data.candidates || data.candidates.length === 0) {
-      console.error('No candidates from Gemini Vision', data);
+    console.log('Gemini Vision status:', response.status);
+    const rawBody = await response.text();
+    if (!response.ok) {
+      console.error('Gemini Vision error body:', rawBody);
       return null;
     }
 
-    const rawText = data.candidates[0].content.parts[0].text;
-    const jsonStr = rawText.replace(/```json\n?|\n?```/g, '').trim();
+    let data: unknown;
+    try {
+      data = JSON.parse(rawBody);
+    } catch (err) {
+      console.error('Failed to parse Gemini Vision JSON:', err, 'body:', rawBody);
+      return null;
+    }
+
+    const visionData = data as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>; error?: unknown };
+
+    if (!visionData.candidates || visionData.candidates.length === 0) {
+      console.error('No candidates from Gemini Vision', visionData);
+      return null;
+    }
+
+    const rawText = visionData.candidates[0]?.content?.parts?.[0]?.text;
+    console.log('Gemini Vision raw text:', rawText);
+    const jsonStr = (rawText || '').replace(/```json\n?|\n?```/g, '').trim();
     const result = JSON.parse(jsonStr);
 
     return {

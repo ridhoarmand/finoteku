@@ -86,7 +86,7 @@ supabase secrets set OPENAI_API_KEY=your_openai_api_key
 1. **Deploy function**
 
 ```bash
-supabase functions deploy telegram-bot
+supabase functions deploy telegram-bot --no-verify-jwt
 ```
 
 2. **Set webhook Telegram**

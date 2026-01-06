@@ -1,6 +1,6 @@
 // Telegram Bot Edge Function
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { encode } from 'https://deno.land/std@0.168.0/encoding/base64.ts';
 import { parseTelegramUpdate, parseCallbackQuery, sendTelegramMessage, getTelegramFileUrl, downloadTelegramFile } from '../_shared/platforms/telegram.ts';
 import { detectIntentSimple } from '../_shared/ai/intent.ts';
@@ -12,7 +12,7 @@ import { handleQuery } from './handlers/queries.ts';
 import { handlePendingTransaction, handleNewTransaction, handleTransactionCallback } from './handlers/transactions.ts';
 
 // Utils
-import { getUserByTelegramId, getUserContext, getUserTransactionHistory, UserContext } from './utils/context.ts';
+import { getUserByTelegramId, getUserContext, getUserTransactionHistory } from './utils/context.ts';
 import { parseMessage } from './utils/parser.ts';
 
 const corsHeaders = {
@@ -43,9 +43,17 @@ serve(async (req: Request) => {
 
     // 1. Handle Callback Query (Inline Buttons)
     const callbackQuery = parseCallbackQuery(update);
-    if (callbackQuery) {
+    if (callbackQuery && callbackQuery.data && callbackQuery.message) {
       console.log('Handling callback query:', callbackQuery.data);
-      return await handleTransactionCallback(supabase, TELEGRAM_BOT_TOKEN, callbackQuery);
+      return await handleTransactionCallback(supabase, TELEGRAM_BOT_TOKEN, {
+        id: callbackQuery.id,
+        data: callbackQuery.data,
+        message: {
+          chat: { id: callbackQuery.message.chat.id },
+          message_id: callbackQuery.message.message_id,
+          text: '',
+        },
+      });
     }
 
     // 2. Parse Message
@@ -89,38 +97,63 @@ serve(async (req: Request) => {
       console.log('Step 6: Handle Photo (Vision AI)');
       await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '📸 <b>Menganalisis struk...</b>\nMohon tunggu sebentar.');
 
-      // Get highest resolution photo (last item)
-      const photo = message.photo[message.photo.length - 1];
-      const fileUrl = await getTelegramFileUrl(TELEGRAM_BOT_TOKEN, photo.file_id);
+      try {
+        // Get highest resolution photo (last item)
+        const photo = message.photo[message.photo.length - 1];
+        console.log('Photo file_id:', photo.file_id);
 
-      if (fileUrl) {
-        const fileBuffer = await downloadTelegramFile(fileUrl);
-        if (fileBuffer) {
-          const base64 = encode(fileBuffer);
+        const fileUrl = await getTelegramFileUrl(TELEGRAM_BOT_TOKEN, photo.file_id);
+        console.log('File URL:', fileUrl);
 
-          // Prioritize User Key, fallback to Server Key
-          // Note: Vision works best with Gemini 1.5/2.0 Flash
-          const apiKey = user.aiApiKey || SERVER_GEMINI_API_KEY;
-
-          if (!apiKey) {
-            await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '❌ <b>Gagal: API Key Tidak Ditemukan.</b>\nMohon set API Key di aplikasi.');
-            return new Response('Missing API Key');
-          }
-
-          // Data transformation for Gemini Context
-          const geminiContext = {
-            incomeCategories: userContext.categories.filter((c) => c.type === 'income').map((c) => c.name),
-            expenseCategories: userContext.categories.filter((c) => c.type === 'expense').map((c) => c.name),
-            walletNames: userContext.wallets.map((w) => w.name),
-          };
-
-          const parsed = await parseImageWithGemini(base64, apiKey, geminiContext);
-
-          if (parsed) {
-            console.log('Vision Parse Success:', parsed);
-            return await handleNewTransaction(supabase, TELEGRAM_BOT_TOKEN, chatId, user.userId, userContext, parsed);
-          }
+        if (!fileUrl) {
+          console.error('Failed to get file URL from Telegram');
+          await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '❌ <b>Gagal mengunduh foto.</b>\nSilakan coba lagi.');
+          return new Response('File URL Failed', { status: 200 });
         }
+
+        const fileBuffer = await downloadTelegramFile(fileUrl);
+        console.log('File buffer size:', fileBuffer?.byteLength || 0);
+
+        if (!fileBuffer) {
+          console.error('Failed to download file from Telegram');
+          await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '❌ <b>Gagal mengunduh foto.</b>\nSilakan coba lagi.');
+          return new Response('Download Failed', { status: 200 });
+        }
+
+        const base64 = encode(fileBuffer);
+        console.log('Base64 length:', base64.length);
+
+        // Prioritize User Key, fallback to Server Key
+        // Note: Vision works best with Gemini 1.5/2.0 Flash
+        const apiKey = user.aiApiKey || SERVER_GEMINI_API_KEY;
+
+        if (!apiKey) {
+          console.error('No API key available for vision parsing');
+          await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '❌ <b>Gagal: API Key Tidak Ditemukan.</b>\nMohon set API Key di aplikasi.');
+          return new Response('Missing API Key', { status: 200 });
+        }
+
+        console.log('Using API key (first 8 chars):', apiKey.substring(0, 8));
+
+        // Data transformation for Gemini Context
+        const geminiContext = {
+          incomeCategories: userContext.categories.filter((c) => c.type === 'income').map((c) => c.name),
+          expenseCategories: userContext.categories.filter((c) => c.type === 'expense').map((c) => c.name),
+          walletNames: userContext.wallets.map((w) => w.name),
+        };
+
+        console.log('Calling parseImageWithGemini...');
+        const parsed = await parseImageWithGemini(base64, apiKey, geminiContext);
+        console.log('ParseImage result:', parsed);
+
+        if (parsed) {
+          console.log('Vision Parse Success:', parsed);
+          return await handleNewTransaction(supabase, TELEGRAM_BOT_TOKEN, chatId, user.userId, userContext, parsed);
+        }
+
+        console.error('parseImageWithGemini returned null');
+      } catch (err) {
+        console.error('Vision handling error:', err);
       }
 
       await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '❌ <b>Gagal membaca gambar.</b>\nPastikan foto jelas dan coba lagi.');
@@ -133,8 +166,9 @@ serve(async (req: Request) => {
       return new Response('No text to process', { status: 200 });
     }
 
-    // 8. Handle Pending Transactions (Text updates)
-    const pendingResponse = await handlePendingTransaction(supabase, TELEGRAM_BOT_TOKEN, chatId, user.userId, originalText, userContext);
+    // 8. Handle Pending Transactions (Text updates) - Pass AI key for natural language updates
+    const aiKeyForUpdates = user.aiApiKey || SERVER_GEMINI_API_KEY;
+    const pendingResponse = await handlePendingTransaction(supabase, TELEGRAM_BOT_TOKEN, chatId, originalText, userContext, aiKeyForUpdates);
     if (pendingResponse) return pendingResponse;
 
     // 9. Detect Intent

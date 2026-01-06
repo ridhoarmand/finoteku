@@ -3,23 +3,58 @@ import { sendTelegramMessage, sendTelegramMessageWithButtons, editTelegramMessag
 import { UserContext, getPendingTransaction, updatePendingTransaction, deletePendingTransaction, createTransaction, savePendingTransaction } from '../utils/context.ts';
 import { findWalletByName, findCategoryByName, calculateTransactionDate, formatDateIndonesian, buildConfirmationMessage, findBestWallet, findBestCategory } from '../utils/helpers.ts';
 import { parseDateOffset, ParsedTransaction } from '../../_shared/parsers/regex.ts';
+import { parseTransactionUpdate, GeminiUserContext } from '../../_shared/parsers/gemini.ts';
 
 /**
  * Handle updates to pending transactions (or confirmations via text)
  */
-export async function handlePendingTransaction(supabase: SupabaseClient, telegramToken: string, chatId: number, userId: string, text: string, userContext: UserContext): Promise<Response | null> {
+export async function handlePendingTransaction(
+  supabase: SupabaseClient,
+  telegramToken: string,
+  chatId: number,
+  text: string,
+  userContext: UserContext,
+  aiApiKey?: string | null
+): Promise<Response | null> {
   const pending = await getPendingTransaction(supabase, chatId);
   if (!pending) return null; // No pending transaction
 
-  // Check update logic
+  const textLower = text.toLowerCase().trim();
+
+  // Check for text confirmation first
+  if (['ya', 'y', 'yes', 'ok', 'oke', 'simpan', 'save'].includes(textLower)) {
+    const success = await createTransaction(supabase, pending.user_id, pending.wallet_id, pending.category_id, pending.amount, pending.notes, pending.date);
+    await deletePendingTransaction(supabase, pending.id);
+
+    if (success) {
+      await sendTelegramMessage(telegramToken, chatId, '✅ <b>Transaksi berhasil disimpan!</b>');
+    } else {
+      await sendTelegramMessage(telegramToken, chatId, '❌ <b>Gagal menyimpan. Silakan coba lagi.</b>');
+    }
+    return new Response('OK', { status: 200 });
+  }
+
+  if (['tidak', 'no', 'n', 'batal', 'cancel', 'batalkan'].includes(textLower)) {
+    await deletePendingTransaction(supabase, pending.id);
+    await sendTelegramMessage(telegramToken, chatId, '❌ <b>Transaksi dibatalkan.</b>');
+    return new Response('OK', { status: 200 });
+  }
+
+  // Get current display values
+  const currentWalletName = userContext.wallets.find((w) => w.id === pending.wallet_id)?.name || 'Unknown';
+  const currentCategoryName = userContext.categories.find((c) => c.id === pending.category_id)?.name || 'Unknown';
+
+  // Check update logic - simple patterns first
   let updated = false;
   let newWalletId = pending.wallet_id;
   let newCategoryId = pending.category_id;
   let newDate = pending.date;
+  let newAmount = pending.amount;
+  let newNotes = pending.notes;
   let dateOffset = 0;
 
   // Check for wallet update: "pakai cash", "pakai bca", etc.
-  const walletMatch = text.match(/^pakai\s+(.+)$/i) || text.match(/^pake\s+(.+)$/i) || text.match(/^ganti\s+(.+)$/i);
+  const walletMatch = text.match(/^pakai\s+(.+)$/i) || text.match(/^pake\s+(.+)$/i) || text.match(/^wallet\s+(.+)$/i);
   if (walletMatch) {
     const walletName = walletMatch[1].trim();
     const foundWallet = findWalletByName(walletName, userContext.wallets);
@@ -46,11 +81,76 @@ export async function handlePendingTransaction(supabase: SupabaseClient, telegra
     }
   }
 
+  // If no simple pattern matched and AI key available, use AI to parse complex updates
+  if (!updated && aiApiKey) {
+    console.log('Using AI to parse update request:', text);
+
+    const geminiContext: GeminiUserContext = {
+      incomeCategories: userContext.categories.filter((c) => c.type === 'income').map((c) => c.name),
+      expenseCategories: userContext.categories.filter((c) => c.type === 'expense').map((c) => c.name),
+      walletNames: userContext.wallets.map((w) => w.name),
+    };
+
+    const parsedUpdate = await parseTransactionUpdate(
+      text,
+      aiApiKey,
+      {
+        amount: pending.amount,
+        notes: pending.notes,
+        category: currentCategoryName,
+        wallet: currentWalletName,
+        date: pending.date,
+      },
+      geminiContext
+    );
+
+    if (parsedUpdate) {
+      // Apply amount update
+      if (parsedUpdate.amount && parsedUpdate.amount > 0) {
+        newAmount = parsedUpdate.amount;
+        updated = true;
+      }
+
+      // Apply notes update
+      if (parsedUpdate.notes) {
+        newNotes = parsedUpdate.notes;
+        updated = true;
+      }
+
+      // Apply category update
+      if (parsedUpdate.categoryHint) {
+        const foundCategory = findCategoryByName(parsedUpdate.categoryHint, userContext.categories, pending.type);
+        if (foundCategory) {
+          newCategoryId = foundCategory;
+          updated = true;
+        }
+      }
+
+      // Apply wallet update
+      if (parsedUpdate.walletHint) {
+        const foundWallet = findWalletByName(parsedUpdate.walletHint, userContext.wallets);
+        if (foundWallet) {
+          newWalletId = foundWallet;
+          updated = true;
+        }
+      }
+
+      // Apply date update
+      if (parsedUpdate.dateOffset !== undefined && parsedUpdate.dateOffset !== null) {
+        newDate = calculateTransactionDate(parsedUpdate.dateOffset);
+        dateOffset = parsedUpdate.dateOffset;
+        updated = true;
+      }
+    }
+  }
+
   if (updated) {
     await updatePendingTransaction(supabase, pending.id, {
       wallet_id: newWalletId,
       category_id: newCategoryId,
       date: newDate,
+      amount: newAmount,
+      notes: newNotes,
     });
 
     // Get updated display names
@@ -58,7 +158,7 @@ export async function handlePendingTransaction(supabase: SupabaseClient, telegra
     const categoryName = userContext.categories.find((c) => c.id === newCategoryId)?.name || 'Unknown';
     const dateDisplay = formatDateIndonesian(newDate, dateOffset);
 
-    const confirmMessage = buildConfirmationMessage(pending.type, pending.amount, categoryName, walletName, dateDisplay, pending.notes);
+    const confirmMessage = buildConfirmationMessage(pending.type, newAmount, categoryName, walletName, dateDisplay, newNotes);
 
     await sendTelegramMessageWithButtons(telegramToken, chatId, confirmMessage, [
       [
@@ -67,25 +167,6 @@ export async function handlePendingTransaction(supabase: SupabaseClient, telegra
       ],
     ]);
 
-    return new Response('OK', { status: 200 });
-  }
-
-  // Check for text confirmation
-  if (text === 'ya' || text === 'y' || text === 'yes' || text === 'ok' || text === 'oke') {
-    const success = await createTransaction(supabase, pending.user_id, pending.wallet_id, pending.category_id, pending.amount, pending.notes, pending.date);
-    await deletePendingTransaction(supabase, pending.id);
-
-    if (success) {
-      await sendTelegramMessage(telegramToken, chatId, '✅ <b>Transaksi berhasil disimpan!</b>');
-    } else {
-      await sendTelegramMessage(telegramToken, chatId, '❌ <b>Gagal menyimpan. Silakan coba lagi.</b>');
-    }
-    return new Response('OK', { status: 200 });
-  }
-
-  if (text === 'tidak' || text === 'no' || text === 'n' || text === 'batal' || text === 'cancel') {
-    await deletePendingTransaction(supabase, pending.id);
-    await sendTelegramMessage(telegramToken, chatId, '❌ <b>Transaksi dibatalkan.</b>');
     return new Response('OK', { status: 200 });
   }
 
@@ -101,15 +182,18 @@ export async function handlePendingTransaction(supabase: SupabaseClient, telegra
 
 💸 ${formatCurrency(pending.amount)} - ${categoryName}
 💳 ${walletName} | 📅 ${dateDisplay}
+📝 ${pending.notes}
 
-<b>Untuk update:</b>
-• <code>pakai [wallet]</code> - ganti wallet
-• <code>kemarin/besok</code> - ganti tanggal
-• Ketik <b>nama kategori</b> - ganti kategori
+<b>Untuk update (bisa pakai bahasa natural):</b>
+• "nominal jadi 50k" atau "ganti 100rb"
+• "catatan ganti Makan Siang"
+• "pakai BCA" atau "wallet Cash"
+• "kemarin" atau "besok"
+• Kombinasi: "nominal 41k dan catatan jadi Es Krim"
 
 <b>Untuk konfirmasi:</b>
-• <code>ya</code> - simpan
-• <code>tidak</code> - batalkan`
+• <code>ya</code> / <code>ok</code> - simpan
+• <code>tidak</code> / <code>batal</code> - batalkan`
   );
   return new Response('OK', { status: 200 });
 }
@@ -173,10 +257,20 @@ Silakan buat kategori ${parsed.type === 'income' ? 'pemasukan' : 'pengeluaran'} 
   return new Response('OK', { status: 200 });
 }
 
+interface CallbackQuery {
+  id: string;
+  data: string;
+  message: {
+    chat: { id: number };
+    message_id: number;
+    text: string;
+  };
+}
+
 /**
  * Handle callback queries (inline buttons)
  */
-export async function handleTransactionCallback(supabase: SupabaseClient, telegramToken: string, callbackQuery: any): Promise<Response> {
+export async function handleTransactionCallback(supabase: SupabaseClient, telegramToken: string, callbackQuery: CallbackQuery): Promise<Response> {
   const { data, message } = callbackQuery;
   const chatId = message.chat.id;
 

@@ -193,7 +193,7 @@ export async function getPendingTransaction(supabase: SupabaseClient, telegramCh
 /**
  * Update pending transaction
  */
-export async function updatePendingTransaction(supabase: SupabaseClient, id: string, updates: { wallet_id?: string; category_id?: string; date?: string }): Promise<boolean> {
+export async function updatePendingTransaction(supabase: SupabaseClient, id: string, updates: { wallet_id?: string; category_id?: string; date?: string; amount?: number; notes?: string }): Promise<boolean> {
   const { error } = await supabase.from('pending_bot_transactions').update(updates).eq('id', id);
   return !error;
 }
