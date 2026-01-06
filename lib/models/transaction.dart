@@ -32,7 +32,7 @@ class Transaction {
       'date': date.toIso8601String().split('T')[0], // Store as date only
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
-  // Offline flags removed
+      // Offline flags removed
     };
   }
 
@@ -45,8 +45,8 @@ class Transaction {
       amount: (json['amount'] as num).toDouble(),
       notes: json['notes'] as String?,
       date: DateTime.parse(json['date'] as String),
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
+      updatedAt: DateTime.parse(json['updated_at'] as String).toLocal(),
     );
   }
 
@@ -87,7 +87,7 @@ class Transaction {
         other.notes == notes &&
         other.date == date &&
         other.createdAt == createdAt &&
-  other.updatedAt == updatedAt;
+        other.updatedAt == updatedAt;
   }
 
   @override
@@ -101,13 +101,13 @@ class Transaction {
       notes,
       date,
       createdAt,
-  updatedAt,
+      updatedAt,
     );
   }
 
   @override
   String toString() {
-  return 'Transaction(id: $id, userId: $userId, walletId: $walletId, categoryId: $categoryId, amount: $amount, notes: $notes, date: $date, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'Transaction(id: $id, userId: $userId, walletId: $walletId, categoryId: $categoryId, amount: $amount, notes: $notes, date: $date, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 }
 
@@ -176,9 +176,13 @@ class UpdateTransactionRequest {
     return UpdateTransactionRequest(
       walletId: json['wallet_id'] as String?,
       categoryId: json['category_id'] as String?,
-      amount: json['amount'] != null ? (json['amount'] as num).toDouble() : null,
+      amount: json['amount'] != null
+          ? (json['amount'] as num).toDouble()
+          : null,
       notes: json['notes'] as String?,
-      date: json['date'] != null ? DateTime.parse(json['date'] as String) : null,
+      date: json['date'] != null
+          ? DateTime.parse(json['date'] as String)
+          : null,
     );
   }
 }

@@ -28,8 +28,8 @@ CREATE TABLE IF NOT EXISTS public.users (
   full_name TEXT,
   currency TEXT DEFAULT 'IDR',
   timezone TEXT DEFAULT 'Asia/Jakarta', -- Default Timezone as requested
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('Asia/Jakarta'::text, NOW()) NOT NULL,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('Asia/Jakarta'::text, NOW()) NOT NULL
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
 -- 1.2 WALLETS
@@ -41,8 +41,8 @@ CREATE TABLE IF NOT EXISTS public.wallets (
   currency TEXT NOT NULL DEFAULT 'IDR',
   icon TEXT, 
   is_hidden BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('Asia/Jakarta'::text, NOW()) NOT NULL,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('Asia/Jakarta'::text, NOW()) NOT NULL
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
 -- 1.3 CATEGORIES
@@ -54,8 +54,8 @@ CREATE TABLE IF NOT EXISTS public.categories (
   parent_id UUID REFERENCES public.categories(id) ON DELETE CASCADE,
   icon_code_point BIGINT,
   is_hidden BOOLEAN DEFAULT false,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('Asia/Jakarta'::text, NOW()) NOT NULL,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('Asia/Jakarta'::text, NOW()) NOT NULL
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
 -- 1.4 TRANSACTIONS
@@ -66,9 +66,9 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   category_id UUID REFERENCES public.categories(id) ON DELETE RESTRICT NOT NULL,
   amount DECIMAL(15, 2) NOT NULL CHECK (amount > 0),
   notes TEXT,
-  date DATE NOT NULL DEFAULT CURRENT_DATE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('Asia/Jakarta'::text, NOW()) NOT NULL,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('Asia/Jakarta'::text, NOW()) NOT NULL
+  date DATE NOT NULL DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta')::DATE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
 -- 1.5 TRANSACTION IMAGES
@@ -90,9 +90,9 @@ CREATE TABLE IF NOT EXISTS public.transfers (
   amount DECIMAL(15, 2) NOT NULL,
   fee DECIMAL(15, 2) DEFAULT 0.00,
   notes TEXT,
-  date DATE NOT NULL DEFAULT CURRENT_DATE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('Asia/Jakarta'::text, NOW()) NOT NULL,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('Asia/Jakarta'::text, NOW()) NOT NULL
+  date DATE NOT NULL DEFAULT (NOW() AT TIME ZONE 'Asia/Jakarta')::DATE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
 -- 1.7 BOT LINKS (Integrations)
@@ -106,8 +106,8 @@ CREATE TABLE IF NOT EXISTS public.bot_links (
   ai_provider TEXT DEFAULT 'none',     -- 'none', 'gemini', 'openai'
   ai_api_key TEXT,                     
   parser_mode TEXT DEFAULT 'regex',    -- 'regex', 'server_key', 'user_key'
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('Asia/Jakarta'::text, NOW()) NOT NULL,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('Asia/Jakarta'::text, NOW()) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   UNIQUE(platform, platform_user_id),
   UNIQUE(user_id, platform)
 );
@@ -136,8 +136,8 @@ CREATE TABLE IF NOT EXISTS public.notification_reminders (
   hour INT NOT NULL CHECK (hour >= 0 AND hour <= 23),
   minute INT NOT NULL CHECK (minute >= 0 AND minute <= 59),
   is_enabled BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('Asia/Jakarta'::text, NOW()) NOT NULL,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('Asia/Jakarta'::text, NOW()) NOT NULL
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
 -- =============================================
@@ -172,7 +172,7 @@ CREATE INDEX IF NOT EXISTS idx_pending_bot_transactions_chat ON public.pending_b
 -- 3.1 Updated At Handler
 CREATE OR REPLACE FUNCTION public.handle_updated_at() RETURNS TRIGGER AS $$
 BEGIN
-  NEW.updated_at = TIMEZONE('Asia/Jakarta'::text, NOW());
+  NEW.updated_at = NOW();
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -210,7 +210,7 @@ BEGIN
 
   calculated_balance := tx_balance + transfer_in - transfer_out;
   
-  UPDATE public.wallets SET balance = calculated_balance, updated_at = TIMEZONE('Asia/Jakarta'::text, NOW())
+  UPDATE public.wallets SET balance = calculated_balance, updated_at = NOW()
   WHERE id = p_wallet_id AND user_id = p_user_id;
   
   RETURN calculated_balance;
