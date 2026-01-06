@@ -1,4 +1,5 @@
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';import { sendTelegramMessage, formatCurrency } from '../../_shared/platforms/telegram.ts';
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { sendTelegramMessage, formatCurrency } from '../../_shared/platforms/telegram.ts';
 import {
   getWalletBalances,
   getMonthlySummary,

@@ -1,6 +1,7 @@
-// Query functions for bot - get balance, summary, etc.// These are used by the smart assistant when AI mode is enabled
+// Query functions for bot - get balance, summary, etc.
+// These are used by the smart assistant when AI mode is enabled
 
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 export interface WalletBalance {
   name: string;
@@ -187,8 +188,11 @@ Silakan buat wallet di aplikasi Finoteku terlebih dahulu.`;
 
   const total = balances.reduce((sum, w) => sum + w.balance, 0);
 
+  // Sort by balance descending (terbesar ke terkecil)
+  const sortedBalances = [...balances].sort((a, b) => b.balance - a.balance);
+
   let message = `💰 <b>Saldo Wallet</b>\n\n`;
-  for (const wallet of balances) {
+  for (const wallet of sortedBalances) {
     const emoji = wallet.balance >= 0 ? '💳' : '⚠️';
     message += `${emoji} ${wallet.name}: ${formatCurrency(wallet.balance)}\n`;
   }

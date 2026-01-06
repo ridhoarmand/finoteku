@@ -1,6 +1,7 @@
-// User transaction history for few-shot learning// Fetches recent transactions to provide context to AI
+// User transaction history for few-shot learning
+// Fetches recent transactions to provide context to AI
 
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 export interface TransactionExample {
   notes: string;

@@ -1,4 +1,4 @@
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { sendTelegramMessage } from '../../_shared/platforms/telegram.ts';
 import { linkTelegramAccount, getUserByTelegramId } from '../utils/context.ts';
 

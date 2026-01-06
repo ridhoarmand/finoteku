@@ -60,8 +60,8 @@ export function detectIntentSimple(text: string): IntentResult {
 
   // Check for summary query
   const hasSummaryKeyword = SUMMARY_KEYWORDS.some((k) => lowerText.includes(k));
-  if (hasSummaryKeyword && (isQuestion || !hasTransactionIndicator(lowerText))) {
-    return { intent: 'query_summary', confidence: 0.8 };
+  if (hasSummaryKeyword) {
+    return { intent: 'query_summary', confidence: 0.85 };
   }
 
   // Check for transactions query

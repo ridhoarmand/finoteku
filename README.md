@@ -22,15 +22,18 @@ Bot Telegram untuk manajemen keuangan pribadi dengan AI yang berjalan di Supabas
 
 ```
 finoteku-bot/
-├── _shared/              # Shared utilities dan modules
-│   ├── ai/              # AI intent detection
-│   ├── parsers/         # Gemini, OpenAI, dan regex parsers
-│   ├── platforms/       # Telegram platform utilities
-│   └── queries/         # Database queries
-├── telegram-bot/        # Telegram bot edge function
-│   ├── handlers/        # Command, query, dan transaction handlers
-│   └── utils/           # Context dan helper utilities
-└── deno.json           # Deno configuration
+├── supabase/
+│   └── functions/
+│       ├── _shared/              # Shared utilities dan modules
+│       │   ├── ai/              # AI intent detection
+│       │   ├── parsers/         # Gemini, OpenAI, dan regex parsers
+│       │   ├── platforms/       # Telegram platform utilities
+│       │   └── queries/         # Database queries
+│       └── telegram-bot/        # Telegram bot edge function
+│           ├── index.ts         # Main entry point
+│           ├── handlers/        # Command, query, dan transaction handlers
+│           └── utils/           # Context dan helper utilities
+└── deno.json                    # Deno configuration
 ```
 
 ## Prerequisites
@@ -43,53 +46,6 @@ finoteku-bot/
   - Google Gemini API Key
   - OpenAI API Key (optional)
 
-## Setup Database
-
-1. Buat tabel yang diperlukan di Supabase:
-
-```sql
--- Users table
-CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  telegram_id BIGINT UNIQUE NOT NULL,
-  username TEXT,
-  first_name TEXT,
-  last_name TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Transactions table
-CREATE TABLE transactions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  type TEXT NOT NULL, -- 'income' or 'expense'
-  amount DECIMAL(15, 2) NOT NULL,
-  category TEXT,
-  description TEXT,
-  transaction_date DATE NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Pending transactions table (for confirmation flow)
-CREATE TABLE pending_transactions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  telegram_id BIGINT NOT NULL,
-  type TEXT NOT NULL,
-  amount DECIMAL(15, 2) NOT NULL,
-  category TEXT,
-  description TEXT,
-  transaction_date DATE NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Create indexes
-CREATE INDEX idx_transactions_user_id ON transactions(user_id);
-CREATE INDEX idx_transactions_date ON transactions(transaction_date);
-CREATE INDEX idx_pending_transactions_telegram_id ON pending_transactions(telegram_id);
-```
 
 ## Setup Lokal
 
@@ -178,13 +134,13 @@ Kirim pesan ke bot Telegram Anda:
 
 ## Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `TELEGRAM_BOT_TOKEN` | Token dari BotFather | ✅ |
-| `SUPABASE_URL` | URL Supabase project | ✅ |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role key | ✅ |
-| `GEMINI_API_KEY` | Google Gemini API key | ✅ |
-| `OPENAI_API_KEY` | OpenAI API key | ⚠️ Optional |
+| Variable                    | Description           | Required   |
+| --------------------------- | --------------------- | ---------- |
+| `TELEGRAM_BOT_TOKEN`        | Token dari BotFather  | ✅          |
+| `SUPABASE_URL`              | URL Supabase project  | ✅          |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key      | ✅          |
+| `GEMINI_API_KEY`            | Google Gemini API key | ✅          |
+| `OPENAI_API_KEY`            | OpenAI API key        | ⚠️ Optional |
 
 ## Troubleshooting
 

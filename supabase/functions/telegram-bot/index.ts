@@ -1,5 +1,6 @@
-// Telegram Bot Edge Functionimport { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+// Telegram Bot Edge Function
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { encode } from 'https://deno.land/std@0.168.0/encoding/base64.ts';
 import { parseTelegramUpdate, parseCallbackQuery, sendTelegramMessage, getTelegramFileUrl, downloadTelegramFile } from '../_shared/platforms/telegram.ts';
 import { detectIntentSimple } from '../_shared/ai/intent.ts';
@@ -138,12 +139,8 @@ serve(async (req: Request) => {
 
     // 9. Detect Intent
     console.log('Step 9: Detect Intent');
-    let intentResult = { intent: 'transaction', confidence: 1.0 };
-
-    if (user.parserMode !== 'regex') {
-      intentResult = detectIntentSimple(originalText);
-      console.log('Detected intent:', intentResult.intent);
-    }
+    const intentResult = detectIntentSimple(originalText);
+    console.log('Detected intent:', intentResult.intent);
 
     // 10. Handle Queries
     if (intentResult.intent.startsWith('query_')) {
