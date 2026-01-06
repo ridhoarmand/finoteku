@@ -33,9 +33,17 @@ const QUESTION_INDICATORS = ['?', 'berapa', 'gimana', 'bagaimana', 'apa', 'mana'
 export function detectIntentSimple(text: string): IntentResult {
   const lowerText = text.toLowerCase().trim();
 
-  // Help commands
+  // Commands
   if (lowerText === '/help' || lowerText === '/start') {
     return { intent: 'help', confidence: 1.0 };
+  }
+
+  if (lowerText === '/balance') {
+    return { intent: 'query_balance', confidence: 1.0 };
+  }
+
+  if (lowerText === '/history') {
+    return { intent: 'query_transactions', confidence: 1.0 };
   }
 
   // Check for tips/recommendation query

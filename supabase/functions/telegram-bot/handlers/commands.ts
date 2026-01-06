@@ -117,5 +117,15 @@ Ketik /help untuk panduan lengkap.`
     return new Response('OK', { status: 200 });
   }
 
+  if (originalText === '/balance') {
+    // Trigger balance query - return null to let it be handled by query handler
+    return null;
+  }
+
+  if (originalText === '/history') {
+    // Trigger history query - return null to let it be handled by query handler
+    return null;
+  }
+
   return null; // Not a command this handler processes (or return null to continue chain)
 }
