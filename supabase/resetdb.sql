@@ -56,7 +56,8 @@ DROP FUNCTION IF EXISTS public.transfer_transactions_to_wallet(UUID, UUID, UUID)
 DROP FUNCTION IF EXISTS public.transfer_transactions_to_category(UUID, UUID, UUID) CASCADE;
 DROP FUNCTION IF EXISTS public.handle_transfer() CASCADE;
 DROP FUNCTION IF EXISTS public.get_transaction_image_url(TEXT) CASCADE;
-DROP FUNCTION IF EXISTS public.cleanup_orphaned_transaction_images() CASCADE;
+DROP FUNCTION IF EXISTS public.cleanup_expired_pending_transactions() CASCADE;
+DROP FUNCTION IF EXISTS public.get_user_by_platform_id(TEXT, TEXT) CASCADE;
 
 -- =============================================
 -- HAPUS SEMUA KEBIJAKAN RLS
@@ -90,6 +91,9 @@ DROP POLICY IF EXISTS "Users can delete own transfers" ON public.transfers;
 -- =============================================
 DROP TABLE IF EXISTS public.transaction_images CASCADE;
 DROP TABLE IF EXISTS public.transactions CASCADE;
+DROP TABLE IF EXISTS public.pending_bot_transactions CASCADE;
+DROP TABLE IF EXISTS public.notification_reminders CASCADE;
+DROP TABLE IF EXISTS public.bot_links CASCADE;
 DROP TABLE IF EXISTS public.transfers CASCADE;
 DROP TABLE IF EXISTS public.categories CASCADE;
 DROP TABLE IF EXISTS public.wallets CASCADE;

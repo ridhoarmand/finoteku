@@ -83,16 +83,20 @@ class BotLinkService {
     }
   }
 
-  /// Update AI configuration for a bot link
-  Future<BotLink> updateAIConfig({
+  /// Update parser configuration for a bot link
+  Future<BotLink> updateParserConfig({
     required String botLinkId,
     required String userId,
+    required String parserMode,
     required String aiProvider,
     String? aiApiKey,
   }) async {
     try {
-      final data = <String, dynamic>{'ai_provider': aiProvider};
-      if (aiApiKey != null) {
+      final data = <String, dynamic>{
+        'parser_mode': parserMode,
+        'ai_provider': aiProvider,
+      };
+      if (aiApiKey != null && aiApiKey.isNotEmpty) {
         data['ai_api_key'] = aiApiKey;
       }
 
@@ -106,7 +110,7 @@ class BotLinkService {
 
       return BotLink.fromJson(response);
     } catch (e, st) {
-      AppLogger.e('updateAIConfig error', error: e, stackTrace: st);
+      AppLogger.e('updateParserConfig error', error: e, stackTrace: st);
       throw mapException(e, st);
     }
   }

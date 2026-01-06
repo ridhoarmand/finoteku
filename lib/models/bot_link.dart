@@ -8,6 +8,7 @@ class BotLink {
   final bool isActive;
   final String aiProvider;
   final String? aiApiKey;
+  final String parserMode;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -20,6 +21,7 @@ class BotLink {
     this.isActive = true,
     this.aiProvider = 'none',
     this.aiApiKey,
+    this.parserMode = 'regex',
     required this.createdAt,
     required this.updatedAt,
   });
@@ -34,6 +36,7 @@ class BotLink {
       isActive: json['is_active'] as bool? ?? true,
       aiProvider: json['ai_provider'] as String? ?? 'none',
       aiApiKey: json['ai_api_key'] as String?,
+      parserMode: json['parser_mode'] as String? ?? 'regex',
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -49,6 +52,7 @@ class BotLink {
       'is_active': isActive,
       'ai_provider': aiProvider,
       'ai_api_key': aiApiKey,
+      'parser_mode': parserMode,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -63,6 +67,7 @@ class BotLink {
     bool? isActive,
     String? aiProvider,
     String? aiApiKey,
+    String? parserMode,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -75,20 +80,31 @@ class BotLink {
       isActive: isActive ?? this.isActive,
       aiProvider: aiProvider ?? this.aiProvider,
       aiApiKey: aiApiKey ?? this.aiApiKey,
+      parserMode: parserMode ?? this.parserMode,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
+  /// Check if API key is configured (for user_key mode)
+  bool get hasApiKey => aiApiKey != null && aiApiKey!.isNotEmpty;
+
+  /// Get masked API key for display
+  String get maskedApiKey {
+    if (!hasApiKey) return '';
+    final key = aiApiKey!;
+    if (key.length <= 8) return '••••••••';
+    return '${key.substring(0, 4)}••••${key.substring(key.length - 4)}';
+  }
+
   @override
   String toString() {
-    return 'BotLink(platform: $platform, username: $platformUsername, aiProvider: $aiProvider)';
+    return 'BotLink(platform: $platform, username: $platformUsername, parserMode: $parserMode)';
   }
 }
 
-/// Available AI providers
+/// Available AI providers (for user_key mode)
 enum AIProvider {
-  none('none', 'Tanpa AI'),
   gemini('gemini', 'Google Gemini'),
   openai('openai', 'OpenAI');
 
@@ -100,7 +116,31 @@ enum AIProvider {
   static AIProvider fromValue(String value) {
     return AIProvider.values.firstWhere(
       (e) => e.value == value,
-      orElse: () => AIProvider.none,
+      orElse: () => AIProvider.gemini,
+    );
+  }
+}
+
+/// Parser mode options
+enum ParserMode {
+  regex(
+    'regex',
+    'RegEx (Tanpa AI)',
+    'Parsing sederhana dengan aturan kata kunci',
+  ),
+  serverKey('server_key', 'AI (Server)', 'Pakai AI dari server, gratis'),
+  userKey('user_key', 'AI (Key Sendiri)', 'Pakai API key AI Anda sendiri');
+
+  final String value;
+  final String displayName;
+  final String description;
+
+  const ParserMode(this.value, this.displayName, this.description);
+
+  static ParserMode fromValue(String value) {
+    return ParserMode.values.firstWhere(
+      (e) => e.value == value,
+      orElse: () => ParserMode.regex,
     );
   }
 }

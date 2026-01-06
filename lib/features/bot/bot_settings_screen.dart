@@ -7,7 +7,7 @@ import '../../models/bot_link.dart';
 import '../../services/supabase_service.dart';
 import 'bot_provider.dart';
 
-/// Bot Settings Screen - Configure Telegram and AI
+/// Bot Settings Screen - Configure Telegram and Parser Mode
 class BotSettingsScreen extends ConsumerStatefulWidget {
   const BotSettingsScreen({super.key});
 
@@ -17,9 +17,12 @@ class BotSettingsScreen extends ConsumerStatefulWidget {
 
 class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
   final _apiKeyController = TextEditingController();
-  AIProvider _selectedProvider = AIProvider.none;
+  ParserMode _selectedParserMode = ParserMode.regex;
+  AIProvider _selectedAIProvider = AIProvider.gemini;
   bool _showApiKey = false;
   bool _isSaving = false;
+  bool _isEditing = false;
+  bool _hasInitialized = false;
 
   @override
   void dispose() {
@@ -66,8 +69,10 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
 
         const SizedBox(height: 24),
 
-        // AI Configuration (only show if connected)
-        if (botLink != null) ...[_buildAIConfigCard(context, theme, botLink)],
+        // Parser Configuration (only show if connected)
+        if (botLink != null) ...[
+          _buildParserConfigCard(context, theme, botLink),
+        ],
       ],
     );
   }
@@ -157,14 +162,22 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
     );
   }
 
-  Widget _buildAIConfigCard(
+  Widget _buildParserConfigCard(
     BuildContext context,
     ThemeData theme,
     BotLink botLink,
   ) {
-    // Initialize state from botLink
-    if (_selectedProvider == AIProvider.none && botLink.aiProvider != 'none') {
-      _selectedProvider = AIProvider.fromValue(botLink.aiProvider);
+    // Initialize state from botLink on first build only
+    if (!_hasInitialized) {
+      _hasInitialized = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _selectedParserMode = ParserMode.fromValue(botLink.parserMode);
+            _selectedAIProvider = AIProvider.fromValue(botLink.aiProvider);
+          });
+        }
+      });
     }
 
     return Card(
@@ -193,13 +206,13 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'AI Parser (Opsional)',
+                        'Mode Parser',
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        'Tingkatkan akurasi parsing transaksi',
+                        'Pilih cara parsing transaksi',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: Colors.grey,
                         ),
@@ -211,92 +224,50 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Provider dropdown
-            DropdownButtonFormField<AIProvider>(
-              initialValue: _selectedProvider,
-              decoration: const InputDecoration(
-                labelText: 'AI Provider',
-                border: OutlineInputBorder(),
-              ),
-              items: AIProvider.values.map((provider) {
-                return DropdownMenuItem(
-                  value: provider,
-                  child: Text(provider.displayName),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedProvider = value ?? AIProvider.none;
-                  if (_selectedProvider == AIProvider.none) {
-                    _apiKeyController.clear();
-                  }
-                });
-              },
+            // Parser mode selection
+            ...ParserMode.values.map(
+              (mode) => _buildParserModeOption(theme, mode, botLink),
             ),
 
-            // API Key input (show only if provider selected)
-            if (_selectedProvider != AIProvider.none) ...[
+            // Show AI provider and API key input only for user_key mode
+            if (_selectedParserMode == ParserMode.userKey) ...[
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _apiKeyController,
-                obscureText: !_showApiKey,
-                decoration: InputDecoration(
-                  labelText: 'API Key',
-                  border: const OutlineInputBorder(),
-                  helperText: _getApiKeyHelperText(),
-                  suffixIcon: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(
-                          _showApiKey ? Icons.visibility_off : Icons.visibility,
-                        ),
-                        onPressed: () =>
-                            setState(() => _showApiKey = !_showApiKey),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.content_paste),
-                        onPressed: () async {
-                          final data = await Clipboard.getData('text/plain');
-                          if (data?.text != null) {
-                            _apiKeyController.text = data!.text!;
-                          }
-                        },
-                      ),
-                    ],
-                  ),
+              const Divider(),
+              const SizedBox(height: 16),
+
+              // AI Provider dropdown
+              DropdownButtonFormField<AIProvider>(
+                initialValue: _selectedAIProvider,
+                decoration: const InputDecoration(
+                  labelText: 'AI Provider',
+                  border: OutlineInputBorder(),
                 ),
+                items: AIProvider.values.map((provider) {
+                  return DropdownMenuItem(
+                    value: provider,
+                    child: Text(provider.displayName),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedAIProvider = value ?? AIProvider.gemini;
+                  });
+                },
               ),
+
+              const SizedBox(height: 16),
+
+              // API Key status or input
+              if (botLink.hasApiKey && !_isEditing)
+                _buildApiKeyStatus(theme, botLink)
+              else
+                _buildApiKeyInput(theme),
             ],
 
             const SizedBox(height: 16),
 
-            // Info box
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 20,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _selectedProvider == AIProvider.none
-                          ? 'Tanpa AI, parsing menggunakan aturan sederhana dengan akurasi ~70-80%.'
-                          : 'Dengan AI, parsing lebih cerdas dengan akurasi ~95%.',
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            // Info box based on selected mode
+            _buildInfoBox(theme),
 
             const SizedBox(height: 16),
 
@@ -304,7 +275,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: _isSaving ? null : _saveAIConfig,
+                onPressed: _isSaving ? null : _saveConfig,
                 child: _isSaving
                     ? const SizedBox(
                         width: 20,
@@ -320,14 +291,195 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
     );
   }
 
+  Widget _buildParserModeOption(
+    ThemeData theme,
+    ParserMode mode,
+    BotLink botLink,
+  ) {
+    final isSelected = _selectedParserMode == mode;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _selectedParserMode = mode;
+            if (mode != ParserMode.userKey) {
+              _isEditing = false;
+            }
+          });
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: isSelected
+                  ? theme.colorScheme.primary
+                  : Colors.grey.shade300,
+              width: isSelected ? 2 : 1,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            color: isSelected
+                ? theme.colorScheme.primary.withValues(alpha: 0.05)
+                : null,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                isSelected
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_off,
+                color: isSelected ? theme.colorScheme.primary : Colors.grey,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      mode.displayName,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                    Text(
+                      mode.description,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildApiKeyStatus(ThemeData theme, BotLink botLink) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.green.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.green.shade200),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle, color: Colors.green, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'API Key tersimpan',
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  botLink.maskedApiKey,
+                  style: TextStyle(
+                    color: Colors.green.shade700,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _isEditing = true;
+                _apiKeyController.clear();
+              });
+            },
+            child: const Text('Ubah'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildApiKeyInput(ThemeData theme) {
+    return TextFormField(
+      controller: _apiKeyController,
+      obscureText: !_showApiKey,
+      decoration: InputDecoration(
+        labelText: 'API Key',
+        border: const OutlineInputBorder(),
+        helperText: _getApiKeyHelperText(),
+        suffixIcon: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: Icon(_showApiKey ? Icons.visibility_off : Icons.visibility),
+              onPressed: () => setState(() => _showApiKey = !_showApiKey),
+            ),
+            IconButton(
+              icon: const Icon(Icons.content_paste),
+              onPressed: () async {
+                final data = await Clipboard.getData('text/plain');
+                if (data?.text != null) {
+                  _apiKeyController.text = data!.text!;
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoBox(ThemeData theme) {
+    String info;
+    IconData icon;
+    Color color;
+
+    switch (_selectedParserMode) {
+      case ParserMode.regex:
+        info = 'Parsing dengan aturan kata kunci sederhana. Akurasi ~70-80%.';
+        icon = Icons.rule;
+        color = Colors.orange;
+      case ParserMode.serverKey:
+        info = 'Parsing dengan AI menggunakan server. Akurasi ~95%. Gratis!';
+        icon = Icons.cloud;
+        color = Colors.blue;
+      case ParserMode.userKey:
+        info = 'Parsing dengan AI menggunakan API key Anda. Akurasi ~95%.';
+        icon = Icons.key;
+        color = theme.colorScheme.primary;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: color),
+          const SizedBox(width: 8),
+          Expanded(child: Text(info, style: theme.textTheme.bodySmall)),
+        ],
+      ),
+    );
+  }
+
   String _getApiKeyHelperText() {
-    switch (_selectedProvider) {
+    switch (_selectedAIProvider) {
       case AIProvider.gemini:
-        return 'Dapatkan dari aistudio.google.com';
+        return 'Dapatkan dari aistudio.google.com atau GCP Console';
       case AIProvider.openai:
         return 'Dapatkan dari platform.openai.com';
-      default:
-        return '';
     }
   }
 
@@ -388,23 +540,36 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
     }
   }
 
-  Future<void> _saveAIConfig() async {
+  Future<void> _saveConfig() async {
     setState(() => _isSaving = true);
 
     try {
+      String? apiKey;
+      String aiProvider = 'none';
+
+      if (_selectedParserMode == ParserMode.userKey) {
+        apiKey = _apiKeyController.text.isNotEmpty
+            ? _apiKeyController.text
+            : null;
+        aiProvider = _selectedAIProvider.value;
+      }
+
       await ref
           .read(telegramBotLinkProvider.notifier)
-          .updateAIConfig(
-            _selectedProvider.value,
-            _selectedProvider != AIProvider.none
-                ? _apiKeyController.text
-                : null,
+          .updateParserConfig(
+            parserMode: _selectedParserMode.value,
+            aiProvider: aiProvider,
+            apiKey: apiKey,
           );
+
+      setState(() {
+        _isEditing = false;
+      });
 
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Pengaturan AI disimpan')));
+        ).showSnackBar(const SnackBar(content: Text('Pengaturan disimpan')));
       }
     } catch (e) {
       if (mounted) {

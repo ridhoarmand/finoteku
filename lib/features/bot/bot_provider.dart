@@ -42,8 +42,12 @@ class TelegramBotLinkNotifier extends AsyncNotifier<BotLink?> {
     state = await AsyncValue.guard(() => build());
   }
 
-  /// Update AI configuration
-  Future<void> updateAIConfig(String aiProvider, String? apiKey) async {
+  /// Update parser configuration (parser_mode, ai_provider, api_key)
+  Future<void> updateParserConfig({
+    required String parserMode,
+    required String aiProvider,
+    String? apiKey,
+  }) async {
     final currentLink = state.value;
     if (currentLink == null) return;
 
@@ -55,9 +59,10 @@ class TelegramBotLinkNotifier extends AsyncNotifier<BotLink?> {
 
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      return service.updateAIConfig(
+      return service.updateParserConfig(
         botLinkId: currentLink.id,
         userId: user.id,
+        parserMode: parserMode,
         aiProvider: aiProvider,
         aiApiKey: apiKey,
       );
