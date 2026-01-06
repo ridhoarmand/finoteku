@@ -1,0 +1,42 @@
+# Deno
+.deno/
+deno.lock
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Supabase
+.supabase/
+supabase/config.toml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Dependencies (if using npm/node modules for any tooling)
+node_modules/
+
+# Build outputs
+dist/
+build/
+*.js.map
+
+# Testing
+coverage/
+
+# Temporary files
+*.tmp
+.temp/
