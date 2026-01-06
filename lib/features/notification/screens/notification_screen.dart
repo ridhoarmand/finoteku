@@ -20,7 +20,8 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Refresh notification list to ensure we have latest data
-      ref.read(notificationListProvider.notifier).loadNotifications();
+      // Sync happens automatically on provider build
+      // ref.read(notificationListProvider.notifier).loadNotifications();
       _checkAndRequestPermissions();
     });
   }

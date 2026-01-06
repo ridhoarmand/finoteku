@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import 'dart:convert';
-import 'package:uuid/uuid.dart';
+
 import 'package:go_router/go_router.dart';
 
 import '../models/daily_notification.dart';
@@ -242,27 +242,30 @@ class NotificationService {
     return List.from(_notificationsList);
   }
 
+  // Modified to be a pure scheduler, mostly called by Provider now
+  static Future<void> scheduleFromList(
+    List<DailyNotification> notifications,
+  ) async {
+    try {
+      await _notifications.cancelAll();
+      for (final n in notifications) {
+        if (n.isEnabled) {
+          await _scheduleDailyNotification(n);
+        }
+      }
+      _notificationsList = notifications; // Keep in memory for UI if needed
+    } catch (e) {
+      debugPrint('Error scheduling from list: $e');
+    }
+  }
+
   static Future<void> addNotification(
     String title,
     String body,
     TimeOfDay time,
   ) async {
-    try {
-      final notification = DailyNotification(
-        id: const Uuid().v4(),
-        title: title,
-        body: body,
-        time: time,
-        isEnabled: true,
-        createdAt: DateTime.now(),
-      );
-
-      _notificationsList.add(notification);
-      await _saveNotifications();
-      await _scheduleDailyNotification(notification);
-    } catch (e) {
-      debugPrint('Error adding notification: $e');
-    }
+    // Legacy or local-only fallback
+    // In new flow, Provider calls API then calls scheduleFromList
   }
 
   static Future<void> updateNotification(DailyNotification notification) async {

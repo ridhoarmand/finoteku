@@ -21,6 +21,9 @@ class NotificationSyncService {
 
   NotificationSyncService(this._supabase);
 
+  // Helper to get current user
+  User? get currentUser => _supabase.auth.currentUser;
+
   /// Fetch all notification reminders from Supabase
   Future<List<DailyNotification>> getReminders(String userId) async {
     try {
