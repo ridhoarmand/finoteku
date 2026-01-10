@@ -103,17 +103,30 @@ export function calculateTransactionDate(dateOffset: number): string {
 }
 
 /**
- * Format date for display in Indonesian
+ * Format date for display in Indonesian with correct relative label
  */
-export function formatDateIndonesian(dateStr: string, dateOffset: number): string {
+export function formatDateIndonesian(dateStr: string): string {
   const date = new Date(dateStr);
   const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
   const formatted = date.toLocaleDateString('id-ID', options);
 
-  if (dateOffset === 0) return `${formatted} (hari ini)`;
-  if (dateOffset === -1) return `${formatted} (kemarin)`;
-  if (dateOffset === 1) return `${formatted} (besok)`;
-  if (dateOffset === 2) return `${formatted} (lusa)`;
+  // Calculate actual offset from today (Jakarta timezone)
+  const now = new Date();
+  const jakartaOffset = 7 * 60;
+  const localOffset = now.getTimezoneOffset();
+  now.setMinutes(now.getMinutes() + localOffset + jakartaOffset);
+  const todayStr = now.toISOString().split('T')[0];
+
+  const todayDate = new Date(todayStr);
+  const inputDate = new Date(dateStr);
+  const diffTime = inputDate.getTime() - todayDate.getTime();
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return `${formatted} (hari ini)`;
+  if (diffDays === -1) return `${formatted} (kemarin)`;
+  if (diffDays === 1) return `${formatted} (besok)`;
+  if (diffDays === 2) return `${formatted} (lusa)`;
+  if (diffDays === -2) return `${formatted} (2 hari lalu)`;
   return formatted;
 }
 

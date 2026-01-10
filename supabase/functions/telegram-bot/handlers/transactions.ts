@@ -86,7 +86,6 @@ export async function handlePendingTransaction(
   let newDate = pending.date;
   let newAmount = pending.amount;
   let newNotes = pending.notes;
-  let dateOffset = 0;
 
   // Check for wallet update: "pakai cash", "pakai bca", etc.
   const walletMatch = text.match(/^pakai\s+(.+)$/i) || text.match(/^pake\s+(.+)$/i) ||
@@ -104,7 +103,6 @@ export async function handlePendingTransaction(
   const detectedDateOffset = parseDateOffset(text);
   if (detectedDateOffset !== 0) {
     newDate = calculateTransactionDate(detectedDateOffset);
-    dateOffset = detectedDateOffset;
     updated = true;
   }
 
@@ -188,7 +186,6 @@ export async function handlePendingTransaction(
       // Apply date update
       if (parsedUpdate.dateOffset !== undefined && parsedUpdate.dateOffset !== null) {
         newDate = calculateTransactionDate(parsedUpdate.dateOffset);
-        dateOffset = parsedUpdate.dateOffset;
         updated = true;
       }
     }
@@ -208,7 +205,7 @@ export async function handlePendingTransaction(
     const category = userContext.categories.find((c) => c.id === newCategoryId);
     const categoryName = category?.name || 'Unknown';
     const parentCategoryName = category?.parentName || null;
-    const dateDisplay = formatDateIndonesian(newDate, dateOffset);
+    const dateDisplay = formatDateIndonesian(newDate);
 
     const confirmMessage = buildConfirmationMessage(
       pending.type,
@@ -234,7 +231,7 @@ export async function handlePendingTransaction(
   const walletName = userContext.wallets.find((w) => w.id === pending.wallet_id)?.name || 'Unknown';
   const categoryName = userContext.categories.find((c) => c.id === pending.category_id)?.name ||
     'Unknown';
-  const dateDisplay = formatDateIndonesian(pending.date, 0);
+  const dateDisplay = formatDateIndonesian(pending.date);
 
   await sendTelegramMessage(
     telegramToken,
@@ -306,7 +303,7 @@ Silakan buat kategori ${
   const category = userContext.categories.find((c) => c.id === categoryId);
   const categoryName = category?.name || parsed.categoryHint;
   const parentCategoryName = category?.parentName || null;
-  const dateDisplay = formatDateIndonesian(transactionDate, parsed.dateOffset);
+  const dateDisplay = formatDateIndonesian(transactionDate);
 
   // Save pending transaction
   const pendingId = await savePendingTransaction(
