@@ -12,10 +12,26 @@ export interface ParsedTransaction {
 const GEMINI_API_URL =
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
+/**
+ * Log token usage from Gemini API response
+ */
+// deno-lint-ignore no-explicit-any
+function logTokenUsage(data: any, caller: string): void {
+  if (data?.usageMetadata) {
+    const { promptTokenCount, candidatesTokenCount, totalTokenCount } = data.usageMetadata;
+    console.log(
+      `[Gemini ${caller}] Tokens - Prompt: ${promptTokenCount}, Response: ${candidatesTokenCount}, Total: ${totalTokenCount}`,
+    );
+  }
+}
+
 export interface GeminiUserContext {
   incomeCategories: string[];
   expenseCategories: string[];
   walletNames: string[];
+  // Categories with parent info for better matching
+  incomeCategoriesWithParent?: Array<{ name: string; parent: string | null }>;
+  expenseCategoriesWithParent?: Array<{ name: string; parent: string | null }>;
 }
 
 interface TransactionExample {
@@ -37,34 +53,46 @@ function buildSystemPrompt(
   examples: TransactionExample[] = [],
   noteStyle?: NoteStyle,
 ): string {
-  let prompt = `Kamu adalah parser transaksi keuangan PERSONAL untuk user ini.
+  let prompt = `Kamu adalah parser transaksi keuangan PERSONAL untuk user Indonesia.
 
 TUGAS: Parse pesan user menjadi format JSON:
 {
   "type": "income" atau "expense",
   "amount": number (tanpa format, contoh: 50000),
-  "categoryHint": "nama kategori yang cocok",
+  "categoryHint": "nama kategori yang paling cocok",
   "walletHint": "nama wallet/bank jika disebutkan, null jika tidak",
-  "notes": "catatan/deskripsi transaksi",
+  "notes": "catatan/deskripsi transaksi (bersih, tanpa nominal/wallet)",
   "dateOffset": number (0=hari ini, -1=kemarin, 1=besok, 2=lusa)
 }`;
 
-  // Add user's transaction examples for few-shot learning
+  // Add user's transaction examples for few-shot learning (increased to 25)
   if (examples.length > 0) {
-    prompt += `
+    // Deduplicate notes to get diverse patterns
+    const seenNotes = new Set<string>();
+    const uniqueExamples = examples
+      .filter((e) => {
+        if (!e.notes || e.notes.trim().length === 0) return false;
+        const key = e.notes.toLowerCase().trim();
+        if (seenNotes.has(key)) return false;
+        seenNotes.add(key);
+        return true;
+      })
+      .slice(0, 25);
 
-PELAJARI PATTERN USER INI dari transaksi sebelumnya:
+    if (uniqueExamples.length > 0) {
+      prompt += `
+
+PELAJARI PATTERN USER INI dari ${uniqueExamples.length} transaksi sebelumnya:
 ${
-      examples
-        .filter((e) => e.notes && e.notes.trim().length > 0)
-        .slice(0, 12)
-        .map((e) =>
-          `• "${e.notes}" → ${e.category}, ${e.wallet}, Rp${e.amount.toLocaleString('id-ID')}`
-        )
-        .join('\n')
-    }
+        uniqueExamples.map((e) =>
+          `• "${e.notes}" → ${e.type === 'income' ? '📈' : '📉'} ${e.category}, ${e.wallet}, Rp${
+            e.amount.toLocaleString('id-ID')
+          }`
+        ).join('\n')
+      }
 
 PENTING: Ikuti pattern user ini! Jika user sering pakai kata tertentu untuk kategori/wallet tertentu, gunakan pattern yang sama.`;
+    }
   }
 
   // Add note style guidance
@@ -85,31 +113,50 @@ PENTING: Ikuti pattern user ini! Jika user sering pakai kata tertentu untuk kate
     }
   }
 
+  // Format categories with parent info if available
+  let incomeCatDisplay = context.incomeCategories.join(', ') || 'Gaji, Bonus, Lainnya';
+  let expenseCatDisplay = context.expenseCategories.join(', ') || 'Makanan, Transport, Belanja';
+
+  if (context.incomeCategoriesWithParent && context.incomeCategoriesWithParent.length > 0) {
+    incomeCatDisplay = context.incomeCategoriesWithParent.map((
+      c,
+    ) => (c.parent ? `${c.parent} › ${c.name}` : c.name)).join(', ');
+  }
+  if (context.expenseCategoriesWithParent && context.expenseCategoriesWithParent.length > 0) {
+    expenseCatDisplay = context.expenseCategoriesWithParent.map((
+      c,
+    ) => (c.parent ? `${c.parent} › ${c.name}` : c.name)).join(', ');
+  }
+
   prompt += `
 
-ATURAN PARSING:
-1. Deteksi: kategori, nominal (50k/1jt), wallet, tanggal relatif
-2. Jika ada koma (,), text setelah koma adalah notes
-3. Gunakan pattern dari contoh transaksi di atas jika cocok
+ATURAN PARSING KETAT:
+1. NOMINAL WAJIB: k/K/rb = ×1000, jt/JT/juta/m = ×1000000
+   Contoh: 50k = 50000, 1.5jt = 1500000, 25rb = 25000
+2. NOTES: Ambil deskripsi transaksi, hapus nominal dan wallet dari notes
+   Contoh: "makan siang 50k bca" → notes: "makan siang"
+3. KOMA: Text setelah koma (,) adalah notes tambahan
+   Contoh: "transport 10k, naik gojek" → notes: "transport, naik gojek"
+4. MATCHING: Cocokkan dengan kategori & wallet user yang tersedia
+5. KATEGORI PARENT: Jika kategori punya parent (format: Parent › Child), return nama CHILD saja di categoryHint
 
 TANGGAL RELATIF:
-- "kemarin/kemaren" = dateOffset: -1
-- "besok/besuk" = dateOffset: 1
-- "lusa/besok lusa" = dateOffset: 2
-- Tidak disebutkan = dateOffset: 0
+- kemarin/kemaren/yesterday = -1
+- besok/besuk/tomorrow = +1
+- lusa = +2
+- Default (tidak disebutkan) = 0
 
-TYPE:
-- INCOME: gaji, bonus, dapat, terima, cashback, refund
-- EXPENSE: beli, bayar, jajan, makan, bensin, parkir, tagihan
+TYPE DETECTION:
+📈 INCOME: gaji, gajian, bonus, thr, dapat, terima, transfer masuk, cashback, refund
+📉 EXPENSE: beli, bayar, jajan, makan, minum, bensin, parkir, tagihan, langganan
 
-NOMINAL: k/rb = ribuan, jt/m = jutaan
+KATEGORI USER (COCOKKAN PALING TEPAT):
+- Pemasukan: ${incomeCatDisplay}
+- Pengeluaran: ${expenseCatDisplay}
 
-KATEGORI USER:
-- Pemasukan: ${context.incomeCategories.join(', ') || 'Tidak ada'}
-- Pengeluaran: ${context.expenseCategories.join(', ') || 'Tidak ada'}
-- Wallet: ${context.walletNames.join(', ') || 'Tidak ada'}
+WALLET USER: ${context.walletNames.join(', ') || 'Cash, BCA, Mandiri'}
 
-HANYA RETURN JSON VALID TANPA MARKDOWN.`;
+HANYA RETURN JSON VALID. TANPA MARKDOWN, TANPA PENJELASAN.`;
 
   return prompt;
 }
@@ -118,7 +165,24 @@ HANYA RETURN JSON VALID TANPA MARKDOWN.`;
  * Build prompt for Vision AI receipt parsing
  */
 function buildVisionPrompt(context: GeminiUserContext): string {
+  // Get current date info for accurate date offset calculation
+  const now = new Date();
+  const today = now.toLocaleDateString('id-ID', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  const currentDay = now.getDate();
+
   return `Kamu adalah parser struk belanja (receipt scanner).
+
+TANGGAL HARI INI: ${today}
+TAHUN SEKARANG: ${currentYear}
+BULAN SEKARANG: ${currentMonth}
+TANGGAL SEKARANG: ${currentDay}
 
 TUGAS: Analisis gambar struk ini dan ekstrak informasi berikut dalam format JSON:
 {
@@ -127,18 +191,25 @@ TUGAS: Analisis gambar struk ini dan ekstrak informasi berikut dalam format JSON
   "categoryHint": "tebak kategori berdasarkan merchant/item (contoh: Makanan, Belanja Bulanan)",
   "walletHint": null,
   "notes": "Nama Merchant - ringkasan item (maksimal 5 kata)",
-  "dateOffset": number (hitung selisih hari dari tanggal di struk ke HARI INI. Jika sama = 0, kemarin = -1. Jika tidak ada tanggal = 0),
+  "dateOffset": number (selisih hari dari tanggal struk ke hari ini),
   "confidence": 0.9
 }
+
+ATURAN TANGGAL SANGAT PENTING:
+1. TAHUN SEKARANG ADALAH ${currentYear}. Jika struk menunjukkan tahun berbeda (misal 2027), ABAIKAN dan anggap tahun = ${currentYear}
+2. Hitung dateOffset = tanggal_struk - tanggal_hari_ini (${currentDay}/${currentMonth}/${currentYear})
+3. Jika tanggal struk = hari ini → dateOffset = 0
+4. Jika tanggal struk = kemarin → dateOffset = -1
+5. Jika tidak ada tanggal di struk → dateOffset = 0 (asumsi hari ini)
+6. Jika bulan berbeda, hitung dengan benar (misal tanggal 9 Jan, hari ini 10 Jan → dateOffset = -1)
 
 KATEGORI YANG TERSEDIA:
 ${context.expenseCategories.join(', ') || 'Umum'}
 
 PENTING:
-1. Cari TOTAL AMOUNT yang harus dibayar.
-2. Notes harus singkat: "NamaToko - Item1, Item2".
-3. DateOffset sangat penting. Coba cari tanggal di struk. Asumsikan hari ini adalah saat ini.
-4. HANYA RETURN JSON VALID.`;
+1. Cari TOTAL AMOUNT yang harus dibayar
+2. Notes harus singkat: "NamaToko - Item1, Item2"
+3. HANYA RETURN JSON VALID tanpa markdown`;
 }
 
 /**
@@ -246,6 +317,7 @@ export async function parseTransactionUpdate(
     });
 
     const data = await response.json();
+    logTokenUsage(data, 'Update');
     if (!data.candidates || data.candidates.length === 0) {
       console.error('No candidates from Gemini for update parsing');
       return null;
@@ -299,6 +371,7 @@ export async function parseWithGemini(
     });
 
     const data = await response.json();
+    logTokenUsage(data, 'Parse');
     if (!data.candidates || data.candidates.length === 0) return null;
 
     const rawText = data.candidates[0].content.parts[0].text;
@@ -311,7 +384,7 @@ export async function parseWithGemini(
       categoryHint: result.categoryHint || '',
       walletHint: result.walletHint || null,
       notes: result.notes || text,
-      confidence: 1.0, // High confidence for custom API
+      confidence: 1.0,
       dateOffset: Number(result.dateOffset) || 0,
     };
   } catch (error) {
@@ -382,6 +455,7 @@ export async function parseImageWithGemini(
     }
 
     const rawText = visionData.candidates[0]?.content?.parts?.[0]?.text;
+    logTokenUsage(data, 'Vision');
     console.log('Gemini Vision raw text:', rawText);
     const jsonStr = (rawText || '').replace(/```json\n?|\n?```/g, '').trim();
     const result = JSON.parse(jsonStr);

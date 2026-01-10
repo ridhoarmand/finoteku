@@ -127,14 +127,18 @@ export function buildConfirmationMessage(
   walletName: string,
   dateDisplay: string,
   notes: string,
+  parentCategoryName?: string | null,
 ): string {
   const typeEmoji = type === 'income' ? '💰' : '💸';
   const typeText = type === 'income' ? 'Pemasukan' : 'Pengeluaran';
+  const categoryDisplay = parentCategoryName
+    ? `${parentCategoryName} › ${categoryName}`
+    : categoryName;
 
   return `📝 <b>Konfirmasi Transaksi</b>
 
 ${typeEmoji} <b>${typeText}</b> ${formatCurrency(amount)}
-📁 ${categoryName}
+📁 ${categoryDisplay}
 💳 ${walletName}
 📅 ${dateDisplay}
 📝 ${notes || '-'}

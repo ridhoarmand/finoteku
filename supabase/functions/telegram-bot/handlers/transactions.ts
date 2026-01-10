@@ -129,6 +129,12 @@ export async function handlePendingTransaction(
         c.name
       ),
       walletNames: userContext.wallets.map((w) => w.name),
+      incomeCategoriesWithParent: userContext.categories.filter((c) => c.type === 'income').map((
+        c,
+      ) => ({ name: c.name, parent: c.parentName })),
+      expenseCategoriesWithParent: userContext.categories.filter((c) => c.type === 'expense').map((
+        c,
+      ) => ({ name: c.name, parent: c.parentName })),
     };
 
     const parsedUpdate = await parseTransactionUpdate(
@@ -199,8 +205,9 @@ export async function handlePendingTransaction(
 
     // Get updated display names
     const walletName = userContext.wallets.find((w) => w.id === newWalletId)?.name || 'Unknown';
-    const categoryName = userContext.categories.find((c) => c.id === newCategoryId)?.name ||
-      'Unknown';
+    const category = userContext.categories.find((c) => c.id === newCategoryId);
+    const categoryName = category?.name || 'Unknown';
+    const parentCategoryName = category?.parentName || null;
     const dateDisplay = formatDateIndonesian(newDate, dateOffset);
 
     const confirmMessage = buildConfirmationMessage(
@@ -210,6 +217,7 @@ export async function handlePendingTransaction(
       walletName,
       dateDisplay,
       newNotes,
+      parentCategoryName,
     );
 
     await sendTelegramMessageWithButtons(telegramToken, chatId, confirmMessage, [
@@ -295,8 +303,9 @@ Silakan buat kategori ${
 
   // Get display names
   const walletName = userContext.wallets.find((w) => w.id === walletId)?.name || 'Unknown';
-  const categoryName = userContext.categories.find((c) => c.id === categoryId)?.name ||
-    parsed.categoryHint;
+  const category = userContext.categories.find((c) => c.id === categoryId);
+  const categoryName = category?.name || parsed.categoryHint;
+  const parentCategoryName = category?.parentName || null;
   const dateDisplay = formatDateIndonesian(transactionDate, parsed.dateOffset);
 
   // Save pending transaction
@@ -329,6 +338,7 @@ Silakan buat kategori ${
     walletName,
     dateDisplay,
     parsed.notes,
+    parentCategoryName,
   );
 
   await sendTelegramMessageWithButtons(telegramToken, chatId, confirmMessage, [

@@ -1,18 +1,15 @@
 import { detectNoteStyle, TransactionExample, UserContext } from './context.ts';
 import { ParsedTransaction, parseTransactionWithContext } from '../../_shared/parsers/regex.ts';
 import { GeminiUserContext, parseWithGemini } from '../../_shared/parsers/gemini.ts';
-import { parseWithOpenAI } from '../../_shared/parsers/openai.ts';
 
 /**
- * Parse message using appropriate parser mode with few-shot learning
+ * Parse message using appropriate parser mode with few-shot learning (Gemini only)
  */
 export async function parseMessage(
   text: string,
   parserMode: string,
-  aiProvider: string,
   aiApiKey: string | null,
   serverGeminiKey: string | undefined,
-  serverOpenAIKey: string | undefined,
   userContext: UserContext,
   transactionHistory: TransactionExample[] = [],
 ): Promise<ParsedTransaction | null> {
@@ -24,47 +21,42 @@ export async function parseMessage(
   );
   const walletNames = userContext.wallets.map((w) => w.name);
 
-  const context: GeminiUserContext = { incomeCategories, expenseCategories, walletNames };
+  // Include parent category info for better AI matching
+  const incomeCategoriesWithParent = userContext.categories.filter((c) => c.type === 'income').map((
+    c,
+  ) => ({ name: c.name, parent: c.parentName }));
+  const expenseCategoriesWithParent = userContext.categories.filter((c) => c.type === 'expense')
+    .map((c) => ({ name: c.name, parent: c.parentName }));
+
+  const context: GeminiUserContext = {
+    incomeCategories,
+    expenseCategories,
+    walletNames,
+    incomeCategoriesWithParent,
+    expenseCategoriesWithParent,
+  };
 
   // Detect user's note style from history
   const noteStyle = transactionHistory.length > 0 ? detectNoteStyle(transactionHistory) : undefined;
 
-  // AI mode with few-shot learning
-  if (parserMode === 'server_key') {
-    if (serverGeminiKey) {
-      const result = await parseWithGemini(
-        text,
-        serverGeminiKey,
-        context,
-        transactionHistory,
-        noteStyle,
-      );
-      if (result) return result;
-    }
-    if (serverOpenAIKey) {
-      const result = await parseWithOpenAI(
-        text,
-        serverOpenAIKey,
-        context,
-        transactionHistory,
-        noteStyle,
-      );
-      if (result) return result;
-    }
-    // Fallback to regex if server keys fail
+  // AI mode with few-shot learning (server key)
+  if (parserMode === 'server_key' && serverGeminiKey) {
+    const result = await parseWithGemini(
+      text,
+      serverGeminiKey,
+      context,
+      transactionHistory,
+      noteStyle,
+    );
+    if (result) return result;
+    // Fallback to regex if Gemini fails
     return parseTransactionWithContext(text, context);
   }
 
+  // AI mode with user's personal API key
   if (parserMode === 'user_key' && aiApiKey) {
-    let aiResult: ParsedTransaction | null = null;
-
-    if (aiProvider === 'gemini') {
-      aiResult = await parseWithGemini(text, aiApiKey, context, transactionHistory, noteStyle);
-    } else if (aiProvider === 'openai') {
-      aiResult = await parseWithOpenAI(text, aiApiKey, context, transactionHistory, noteStyle);
-    }
-
-    if (aiResult) return aiResult;
+    const result = await parseWithGemini(text, aiApiKey, context, transactionHistory, noteStyle);
+    if (result) return result;
   }
 
   // Regex mode - no history needed

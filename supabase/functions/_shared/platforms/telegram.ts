@@ -8,6 +8,14 @@ export interface TelegramPhoto {
   file_size?: number;
 }
 
+export interface TelegramVoice {
+  file_id: string;
+  file_unique_id: string;
+  duration: number;
+  mime_type?: string;
+  file_size?: number;
+}
+
 export interface TelegramMessage {
   message_id: number;
   from: {
@@ -21,6 +29,7 @@ export interface TelegramMessage {
   };
   text?: string;
   photo?: TelegramPhoto[];
+  voice?: TelegramVoice;
   caption?: string;
   date: number;
 }
@@ -62,8 +71,8 @@ export function parseTelegramUpdate(body: unknown): TelegramMessage | null {
     return null;
   }
 
-  // Accept if it has text OR photo OR caption
-  if (!msg.text && !msg.photo && !msg.caption) {
+  // Accept if it has text OR photo OR voice OR caption
+  if (!msg.text && !msg.photo && !msg.voice && !msg.caption) {
     return null;
   }
 

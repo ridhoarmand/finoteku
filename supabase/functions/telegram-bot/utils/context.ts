@@ -1,8 +1,9 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 export interface UserCategory {
   id: string;
   name: string;
   type: 'income' | 'expense';
+  parentName: string | null;
 }
 
 export interface UserWallet {
@@ -49,15 +50,32 @@ export async function getUserContext(
   userId: string,
 ): Promise<UserContext> {
   const [categoriesResult, walletsResult] = await Promise.all([
-    supabase.from('categories').select('id, name, type').eq('user_id', userId).eq(
-      'is_hidden',
-      false,
-    ),
+    supabase
+      .from('categories')
+      .select(
+        `
+      id, 
+      name, 
+      type,
+      parent:parent_id(name)
+    `,
+      )
+      .eq('user_id', userId)
+      .eq('is_hidden', false),
     supabase.from('wallets').select('id, name').eq('user_id', userId),
   ]);
 
+  // Transform to include parentName
+  // deno-lint-ignore no-explicit-any
+  const categories = (categoriesResult.data || []).map((c: any) => ({
+    id: c.id,
+    name: c.name,
+    type: c.type,
+    parentName: c.parent?.name || null,
+  })) as UserCategory[];
+
   return {
-    categories: (categoriesResult.data || []) as UserCategory[],
+    categories,
     wallets: (walletsResult.data || []) as UserWallet[],
   };
 }
@@ -254,7 +272,7 @@ export async function deletePendingTransaction(
 export async function getUserTransactionHistory(
   supabase: SupabaseClient,
   userId: string,
-  limit: number = 15,
+  limit: number = 30,
 ): Promise<TransactionExample[]> {
   const { data, error } = await supabase
     .from('transactions')
