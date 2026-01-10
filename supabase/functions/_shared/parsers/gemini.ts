@@ -165,24 +165,7 @@ HANYA RETURN JSON VALID. TANPA MARKDOWN, TANPA PENJELASAN.`;
  * Build prompt for Vision AI receipt parsing
  */
 function buildVisionPrompt(context: GeminiUserContext): string {
-  // Get current date info for accurate date offset calculation
-  const now = new Date();
-  const today = now.toLocaleDateString('id-ID', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
-  const currentDay = now.getDate();
-
   return `Kamu adalah parser struk belanja (receipt scanner).
-
-TANGGAL HARI INI: ${today}
-TAHUN SEKARANG: ${currentYear}
-BULAN SEKARANG: ${currentMonth}
-TANGGAL SEKARANG: ${currentDay}
 
 TUGAS: Analisis gambar struk ini dan ekstrak informasi berikut dalam format JSON:
 {
@@ -190,26 +173,19 @@ TUGAS: Analisis gambar struk ini dan ekstrak informasi berikut dalam format JSON
   "amount": number (total belanjaan),
   "categoryHint": "tebak kategori berdasarkan merchant/item (contoh: Makanan, Belanja Bulanan)",
   "walletHint": null,
-  "notes": "Nama Merchant - ringkasan item (maksimal 5 kata)",
-  "dateOffset": number (selisih hari dari tanggal struk ke hari ini),
-  "confidence": 0.9
+  "notes": "Nama Merchant - ringkasan item (tulis item yang relevan)",
+  "date": "YYYY-MM-DD" (tanggal transaksi di struk),
+  "dateOffset": number (fallback, hitung selisih hari jika tanggal sulit dibaca)
 }
-
-ATURAN TANGGAL SANGAT PENTING:
-1. TAHUN SEKARANG ADALAH ${currentYear}. Jika struk menunjukkan tahun berbeda (misal 2027), ABAIKAN dan anggap tahun = ${currentYear}
-2. Hitung dateOffset = tanggal_struk - tanggal_hari_ini (${currentDay}/${currentMonth}/${currentYear})
-3. Jika tanggal struk = hari ini → dateOffset = 0
-4. Jika tanggal struk = kemarin → dateOffset = -1
-5. Jika tidak ada tanggal di struk → dateOffset = 0 (asumsi hari ini)
-6. Jika bulan berbeda, hitung dengan benar (misal tanggal 9 Jan, hari ini 10 Jan → dateOffset = -1)
 
 KATEGORI YANG TERSEDIA:
 ${context.expenseCategories.join(', ') || 'Umum'}
 
 PENTING:
-1. Cari TOTAL AMOUNT yang harus dibayar
-2. Notes harus singkat: "NamaToko - Item1, Item2"
-3. HANYA RETURN JSON VALID tanpa markdown`;
+1. Cari TOTAL AMOUNT.
+2. Notes: "NamaToko - Item1, Item2...".
+3. Cari TANGGAL di struk. Format YYYY-MM-DD.
+4. HANYA RETURN JSON VALID.`;
 }
 
 /**
@@ -456,9 +432,45 @@ export async function parseImageWithGemini(
 
     const rawText = visionData.candidates[0]?.content?.parts?.[0]?.text;
     logTokenUsage(data, 'Vision');
-    console.log('Gemini Vision raw text:', rawText);
+
+    // DEBUG: Log raw OCR output for debugging
+    console.log('=== GEMINI VISION RAW OUTPUT START ===');
+    console.log(rawText);
+    console.log('=== GEMINI VISION RAW OUTPUT END ===');
+
     const jsonStr = (rawText || '').replace(/```json\n?|\n?```/g, '').trim();
-    const result = JSON.parse(jsonStr);
+    let result = JSON.parse(jsonStr);
+
+    // Handle case where AI returns an array
+    if (Array.isArray(result)) {
+      result = result[0];
+    }
+
+    // Manual Date Offset Calculation (More robust than AI)
+    let dateOffset = 0;
+    if (result.date) {
+      try {
+        const today = new Date();
+        const transDate = new Date(result.date);
+
+        // Reset time part to ensure day-only comparison
+        today.setHours(0, 0, 0, 0);
+        transDate.setHours(0, 0, 0, 0);
+
+        // Difference in milliseconds
+        const diffMs = transDate.getTime() - today.getTime();
+        // Convert to days (round to handle DST etc)
+        dateOffset = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+        console.log(`Date calc: ${result.date} -> offset ${dateOffset}`);
+      } catch (e) {
+        console.error('Date parse error:', e);
+        // Fallback to AI's offset if date parse fails
+        dateOffset = Number(result.dateOffset) || 0;
+      }
+    } else {
+      dateOffset = Number(result.dateOffset) || 0;
+    }
 
     return {
       type: 'expense',
@@ -467,7 +479,7 @@ export async function parseImageWithGemini(
       walletHint: null,
       notes: result.notes || 'Scan Struk',
       confidence: 0.9,
-      dateOffset: Number(result.dateOffset) || 0,
+      dateOffset: dateOffset,
     };
   } catch (error) {
     console.error('Gemini Vision API error:', error);
