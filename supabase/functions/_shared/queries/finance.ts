@@ -27,11 +27,17 @@ export interface MonthlySummary {
 /**
  * Get all wallet balances for a user
  */
-export async function getWalletBalances(supabase: SupabaseClient, userId: string): Promise<WalletBalance[]> {
+export async function getWalletBalances(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<WalletBalance[]> {
   console.log('getWalletBalances called with userId:', userId);
 
   // Get wallets with balance directly
-  const { data: wallets, error } = await supabase.from('wallets').select('name, balance').eq('user_id', userId);
+  const { data: wallets, error } = await supabase.from('wallets').select('name, balance').eq(
+    'user_id',
+    userId,
+  );
 
   if (error) {
     console.error('Error fetching wallets:', error);
@@ -55,7 +61,12 @@ export async function getWalletBalances(supabase: SupabaseClient, userId: string
 /**
  * Get monthly summary (income, expense, by category)
  */
-export async function getMonthlySummary(supabase: SupabaseClient, userId: string, year?: number, month?: number): Promise<MonthlySummary> {
+export async function getMonthlySummary(
+  supabase: SupabaseClient,
+  userId: string,
+  year?: number,
+  month?: number,
+): Promise<MonthlySummary> {
   const now = new Date();
   const targetYear = year || now.getFullYear();
   const targetMonth = month || now.getMonth() + 1;
@@ -64,13 +75,18 @@ export async function getMonthlySummary(supabase: SupabaseClient, userId: string
   const endDate = `${targetYear}-${String(targetMonth).padStart(2, '0')}-31`;
 
   // 1. Fetch all categories to map parent IDs to names
-  const { data: allCats } = await supabase.from('categories').select('id, name').eq('user_id', userId);
+  const { data: allCats } = await supabase.from('categories').select('id, name').eq(
+    'user_id',
+    userId,
+  );
   const catMap = new Map((allCats || []).map((c) => [c.id, c.name]));
 
   // 2. Fetch transactions with parent_id info
   // Assuming 'parent_id' column exists in 'categories' and we can fetch it via join
   // If parent_id is in categories table:
-  const { data: transactions, error } = await supabase.from('transactions').select('amount, categories!inner(name, type, parent_id)').eq('user_id', userId).gte('date', startDate).lte('date', endDate);
+  const { data: transactions, error } = await supabase.from('transactions').select(
+    'amount, categories!inner(name, type, parent_id)',
+  ).eq('user_id', userId).gte('date', startDate).lte('date', endDate);
 
   if (error || !transactions) {
     console.error('Error fetching monthly transactions:', error);
@@ -126,8 +142,12 @@ export async function getMonthlySummary(supabase: SupabaseClient, userId: string
   }
 
   const categories = Object.values(categoryTotals);
-  const expenseCategories = categories.filter((c) => c.type === 'expense').sort((a, b) => b.total - a.total);
-  const incomeCategories = categories.filter((c) => c.type === 'income').sort((a, b) => b.total - a.total);
+  const expenseCategories = categories.filter((c) => c.type === 'expense').sort((a, b) =>
+    b.total - a.total
+  );
+  const incomeCategories = categories.filter((c) => c.type === 'income').sort((a, b) =>
+    b.total - a.total
+  );
 
   return {
     totalIncome,
@@ -144,8 +164,10 @@ export async function getMonthlySummary(supabase: SupabaseClient, userId: string
 export async function getRecentTransactions(
   supabase: SupabaseClient,
   userId: string,
-  limit: number = 10
-): Promise<{ date: string; notes: string; amount: number; category: string; wallet: string; type: string }[]> {
+  limit: number = 10,
+): Promise<
+  { date: string; notes: string; amount: number; category: string; wallet: string; type: string }[]
+> {
   const { data, error } = await supabase
     .from('transactions')
     .select('date, notes, amount, categories!inner(name, type), wallets!inner(name)')
@@ -212,7 +234,9 @@ export function formatMonthlySummaryMessage(summary: MonthlySummary, monthName: 
     message += `\n<b>Top Pengeluaran:</b>\n`;
     for (let i = 0; i < Math.min(3, summary.topExpenseCategories.length); i++) {
       const cat = summary.topExpenseCategories[i];
-      const percent = summary.totalExpense > 0 ? Math.round((cat.total / summary.totalExpense) * 100) : 0;
+      const percent = summary.totalExpense > 0
+        ? Math.round((cat.total / summary.totalExpense) * 100)
+        : 0;
       message += `${i + 1}. ${cat.name}: ${formatCurrency(cat.total)} (${percent}%)\n`;
     }
   }
@@ -246,7 +270,10 @@ export interface SavingTip {
 /**
  * Get spending trend (this month vs last month)
  */
-export async function getSpendingTrend(supabase: SupabaseClient, userId: string): Promise<SpendingTrend> {
+export async function getSpendingTrend(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<SpendingTrend> {
   const now = new Date();
   const thisMonth = now.getMonth() + 1;
   const thisYear = now.getFullYear();
@@ -279,7 +306,10 @@ export async function getSpendingTrend(supabase: SupabaseClient, userId: string)
 /**
  * Get top expense categories with trend
  */
-export async function getTopCategoriesWithTrend(supabase: SupabaseClient, userId: string): Promise<CategoryTrend[]> {
+export async function getTopCategoriesWithTrend(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<CategoryTrend[]> {
   const now = new Date();
   const thisMonth = now.getMonth() + 1;
   const thisYear = now.getFullYear();
@@ -296,7 +326,9 @@ export async function getTopCategoriesWithTrend(supabase: SupabaseClient, userId
 
   return thisMonthSummary.topExpenseCategories.map((cat) => {
     const lastMonthTotal = lastMonthMap.get(cat.name) || 0;
-    const change = lastMonthTotal > 0 ? Math.round(((cat.total - lastMonthTotal) / lastMonthTotal) * 100) : 0;
+    const change = lastMonthTotal > 0
+      ? Math.round(((cat.total - lastMonthTotal) / lastMonthTotal) * 100)
+      : 0;
 
     return {
       name: cat.name,
@@ -311,7 +343,10 @@ export async function getTopCategoriesWithTrend(supabase: SupabaseClient, userId
 /**
  * Generate saving tips based on spending patterns
  */
-export async function getSavingTips(supabase: SupabaseClient, userId: string): Promise<SavingTip[]> {
+export async function getSavingTips(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<SavingTip[]> {
   const trends = await getTopCategoriesWithTrend(supabase, userId);
   const tips: SavingTip[] = [];
 
@@ -331,7 +366,8 @@ export async function getSavingTips(supabase: SupabaseClient, userId: string): P
     const topCategory = trends[0];
     tips.push({
       category: topCategory.name,
-      suggestion: `${topCategory.name} adalah pengeluaran terbesar. Pertimbangkan untuk membuat budget.`,
+      suggestion:
+        `${topCategory.name} adalah pengeluaran terbesar. Pertimbangkan untuk membuat budget.`,
       potentialSaving: Math.round(topCategory.thisMonth * 0.1),
     });
   }
@@ -394,7 +430,9 @@ export function formatTopCategoriesMessage(categories: CategoryTrend[]): string 
     const trendIcon = cat.isIncreasing ? '📈' : cat.change < -10 ? '📉' : '➡️';
     const changeText = cat.change !== 0 ? ` (${cat.change > 0 ? '+' : ''}${cat.change}%)` : '';
 
-    message += `${i + 1}. ${cat.name}: ${formatCurrency(cat.thisMonth)}${changeText} ${trendIcon}\n`;
+    message += `${i + 1}. ${cat.name}: ${
+      formatCurrency(cat.thisMonth)
+    }${changeText} ${trendIcon}\n`;
   }
 
   return message;

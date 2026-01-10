@@ -1,9 +1,30 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { sendTelegramMessage, sendTelegramMessageWithButtons, editTelegramMessage, answerCallbackQuery, formatCurrency } from '../../_shared/platforms/telegram.ts';
-import { UserContext, getPendingTransaction, updatePendingTransaction, deletePendingTransaction, createTransaction, savePendingTransaction } from '../utils/context.ts';
-import { findWalletByName, findCategoryByName, calculateTransactionDate, formatDateIndonesian, buildConfirmationMessage, findBestWallet, findBestCategory } from '../utils/helpers.ts';
+import {
+  answerCallbackQuery,
+  editTelegramMessage,
+  formatCurrency,
+  sendTelegramMessage,
+  sendTelegramMessageWithButtons,
+} from '../../_shared/platforms/telegram.ts';
+import {
+  createTransaction,
+  deletePendingTransaction,
+  getPendingTransaction,
+  savePendingTransaction,
+  updatePendingTransaction,
+  UserContext,
+} from '../utils/context.ts';
+import {
+  buildConfirmationMessage,
+  calculateTransactionDate,
+  findBestCategory,
+  findBestWallet,
+  findCategoryByName,
+  findWalletByName,
+  formatDateIndonesian,
+} from '../utils/helpers.ts';
 import { parseDateOffset, ParsedTransaction } from '../../_shared/parsers/regex.ts';
-import { parseTransactionUpdate, GeminiUserContext } from '../../_shared/parsers/gemini.ts';
+import { GeminiUserContext, parseTransactionUpdate } from '../../_shared/parsers/gemini.ts';
 
 /**
  * Handle updates to pending transactions (or confirmations via text)
@@ -14,7 +35,7 @@ export async function handlePendingTransaction(
   chatId: number,
   text: string,
   userContext: UserContext,
-  aiApiKey?: string | null
+  aiApiKey?: string | null,
 ): Promise<Response | null> {
   const pending = await getPendingTransaction(supabase, chatId);
   if (!pending) return null; // No pending transaction
@@ -23,13 +44,25 @@ export async function handlePendingTransaction(
 
   // Check for text confirmation first
   if (['ya', 'y', 'yes', 'ok', 'oke', 'simpan', 'save'].includes(textLower)) {
-    const success = await createTransaction(supabase, pending.user_id, pending.wallet_id, pending.category_id, pending.amount, pending.notes, pending.date);
+    const success = await createTransaction(
+      supabase,
+      pending.user_id,
+      pending.wallet_id,
+      pending.category_id,
+      pending.amount,
+      pending.notes,
+      pending.date,
+    );
     await deletePendingTransaction(supabase, pending.id);
 
     if (success) {
       await sendTelegramMessage(telegramToken, chatId, '✅ <b>Transaksi berhasil disimpan!</b>');
     } else {
-      await sendTelegramMessage(telegramToken, chatId, '❌ <b>Gagal menyimpan. Silakan coba lagi.</b>');
+      await sendTelegramMessage(
+        telegramToken,
+        chatId,
+        '❌ <b>Gagal menyimpan. Silakan coba lagi.</b>',
+      );
     }
     return new Response('OK', { status: 200 });
   }
@@ -41,8 +74,10 @@ export async function handlePendingTransaction(
   }
 
   // Get current display values
-  const currentWalletName = userContext.wallets.find((w) => w.id === pending.wallet_id)?.name || 'Unknown';
-  const currentCategoryName = userContext.categories.find((c) => c.id === pending.category_id)?.name || 'Unknown';
+  const currentWalletName = userContext.wallets.find((w) => w.id === pending.wallet_id)?.name ||
+    'Unknown';
+  const currentCategoryName =
+    userContext.categories.find((c) => c.id === pending.category_id)?.name || 'Unknown';
 
   // Check update logic - simple patterns first
   let updated = false;
@@ -54,7 +89,8 @@ export async function handlePendingTransaction(
   let dateOffset = 0;
 
   // Check for wallet update: "pakai cash", "pakai bca", etc.
-  const walletMatch = text.match(/^pakai\s+(.+)$/i) || text.match(/^pake\s+(.+)$/i) || text.match(/^wallet\s+(.+)$/i);
+  const walletMatch = text.match(/^pakai\s+(.+)$/i) || text.match(/^pake\s+(.+)$/i) ||
+    text.match(/^wallet\s+(.+)$/i);
   if (walletMatch) {
     const walletName = walletMatch[1].trim();
     const foundWallet = findWalletByName(walletName, userContext.wallets);
@@ -86,8 +122,12 @@ export async function handlePendingTransaction(
     console.log('Using AI to parse update request:', text);
 
     const geminiContext: GeminiUserContext = {
-      incomeCategories: userContext.categories.filter((c) => c.type === 'income').map((c) => c.name),
-      expenseCategories: userContext.categories.filter((c) => c.type === 'expense').map((c) => c.name),
+      incomeCategories: userContext.categories.filter((c) => c.type === 'income').map((c) =>
+        c.name
+      ),
+      expenseCategories: userContext.categories.filter((c) => c.type === 'expense').map((c) =>
+        c.name
+      ),
       walletNames: userContext.wallets.map((w) => w.name),
     };
 
@@ -101,7 +141,7 @@ export async function handlePendingTransaction(
         wallet: currentWalletName,
         date: pending.date,
       },
-      geminiContext
+      geminiContext,
     );
 
     if (parsedUpdate) {
@@ -119,7 +159,11 @@ export async function handlePendingTransaction(
 
       // Apply category update
       if (parsedUpdate.categoryHint) {
-        const foundCategory = findCategoryByName(parsedUpdate.categoryHint, userContext.categories, pending.type);
+        const foundCategory = findCategoryByName(
+          parsedUpdate.categoryHint,
+          userContext.categories,
+          pending.type,
+        );
         if (foundCategory) {
           newCategoryId = foundCategory;
           updated = true;
@@ -155,10 +199,18 @@ export async function handlePendingTransaction(
 
     // Get updated display names
     const walletName = userContext.wallets.find((w) => w.id === newWalletId)?.name || 'Unknown';
-    const categoryName = userContext.categories.find((c) => c.id === newCategoryId)?.name || 'Unknown';
+    const categoryName = userContext.categories.find((c) => c.id === newCategoryId)?.name ||
+      'Unknown';
     const dateDisplay = formatDateIndonesian(newDate, dateOffset);
 
-    const confirmMessage = buildConfirmationMessage(pending.type, newAmount, categoryName, walletName, dateDisplay, newNotes);
+    const confirmMessage = buildConfirmationMessage(
+      pending.type,
+      newAmount,
+      categoryName,
+      walletName,
+      dateDisplay,
+      newNotes,
+    );
 
     await sendTelegramMessageWithButtons(telegramToken, chatId, confirmMessage, [
       [
@@ -172,7 +224,8 @@ export async function handlePendingTransaction(
 
   // Fallback: If pending exists but unknown command, show help
   const walletName = userContext.wallets.find((w) => w.id === pending.wallet_id)?.name || 'Unknown';
-  const categoryName = userContext.categories.find((c) => c.id === pending.category_id)?.name || 'Unknown';
+  const categoryName = userContext.categories.find((c) => c.id === pending.category_id)?.name ||
+    'Unknown';
   const dateDisplay = formatDateIndonesian(pending.date, 0);
 
   await sendTelegramMessage(
@@ -193,7 +246,7 @@ export async function handlePendingTransaction(
 
 <b>Untuk konfirmasi:</b>
 • <code>ya</code> / <code>ok</code> - simpan
-• <code>tidak</code> / <code>batal</code> - batalkan`
+• <code>tidak</code> / <code>batal</code> - batalkan`,
   );
   return new Response('OK', { status: 200 });
 }
@@ -201,7 +254,14 @@ export async function handlePendingTransaction(
 /**
  * Handle new parsed transaction processing
  */
-export async function handleNewTransaction(supabase: SupabaseClient, telegramToken: string, chatId: number, userId: string, userContext: UserContext, parsed: ParsedTransaction): Promise<Response> {
+export async function handleNewTransaction(
+  supabase: SupabaseClient,
+  telegramToken: string,
+  chatId: number,
+  userId: string,
+  userContext: UserContext,
+  parsed: ParsedTransaction,
+): Promise<Response> {
   // Find matching wallet and category
   const walletId = findBestWallet(parsed.walletHint, userContext.wallets);
   const categoryId = findBestCategory(parsed.categoryHint, userContext.categories, parsed.type);
@@ -212,7 +272,7 @@ export async function handleNewTransaction(supabase: SupabaseClient, telegramTok
       chatId,
       `❌ <b>Wallet tidak ditemukan</b>
 
-Silakan buat wallet terlebih dahulu di aplikasi Finoteku.`
+Silakan buat wallet terlebih dahulu di aplikasi Finoteku.`,
     );
     return new Response('No wallet', { status: 200 });
   }
@@ -223,7 +283,9 @@ Silakan buat wallet terlebih dahulu di aplikasi Finoteku.`
       chatId,
       `❌ <b>Kategori tidak ditemukan</b>
 
-Silakan buat kategori ${parsed.type === 'income' ? 'pemasukan' : 'pengeluaran'} terlebih dahulu di aplikasi Finoteku.`
+Silakan buat kategori ${
+        parsed.type === 'income' ? 'pemasukan' : 'pengeluaran'
+      } terlebih dahulu di aplikasi Finoteku.`,
     );
     return new Response('No category', { status: 200 });
   }
@@ -233,19 +295,41 @@ Silakan buat kategori ${parsed.type === 'income' ? 'pemasukan' : 'pengeluaran'} 
 
   // Get display names
   const walletName = userContext.wallets.find((w) => w.id === walletId)?.name || 'Unknown';
-  const categoryName = userContext.categories.find((c) => c.id === categoryId)?.name || parsed.categoryHint;
+  const categoryName = userContext.categories.find((c) => c.id === categoryId)?.name ||
+    parsed.categoryHint;
   const dateDisplay = formatDateIndonesian(transactionDate, parsed.dateOffset);
 
   // Save pending transaction
-  const pendingId = await savePendingTransaction(supabase, chatId, userId, walletId, categoryId, parsed.amount, parsed.notes, transactionDate, parsed.type);
+  const pendingId = await savePendingTransaction(
+    supabase,
+    chatId,
+    userId,
+    walletId,
+    categoryId,
+    parsed.amount,
+    parsed.notes,
+    transactionDate,
+    parsed.type,
+  );
 
   if (!pendingId) {
-    await sendTelegramMessage(telegramToken, chatId, '❌ <b>Gagal menyimpan. Silakan coba lagi.</b>');
+    await sendTelegramMessage(
+      telegramToken,
+      chatId,
+      '❌ <b>Gagal menyimpan. Silakan coba lagi.</b>',
+    );
     return new Response('Failed to save pending', { status: 200 });
   }
 
   // Send confirmation with inline buttons
-  const confirmMessage = buildConfirmationMessage(parsed.type, parsed.amount, categoryName, walletName, dateDisplay, parsed.notes);
+  const confirmMessage = buildConfirmationMessage(
+    parsed.type,
+    parsed.amount,
+    categoryName,
+    walletName,
+    dateDisplay,
+    parsed.notes,
+  );
 
   await sendTelegramMessageWithButtons(telegramToken, chatId, confirmMessage, [
     [
@@ -270,30 +354,62 @@ interface CallbackQuery {
 /**
  * Handle callback queries (inline buttons)
  */
-export async function handleTransactionCallback(supabase: SupabaseClient, telegramToken: string, callbackQuery: CallbackQuery): Promise<Response> {
+export async function handleTransactionCallback(
+  supabase: SupabaseClient,
+  telegramToken: string,
+  callbackQuery: CallbackQuery,
+): Promise<Response> {
   const { data, message } = callbackQuery;
   const chatId = message.chat.id;
 
   if (data === 'confirm_yes') {
     const pending = await getPendingTransaction(supabase, chatId);
     if (pending) {
-      const success = await createTransaction(supabase, pending.user_id, pending.wallet_id, pending.category_id, pending.amount, pending.notes, pending.date);
+      const success = await createTransaction(
+        supabase,
+        pending.user_id,
+        pending.wallet_id,
+        pending.category_id,
+        pending.amount,
+        pending.notes,
+        pending.date,
+      );
       await deletePendingTransaction(supabase, pending.id);
 
       if (success) {
-        await editTelegramMessage(telegramToken, chatId, message.message_id, `✅ <b>Transaksi berhasil disimpan!</b>\n\n${message.text.split('\n').slice(2, 6).join('\n')}`);
+        await editTelegramMessage(
+          telegramToken,
+          chatId,
+          message.message_id,
+          `✅ <b>Transaksi berhasil disimpan!</b>\n\n${
+            message.text.split('\n').slice(2, 6).join('\n')
+          }`,
+        );
       } else {
-        await sendTelegramMessage(telegramToken, chatId, '❌ <b>Gagal menyimpan. Silakan coba lagi.</b>');
+        await sendTelegramMessage(
+          telegramToken,
+          chatId,
+          '❌ <b>Gagal menyimpan. Silakan coba lagi.</b>',
+        );
       }
     } else {
-      await sendTelegramMessage(telegramToken, chatId, '⚠️ <b>Transaksi sudah kadaluarsa atau tidak ditemukan.</b>');
+      await sendTelegramMessage(
+        telegramToken,
+        chatId,
+        '⚠️ <b>Transaksi sudah kadaluarsa atau tidak ditemukan.</b>',
+      );
     }
   } else if (data === 'confirm_no') {
     const pending = await getPendingTransaction(supabase, chatId);
     if (pending) {
       await deletePendingTransaction(supabase, pending.id);
     }
-    await editTelegramMessage(telegramToken, chatId, message.message_id, '❌ <b>Transaksi dibatalkan.</b>');
+    await editTelegramMessage(
+      telegramToken,
+      chatId,
+      message.message_id,
+      '❌ <b>Transaksi dibatalkan.</b>',
+    );
   }
 
   // Always answer callback to stop loading spinner

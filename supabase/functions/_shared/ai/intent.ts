@@ -1,16 +1,33 @@
 // Intent detection for smart bot// Classifies user message as: transaction input, query (balance/summary), or chat
 
-export type BotIntent = 'transaction' | 'query_balance' | 'query_summary' | 'query_transactions' | 'query_trend' | 'query_tips' | 'help' | 'unknown';
+export type BotIntent =
+  | 'transaction'
+  | 'query_balance'
+  | 'query_summary'
+  | 'query_transactions'
+  | 'query_trend'
+  | 'query_tips'
+  | 'help'
+  | 'unknown';
 
 interface IntentResult {
   intent: BotIntent;
   confidence: number;
+  // deno-lint-ignore no-explicit-any
   params?: Record<string, any>;
 }
 
 // Keywords for different intents
 const BALANCE_KEYWORDS = ['saldo', 'balance', 'uang', 'berapa', 'dompet', 'wallet', 'rekening'];
-const SUMMARY_KEYWORDS = ['ringkasan', 'summary', 'laporan', 'bulan', 'bulanan', 'total', 'statistik'];
+const SUMMARY_KEYWORDS = [
+  'ringkasan',
+  'summary',
+  'laporan',
+  'bulan',
+  'bulanan',
+  'total',
+  'statistik',
+];
 const TRANSACTIONS_KEYWORDS = ['transaksi', 'riwayat', 'history', 'terakhir', 'terbaru', 'list'];
 const TREND_KEYWORDS = ['tren', 'trend', 'naik', 'turun', 'perbandingan', 'bandingkan', 'banding'];
 const TIPS_KEYWORDS = ['hemat', 'saran', 'tips', 'rekomendasi', 'boros', 'kurangi', 'saving'];
@@ -24,7 +41,17 @@ const TRANSACTION_INDICATORS = [
 ];
 
 // Question indicators
-const QUESTION_INDICATORS = ['?', 'berapa', 'gimana', 'bagaimana', 'apa', 'mana', 'kapan', 'kenapa', 'mengapa'];
+const QUESTION_INDICATORS = [
+  '?',
+  'berapa',
+  'gimana',
+  'bagaimana',
+  'apa',
+  'mana',
+  'kapan',
+  'kenapa',
+  'mengapa',
+];
 
 /**
  * Detect intent from user message (simple keyword-based)

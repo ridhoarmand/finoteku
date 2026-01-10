@@ -1,6 +1,6 @@
-import { UserContext, TransactionExample, detectNoteStyle } from './context.ts';
-import { parseTransactionWithContext, ParsedTransaction } from '../../_shared/parsers/regex.ts';
-import { parseWithGemini, GeminiUserContext } from '../../_shared/parsers/gemini.ts';
+import { detectNoteStyle, TransactionExample, UserContext } from './context.ts';
+import { ParsedTransaction, parseTransactionWithContext } from '../../_shared/parsers/regex.ts';
+import { GeminiUserContext, parseWithGemini } from '../../_shared/parsers/gemini.ts';
 import { parseWithOpenAI } from '../../_shared/parsers/openai.ts';
 
 /**
@@ -14,10 +14,14 @@ export async function parseMessage(
   serverGeminiKey: string | undefined,
   serverOpenAIKey: string | undefined,
   userContext: UserContext,
-  transactionHistory: TransactionExample[] = []
+  transactionHistory: TransactionExample[] = [],
 ): Promise<ParsedTransaction | null> {
-  const incomeCategories = userContext.categories.filter((c) => c.type === 'income').map((c) => c.name);
-  const expenseCategories = userContext.categories.filter((c) => c.type === 'expense').map((c) => c.name);
+  const incomeCategories = userContext.categories.filter((c) => c.type === 'income').map((c) =>
+    c.name
+  );
+  const expenseCategories = userContext.categories.filter((c) => c.type === 'expense').map((c) =>
+    c.name
+  );
   const walletNames = userContext.wallets.map((w) => w.name);
 
   const context: GeminiUserContext = { incomeCategories, expenseCategories, walletNames };
@@ -28,11 +32,23 @@ export async function parseMessage(
   // AI mode with few-shot learning
   if (parserMode === 'server_key') {
     if (serverGeminiKey) {
-      const result = await parseWithGemini(text, serverGeminiKey, context, transactionHistory, noteStyle);
+      const result = await parseWithGemini(
+        text,
+        serverGeminiKey,
+        context,
+        transactionHistory,
+        noteStyle,
+      );
       if (result) return result;
     }
     if (serverOpenAIKey) {
-      const result = await parseWithOpenAI(text, serverOpenAIKey, context, transactionHistory, noteStyle);
+      const result = await parseWithOpenAI(
+        text,
+        serverOpenAIKey,
+        context,
+        transactionHistory,
+        noteStyle,
+      );
       if (result) return result;
     }
     // Fallback to regex if server keys fail

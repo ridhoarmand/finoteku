@@ -1,6 +1,6 @@
-import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { sendTelegramMessage } from '../../_shared/platforms/telegram.ts';
-import { linkTelegramAccount, getUserByTelegramId } from '../utils/context.ts';
+import { getUserByTelegramId, linkTelegramAccount } from '../utils/context.ts';
 
 function getStartMessage(): string {
   return `👋 <b>Selamat datang di Finoteku Bot!</b>
@@ -64,7 +64,14 @@ Mode AI: bisa diajak ngobrol & tanya jawab
 Ubah di App Finoteku → Settings → Chat Bot`;
 }
 
-export async function handleCommand(supabase: SupabaseClient, telegramToken: string, chatId: number, originalText: string, telegramId: number, telegramUsername?: string): Promise<Response | null> {
+export async function handleCommand(
+  supabase: SupabaseClient,
+  telegramToken: string,
+  chatId: number,
+  originalText: string,
+  telegramId: number,
+  telegramUsername?: string,
+): Promise<Response | null> {
   // Handle /start with linking payload
   if (originalText.startsWith('/start')) {
     const parts = originalText.split(' ');
@@ -104,7 +111,7 @@ ${modeLabel}
 <b>Input:</b> <code>makan 50k cash</code>
 <b>Tanya:</b> <code>berapa saldo?</code> (AI mode)
 
-Ketik /help untuk panduan lengkap.`
+Ketik /help untuk panduan lengkap.`,
       );
     } else {
       await sendTelegramMessage(telegramToken, chatId, getStartMessage());

@@ -9,7 +9,8 @@ export interface ParsedTransaction {
   dateOffset: number;
 }
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const GEMINI_API_URL =
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 export interface GeminiUserContext {
   incomeCategories: string[];
@@ -31,7 +32,11 @@ interface NoteStyle {
   isDetailed: boolean;
 }
 
-function buildSystemPrompt(context: GeminiUserContext, examples: TransactionExample[] = [], noteStyle?: NoteStyle): string {
+function buildSystemPrompt(
+  context: GeminiUserContext,
+  examples: TransactionExample[] = [],
+  noteStyle?: NoteStyle,
+): string {
   let prompt = `Kamu adalah parser transaksi keuangan PERSONAL untuk user ini.
 
 TUGAS: Parse pesan user menjadi format JSON:
@@ -49,11 +54,15 @@ TUGAS: Parse pesan user menjadi format JSON:
     prompt += `
 
 PELAJARI PATTERN USER INI dari transaksi sebelumnya:
-${examples
-  .filter((e) => e.notes && e.notes.trim().length > 0)
-  .slice(0, 12)
-  .map((e) => `• "${e.notes}" → ${e.category}, ${e.wallet}, Rp${e.amount.toLocaleString('id-ID')}`)
-  .join('\n')}
+${
+      examples
+        .filter((e) => e.notes && e.notes.trim().length > 0)
+        .slice(0, 12)
+        .map((e) =>
+          `• "${e.notes}" → ${e.category}, ${e.wallet}, Rp${e.amount.toLocaleString('id-ID')}`
+        )
+        .join('\n')
+    }
 
 PENTING: Ikuti pattern user ini! Jika user sering pakai kata tertentu untuk kategori/wallet tertentu, gunakan pattern yang sama.`;
   }
@@ -146,7 +155,16 @@ export interface ParsedTransactionUpdate {
 /**
  * Build prompt for parsing transaction update requests
  */
-function buildUpdatePrompt(currentTransaction: { amount: number; notes: string; category: string; wallet: string; date: string }, context: GeminiUserContext): string {
+function buildUpdatePrompt(
+  currentTransaction: {
+    amount: number;
+    notes: string;
+    category: string;
+    wallet: string;
+    date: string;
+  },
+  context: GeminiUserContext,
+): string {
   return `Kamu adalah parser untuk UPDATE transaksi keuangan.
 
 TRANSAKSI SAAT INI:
@@ -170,8 +188,12 @@ CONTOH INPUT & OUTPUT:
 - "nominal jadi 50k" → {"amount": 50000}
 - "ganti jadi 100rb" → {"amount": 100000}
 - "catatan ganti Makan Siang" → {"notes": "Makan Siang"}
-- "WLS ganti Es Krim Walls" → {"notes": "${currentTransaction.notes.replace(/WLS/gi, 'Es Krim Walls')}"}
-- "pengeluaran jadi 41k dan WLS ganti Es Krim Walls" → {"amount": 41000, "notes": "${currentTransaction.notes.replace(/WLS/gi, 'Es Krim Walls')}"}
+- "WLS ganti Es Krim Walls" → {"notes": "${
+    currentTransaction.notes.replace(/WLS/gi, 'Es Krim Walls')
+  }"}
+- "pengeluaran jadi 41k dan WLS ganti Es Krim Walls" → {"amount": 41000, "notes": "${
+    currentTransaction.notes.replace(/WLS/gi, 'Es Krim Walls')
+  }"}
 - "pakai BCA" → {"walletHint": "BCA"}
 - "kategori Makanan" → {"categoryHint": "Makanan"}
 - "kemarin" → {"dateOffset": -1}
@@ -181,7 +203,9 @@ ATURAN:
 2. NOTES: Jika user minta ganti sebagian text, modifikasi notes yang ada
 3. Hanya return field yang berubah, sisanya null atau tidak disertakan
 
-KATEGORI TERSEDIA: ${[...context.incomeCategories, ...context.expenseCategories].join(', ') || 'Umum'}
+KATEGORI TERSEDIA: ${
+    [...context.incomeCategories, ...context.expenseCategories].join(', ') || 'Umum'
+  }
 WALLET TERSEDIA: ${context.walletNames.join(', ') || 'Cash'}
 
 HANYA RETURN JSON VALID.`;
@@ -193,8 +217,14 @@ HANYA RETURN JSON VALID.`;
 export async function parseTransactionUpdate(
   text: string,
   apiKey: string,
-  currentTransaction: { amount: number; notes: string; category: string; wallet: string; date: string },
-  context: GeminiUserContext
+  currentTransaction: {
+    amount: number;
+    notes: string;
+    category: string;
+    wallet: string;
+    date: string;
+  },
+  context: GeminiUserContext,
 ): Promise<ParsedTransactionUpdate | null> {
   const prompt = buildUpdatePrompt(currentTransaction, context);
 
@@ -232,7 +262,9 @@ export async function parseTransactionUpdate(
       notes: result.notes || undefined,
       categoryHint: result.categoryHint || undefined,
       walletHint: result.walletHint || undefined,
-      dateOffset: result.dateOffset !== null && result.dateOffset !== undefined ? Number(result.dateOffset) : undefined,
+      dateOffset: result.dateOffset !== null && result.dateOffset !== undefined
+        ? Number(result.dateOffset)
+        : undefined,
     };
   } catch (error) {
     console.error('Gemini update parse error:', error);
@@ -240,7 +272,13 @@ export async function parseTransactionUpdate(
   }
 }
 
-export async function parseWithGemini(text: string, apiKey: string, context: GeminiUserContext, examples: TransactionExample[] = [], noteStyle?: NoteStyle): Promise<ParsedTransaction | null> {
+export async function parseWithGemini(
+  text: string,
+  apiKey: string,
+  context: GeminiUserContext,
+  examples: TransactionExample[] = [],
+  noteStyle?: NoteStyle,
+): Promise<ParsedTransaction | null> {
   const systemPrompt = buildSystemPrompt(context, examples, noteStyle);
 
   try {
@@ -285,7 +323,11 @@ export async function parseWithGemini(text: string, apiKey: string, context: Gem
 /**
  * Parse image (receipt) with Gemini Vision
  */
-export async function parseImageWithGemini(base64Image: string, apiKey: string, context: GeminiUserContext): Promise<ParsedTransaction | null> {
+export async function parseImageWithGemini(
+  base64Image: string,
+  apiKey: string,
+  context: GeminiUserContext,
+): Promise<ParsedTransaction | null> {
   const prompt = buildVisionPrompt(context);
   console.log('parseImageWithGemini start, img length:', base64Image.length);
 
@@ -329,7 +371,10 @@ export async function parseImageWithGemini(base64Image: string, apiKey: string, 
       return null;
     }
 
-    const visionData = data as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>; error?: unknown };
+    const visionData = data as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+      error?: unknown;
+    };
 
     if (!visionData.candidates || visionData.candidates.length === 0) {
       console.error('No candidates from Gemini Vision', visionData);

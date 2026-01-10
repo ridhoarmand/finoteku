@@ -16,7 +16,24 @@ interface UserContext {
 }
 
 // Keywords for determining income vs expense
-const INCOME_KEYWORDS = ['gaji', 'gajian', 'salary', 'bonus', 'thr', 'dapat', 'terima', 'received', 'transfer masuk', 'tf masuk', 'penjualan', 'jual', 'cashback', 'refund', 'dividen', 'bunga'];
+const INCOME_KEYWORDS = [
+  'gaji',
+  'gajian',
+  'salary',
+  'bonus',
+  'thr',
+  'dapat',
+  'terima',
+  'received',
+  'transfer masuk',
+  'tf masuk',
+  'penjualan',
+  'jual',
+  'cashback',
+  'refund',
+  'dividen',
+  'bunga',
+];
 
 const EXPENSE_KEYWORDS = [
   'beli',
@@ -58,7 +75,25 @@ const DEFAULT_CATEGORY_HINTS: Record<string, string[]> = {
 };
 
 // Common wallet/bank names
-const WALLET_KEYWORDS = ['bca', 'mandiri', 'bni', 'bri', 'cimb', 'permata', 'danamon', 'mega', 'btpn', 'jenius', 'dana', 'ovo', 'gopay', 'shopeepay', 'linkaja', 'cash', 'tunai'];
+const WALLET_KEYWORDS = [
+  'bca',
+  'mandiri',
+  'bni',
+  'bri',
+  'cimb',
+  'permata',
+  'danamon',
+  'mega',
+  'btpn',
+  'jenius',
+  'dana',
+  'ovo',
+  'gopay',
+  'shopeepay',
+  'linkaja',
+  'cash',
+  'tunai',
+];
 
 // Date keywords for relative date parsing
 const DATE_KEYWORDS: Record<string, number> = {
@@ -112,7 +147,9 @@ function matchWord(text: string, word: string): number {
 /**
  * Parse nominal from Indonesian format
  */
-export function parseNominal(text: string): { amount: number; position: number; length: number } | null {
+export function parseNominal(
+  text: string,
+): { amount: number; position: number; length: number } | null {
   const patterns = [
     { regex: /(\d+(?:[.,]\d+)?)\s*(jt|juta)/gi, multiplier: 1000000 },
     { regex: /(\d+(?:[.,]\d+)?)\s*(k|rb|ribu)/gi, multiplier: 1000 },
@@ -138,7 +175,10 @@ export function parseNominal(text: string): { amount: number; position: number; 
 /**
  * Find wallet in text using word boundary matching
  */
-function findWallet(text: string, userWallets: string[] = []): { name: string; position: number } | null {
+function findWallet(
+  text: string,
+  userWallets: string[] = [],
+): { name: string; position: number } | null {
   // Check user's wallets first (exact word match)
   for (const wallet of userWallets) {
     const pos = matchWord(text, wallet);
@@ -161,7 +201,11 @@ function findWallet(text: string, userWallets: string[] = []): { name: string; p
 /**
  * Find category in text using word boundary matching
  */
-function findCategory(text: string, userCategories: string[] = [], _isIncome: boolean = false): { name: string; position: number } | null {
+function findCategory(
+  text: string,
+  userCategories: string[] = [],
+  _isIncome: boolean = false,
+): { name: string; position: number } | null {
   // Check user's categories first (exact word match)
   for (const category of userCategories) {
     const pos = matchWord(text, category);
@@ -206,7 +250,12 @@ function determineTransactionType(text: string): 'income' | 'expense' {
 /**
  * Extract notes from text
  */
-function extractNotes(text: string, nominal: { position: number; length: number } | null, wallet: { position: number } | null, category: { position: number } | null): string {
+function extractNotes(
+  text: string,
+  nominal: { position: number; length: number } | null,
+  wallet: { position: number } | null,
+  category: { position: number } | null,
+): string {
   // Rule 1: Check for comma separator
   const commaIndex = text.indexOf(',');
   if (commaIndex !== -1) {
@@ -258,7 +307,8 @@ export function parseTransaction(text: string): ParsedTransaction | null {
   const walletResult = findWallet(text);
 
   const notes = extractNotes(text, nominalResult, walletResult, categoryResult);
-  const categoryHint = categoryResult?.name || (type === 'income' ? 'Pemasukan Lainnya' : 'Pengeluaran Lainnya');
+  const categoryHint = categoryResult?.name ||
+    (type === 'income' ? 'Pemasukan Lainnya' : 'Pengeluaran Lainnya');
 
   let confidence = 0.5;
   if (text.startsWith('+') || text.startsWith('-')) confidence += 0.2;
@@ -280,7 +330,10 @@ export function parseTransaction(text: string): ParsedTransaction | null {
 /**
  * Parse with user context for smarter matching
  */
-export function parseTransactionWithContext(text: string, context: UserContext): ParsedTransaction | null {
+export function parseTransactionWithContext(
+  text: string,
+  context: UserContext,
+): ParsedTransaction | null {
   const nominalResult = parseNominal(text);
   if (!nominalResult || nominalResult.amount <= 0) {
     return null;
@@ -293,7 +346,8 @@ export function parseTransactionWithContext(text: string, context: UserContext):
   const walletResult = findWallet(text, context.walletNames);
 
   const notes = extractNotes(text, nominalResult, walletResult, categoryResult);
-  const categoryHint = categoryResult?.name || (type === 'income' ? 'Pemasukan Lainnya' : 'Pengeluaran Lainnya');
+  const categoryHint = categoryResult?.name ||
+    (type === 'income' ? 'Pemasukan Lainnya' : 'Pengeluaran Lainnya');
 
   let confidence = 0.6;
   if (text.startsWith('+') || text.startsWith('-')) confidence += 0.15;

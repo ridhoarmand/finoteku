@@ -4,14 +4,20 @@ import { UserCategory, UserWallet } from './context.ts';
 /**
  * Find best matching category from user's categories
  */
-export function findBestCategory(hint: string, categories: UserCategory[], type: 'income' | 'expense'): string | null {
+export function findBestCategory(
+  hint: string,
+  categories: UserCategory[],
+  type: 'income' | 'expense',
+): string | null {
   const lowerHint = hint.toLowerCase();
   const typeCategories = categories.filter((c) => c.type === type);
 
   const exact = typeCategories.find((c) => c.name.toLowerCase() === lowerHint);
   if (exact) return exact.id;
 
-  const contains = typeCategories.find((c) => c.name.toLowerCase().includes(lowerHint) || lowerHint.includes(c.name.toLowerCase()));
+  const contains = typeCategories.find((c) =>
+    c.name.toLowerCase().includes(lowerHint) || lowerHint.includes(c.name.toLowerCase())
+  );
   if (contains) return contains.id;
 
   return typeCategories[0]?.id || null;
@@ -29,7 +35,9 @@ export function findBestWallet(hint: string | null, wallets: UserWallet[]): stri
     const exact = wallets.find((w) => w.name.toLowerCase() === lowerHint);
     if (exact) return exact.id;
 
-    const contains = wallets.find((w) => w.name.toLowerCase().includes(lowerHint) || lowerHint.includes(w.name.toLowerCase()));
+    const contains = wallets.find((w) =>
+      w.name.toLowerCase().includes(lowerHint) || lowerHint.includes(w.name.toLowerCase())
+    );
     if (contains) return contains.id;
   }
 
@@ -52,7 +60,9 @@ export function findWalletByName(name: string, wallets: UserWallet[]): string | 
   const exact = wallets.find((w) => w.name.toLowerCase() === lowerName);
   if (exact) return exact.id;
 
-  const contains = wallets.find((w) => w.name.toLowerCase().includes(lowerName) || lowerName.includes(w.name.toLowerCase()));
+  const contains = wallets.find((w) =>
+    w.name.toLowerCase().includes(lowerName) || lowerName.includes(w.name.toLowerCase())
+  );
   if (contains) return contains.id;
 
   return null;
@@ -61,14 +71,20 @@ export function findWalletByName(name: string, wallets: UserWallet[]): string | 
 /**
  * Find category by name for update flow
  */
-export function findCategoryByName(name: string, categories: UserCategory[], type: 'income' | 'expense'): string | null {
+export function findCategoryByName(
+  name: string,
+  categories: UserCategory[],
+  type: 'income' | 'expense',
+): string | null {
   const lowerName = name.toLowerCase();
   const typeCategories = categories.filter((c) => c.type === type);
 
   const exact = typeCategories.find((c) => c.name.toLowerCase() === lowerName);
   if (exact) return exact.id;
 
-  const contains = typeCategories.find((c) => c.name.toLowerCase().includes(lowerName) || lowerName.includes(c.name.toLowerCase()));
+  const contains = typeCategories.find((c) =>
+    c.name.toLowerCase().includes(lowerName) || lowerName.includes(c.name.toLowerCase())
+  );
   if (contains) return contains.id;
 
   return null;
@@ -104,7 +120,14 @@ export function formatDateIndonesian(dateStr: string, dateOffset: number): strin
 /**
  * Build confirmation message with transaction details
  */
-export function buildConfirmationMessage(type: 'income' | 'expense', amount: number, categoryName: string, walletName: string, dateDisplay: string, notes: string): string {
+export function buildConfirmationMessage(
+  type: 'income' | 'expense',
+  amount: number,
+  categoryName: string,
+  walletName: string,
+  dateDisplay: string,
+  notes: string,
+): string {
   const typeEmoji = type === 'income' ? '💰' : '💸';
   const typeText = type === 'income' ? 'Pemasukan' : 'Pengeluaran';
 

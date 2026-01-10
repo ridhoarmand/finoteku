@@ -15,7 +15,11 @@ export interface TransactionExample {
  * Fetch user's recent transactions for AI context (few-shot learning)
  * This helps AI learn user's patterns: keywords, categories, wallets, note style
  */
-export async function getUserTransactionHistory(supabase: SupabaseClient, userId: string, limit: number = 15): Promise<TransactionExample[]> {
+export async function getUserTransactionHistory(
+  supabase: SupabaseClient,
+  userId: string,
+  limit: number = 15,
+): Promise<TransactionExample[]> {
   const { data, error } = await supabase
     .from('transactions')
     .select(
@@ -24,7 +28,7 @@ export async function getUserTransactionHistory(supabase: SupabaseClient, userId
       amount,
       categories!inner(name, type),
       wallets!inner(name)
-    `
+    `,
     )
     .eq('user_id', userId)
     .order('date', { ascending: false })

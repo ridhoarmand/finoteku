@@ -29,7 +29,11 @@ interface NoteStyle {
   isDetailed: boolean;
 }
 
-function buildSystemPrompt(context: UserContext, examples: TransactionExample[] = [], noteStyle?: NoteStyle): string {
+function buildSystemPrompt(
+  context: UserContext,
+  examples: TransactionExample[] = [],
+  noteStyle?: NoteStyle,
+): string {
   let prompt = `Kamu adalah parser transaksi keuangan PERSONAL untuk user ini.
 
 TUGAS: Parse pesan user menjadi format JSON:
@@ -47,11 +51,15 @@ TUGAS: Parse pesan user menjadi format JSON:
     prompt += `
 
 PATTERN USER dari transaksi sebelumnya:
-${examples
-  .filter((e) => e.notes && e.notes.trim().length > 0)
-  .slice(0, 12)
-  .map((e) => `• "${e.notes}" → ${e.category}, ${e.wallet}, Rp${e.amount.toLocaleString('id-ID')}`)
-  .join('\n')}
+${
+      examples
+        .filter((e) => e.notes && e.notes.trim().length > 0)
+        .slice(0, 12)
+        .map((e) =>
+          `• "${e.notes}" → ${e.category}, ${e.wallet}, Rp${e.amount.toLocaleString('id-ID')}`
+        )
+        .join('\n')
+    }
 
 PENTING: Ikuti pattern user ini!`;
   }
@@ -100,7 +108,7 @@ export async function parseWithOpenAI(
   apiKey: string,
   context: UserContext = { incomeCategories: [], expenseCategories: [], walletNames: [] },
   examples: TransactionExample[] = [],
-  noteStyle?: NoteStyle
+  noteStyle?: NoteStyle,
 ): Promise<ParsedTransaction | null> {
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {

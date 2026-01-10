@@ -46,7 +46,6 @@ finoteku-bot/
   - Google Gemini API Key
   - OpenAI API Key (optional)
 
-
 ## Setup Lokal
 
 1. **Clone repository**
@@ -134,8 +133,8 @@ Kirim pesan ke bot Telegram Anda:
 
 ## Environment Variables
 
-| Variable                    | Description           | Required   |
-| --------------------------- | --------------------- | ---------- |
+| Variable                    | Description           | Required    |
+| --------------------------- | --------------------- | ----------- |
 | `TELEGRAM_BOT_TOKEN`        | Token dari BotFather  | ✅          |
 | `SUPABASE_URL`              | URL Supabase project  | ✅          |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role key      | ✅          |
@@ -147,11 +146,13 @@ Kirim pesan ke bot Telegram Anda:
 ### Function tidak menerima updates
 
 1. Cek webhook status:
+
 ```bash
 curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
 ```
 
 2. Cek logs:
+
 ```bash
 supabase functions logs telegram-bot
 ```
@@ -159,6 +160,7 @@ supabase functions logs telegram-bot
 ### Error AI parsing
 
 Pastikan API keys sudah diset dengan benar:
+
 ```bash
 supabase secrets list
 ```
@@ -178,6 +180,7 @@ MIT License - lihat file LICENSE untuk detail
 ## Author
 
 **Ridho Armand**
+
 - GitHub: [@ridhoarmand](https://github.com/ridhoarmand)
 
 ## Acknowledgments

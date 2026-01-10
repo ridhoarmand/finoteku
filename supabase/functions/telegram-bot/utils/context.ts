@@ -1,5 +1,4 @@
-import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
+import type { SupabaseClient } from '@supabase/supabase-js';
 export interface UserCategory {
   id: string;
   name: string;
@@ -45,9 +44,15 @@ export interface NoteStyle {
 /**
  * Fetch user's categories and wallets for context
  */
-export async function getUserContext(supabase: SupabaseClient, userId: string): Promise<UserContext> {
+export async function getUserContext(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<UserContext> {
   const [categoriesResult, walletsResult] = await Promise.all([
-    supabase.from('categories').select('id, name, type').eq('user_id', userId).eq('is_hidden', false),
+    supabase.from('categories').select('id, name, type').eq('user_id', userId).eq(
+      'is_hidden',
+      false,
+    ),
     supabase.from('wallets').select('id, name').eq('user_id', userId),
   ]);
 
@@ -60,16 +65,25 @@ export async function getUserContext(supabase: SupabaseClient, userId: string): 
 /**
  * Link Telegram account to Finoteku user
  */
-export async function linkTelegramAccount(supabase: SupabaseClient, userId: string, telegramId: number, telegramUsername: string | undefined): Promise<boolean> {
+export async function linkTelegramAccount(
+  supabase: SupabaseClient,
+  userId: string,
+  telegramId: number,
+  telegramUsername: string | undefined,
+): Promise<boolean> {
   try {
-    const { data: userExists } = await supabase.from('users').select('id').eq('id', userId).single();
+    const { data: userExists } = await supabase.from('users').select('id').eq('id', userId)
+      .single();
 
     if (!userExists) {
       console.error('User not found:', userId);
       return false;
     }
 
-    const { data: existingLink } = await supabase.from('bot_links').select('user_id').eq('platform', 'telegram').eq('platform_user_id', telegramId.toString()).single();
+    const { data: existingLink } = await supabase.from('bot_links').select('user_id').eq(
+      'platform',
+      'telegram',
+    ).eq('platform_user_id', telegramId.toString()).single();
 
     if (existingLink) {
       if (existingLink.user_id === userId) {
@@ -100,13 +114,15 @@ export async function linkTelegramAccount(supabase: SupabaseClient, userId: stri
  */
 export async function getUserByTelegramId(
   supabase: SupabaseClient,
-  telegramId: number
-): Promise<{
-  userId: string;
-  aiProvider: string;
-  aiApiKey: string | null;
-  parserMode: string;
-} | null> {
+  telegramId: number,
+): Promise<
+  {
+    userId: string;
+    aiProvider: string;
+    aiApiKey: string | null;
+    parserMode: string;
+  } | null
+> {
   const { data, error } = await supabase.rpc('get_user_by_platform_id', {
     p_platform: 'telegram',
     p_platform_user_id: telegramId.toString(),
@@ -127,7 +143,15 @@ export async function getUserByTelegramId(
 /**
  * Create transaction in database
  */
-export async function createTransaction(supabase: SupabaseClient, userId: string, walletId: string, categoryId: string, amount: number, notes: string, date: string): Promise<boolean> {
+export async function createTransaction(
+  supabase: SupabaseClient,
+  userId: string,
+  walletId: string,
+  categoryId: string,
+  amount: number,
+  notes: string,
+  date: string,
+): Promise<boolean> {
   const { error } = await supabase.from('transactions').insert({
     user_id: userId,
     wallet_id: walletId,
@@ -152,7 +176,7 @@ export async function savePendingTransaction(
   amount: number,
   notes: string,
   date: string,
-  type: 'income' | 'expense'
+  type: 'income' | 'expense',
 ): Promise<string | null> {
   // Delete existing pending for this chat
   await supabase.from('pending_bot_transactions').delete().eq('telegram_chat_id', telegramChatId);
@@ -183,8 +207,14 @@ export async function savePendingTransaction(
 /**
  * Get pending transaction for a chat
  */
-export async function getPendingTransaction(supabase: SupabaseClient, telegramChatId: number): Promise<PendingTransaction | null> {
-  const { data, error } = await supabase.from('pending_bot_transactions').select('*').eq('telegram_chat_id', telegramChatId).gt('expires_at', new Date().toISOString()).single();
+export async function getPendingTransaction(
+  supabase: SupabaseClient,
+  telegramChatId: number,
+): Promise<PendingTransaction | null> {
+  const { data, error } = await supabase.from('pending_bot_transactions').select('*').eq(
+    'telegram_chat_id',
+    telegramChatId,
+  ).gt('expires_at', new Date().toISOString()).single();
 
   if (error || !data) return null;
   return data as PendingTransaction;
@@ -193,7 +223,17 @@ export async function getPendingTransaction(supabase: SupabaseClient, telegramCh
 /**
  * Update pending transaction
  */
-export async function updatePendingTransaction(supabase: SupabaseClient, id: string, updates: { wallet_id?: string; category_id?: string; date?: string; amount?: number; notes?: string }): Promise<boolean> {
+export async function updatePendingTransaction(
+  supabase: SupabaseClient,
+  id: string,
+  updates: {
+    wallet_id?: string;
+    category_id?: string;
+    date?: string;
+    amount?: number;
+    notes?: string;
+  },
+): Promise<boolean> {
   const { error } = await supabase.from('pending_bot_transactions').update(updates).eq('id', id);
   return !error;
 }
@@ -201,14 +241,21 @@ export async function updatePendingTransaction(supabase: SupabaseClient, id: str
 /**
  * Delete pending transaction
  */
-export async function deletePendingTransaction(supabase: SupabaseClient, id: string): Promise<void> {
+export async function deletePendingTransaction(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<void> {
   await supabase.from('pending_bot_transactions').delete().eq('id', id);
 }
 
 /**
  * Fetch user's recent transactions for AI context (few-shot learning)
  */
-export async function getUserTransactionHistory(supabase: SupabaseClient, userId: string, limit: number = 15): Promise<TransactionExample[]> {
+export async function getUserTransactionHistory(
+  supabase: SupabaseClient,
+  userId: string,
+  limit: number = 15,
+): Promise<TransactionExample[]> {
   const { data, error } = await supabase
     .from('transactions')
     .select(
@@ -217,7 +264,7 @@ export async function getUserTransactionHistory(supabase: SupabaseClient, userId
       amount,
       categories!inner(name, type),
       wallets!inner(name)
-    `
+    `,
     )
     .eq('user_id', userId)
     .order('date', { ascending: false })
@@ -228,6 +275,7 @@ export async function getUserTransactionHistory(supabase: SupabaseClient, userId
     return [];
   }
 
+  // deno-lint-ignore no-explicit-any
   return data.map((t: any) => ({
     notes: t.notes || '',
     category: t.categories?.name || 'Unknown',

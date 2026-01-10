@@ -1,18 +1,25 @@
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { sendTelegramMessage, formatCurrency } from '../../_shared/platforms/telegram.ts';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { formatCurrency, sendTelegramMessage } from '../../_shared/platforms/telegram.ts';
 import {
-  getWalletBalances,
-  getMonthlySummary,
   formatBalanceMessage,
   formatMonthlySummaryMessage,
-  getSpendingTrend,
-  getSavingTips,
-  formatSpendingTrendMessage,
   formatSavingTipsMessage,
+  formatSpendingTrendMessage,
+  getMonthlySummary,
+  getSavingTips,
+  getSpendingTrend,
+  getWalletBalances,
   MonthlySummary,
 } from '../../_shared/queries/finance.ts';
 
-export async function handleQuery(supabase: SupabaseClient, telegramToken: string, chatId: number, userId: string, intent: string, originalText: string): Promise<Response | null> {
+export async function handleQuery(
+  supabase: SupabaseClient,
+  telegramToken: string,
+  chatId: number,
+  userId: string,
+  intent: string,
+  originalText: string,
+): Promise<Response | null> {
   // Handle balance query
   if (intent === 'query_balance') {
     console.log('Balance query - userId:', userId);
@@ -25,7 +32,9 @@ export async function handleQuery(supabase: SupabaseClient, telegramToken: strin
 
     let message: string;
     if (specificWallet) {
-      message = `💳 <b>Saldo ${specificWallet.name}</b>\n\n${formatCurrency(specificWallet.balance)}`;
+      message = `💳 <b>Saldo ${specificWallet.name}</b>\n\n${
+        formatCurrency(specificWallet.balance)
+      }`;
     } else {
       message = formatBalanceMessage(balances);
     }
@@ -37,7 +46,20 @@ export async function handleQuery(supabase: SupabaseClient, telegramToken: strin
   // Handle monthly summary query
   if (intent === 'query_summary') {
     const now = new Date();
-    const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    const monthNames = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
     const textLower = originalText.toLowerCase();
     const isDetail = textLower.includes('detail');
 
@@ -45,7 +67,10 @@ export async function handleQuery(supabase: SupabaseClient, telegramToken: strin
     let targetYear = now.getFullYear();
 
     // Check for "bulan lalu"
-    if (textLower.includes('bulan lalu') || textLower.includes('last month') || textLower.includes('kemarin')) {
+    if (
+      textLower.includes('bulan lalu') || textLower.includes('last month') ||
+      textLower.includes('kemarin')
+    ) {
       targetMonth = now.getMonth(); // 0-11
       if (targetMonth === 0) {
         targetMonth = 12;
@@ -73,7 +98,8 @@ export async function handleQuery(supabase: SupabaseClient, telegramToken: strin
       message = formatDetailedSummary(summary, monthName);
 
       // Add Insight (Call to action to check trends/tips)
-      message += `\n\n💡 <b>Insight:</b>\nCek tren pengeluaranmu dengan mengetik "tren pengeluaran" atau minta "saran hemat" untuk tips personal!`;
+      message +=
+        `\n\n💡 <b>Insight:</b>\nCek tren pengeluaranmu dengan mengetik "tren pengeluaran" atau minta "saran hemat" untuk tips personal!`;
     } else {
       message = formatMonthlySummaryMessage(summary, monthName);
     }
@@ -101,13 +127,11 @@ export async function handleQuery(supabase: SupabaseClient, telegramToken: strin
   // Handle transaction history query
   if (intent === 'query_transactions') {
     console.log('Fetching ledger entries for userId:', userId);
-    
-    const { data: entries, error } = await supabase
-      .from('ledger_entries')
-      .select('*')
-      .eq('user_id', userId)
-      .order('date', { ascending: false })
-      .limit(5);
+
+    const { data: entries, error } = await supabase.from('ledger_entries').select('*').eq(
+      'user_id',
+      userId,
+    ).order('date', { ascending: false }).limit(5);
 
     console.log('Ledger entries result:', { entries, error });
 
@@ -118,7 +142,11 @@ export async function handleQuery(supabase: SupabaseClient, telegramToken: strin
     }
 
     if (!entries || entries.length === 0) {
-      await sendTelegramMessage(telegramToken, chatId, '📋 <b>Riwayat Transaksi</b>\n\nBelum ada transaksi yang tercatat.');
+      await sendTelegramMessage(
+        telegramToken,
+        chatId,
+        '📋 <b>Riwayat Transaksi</b>\n\nBelum ada transaksi yang tercatat.',
+      );
       return new Response('OK', { status: 200 });
     }
 
@@ -126,11 +154,14 @@ export async function handleQuery(supabase: SupabaseClient, telegramToken: strin
     for (const entry of entries) {
       const amount = Math.abs(Number(entry.amount));
       const emoji = entry.amount < 0 ? '💸' : '💰';
-      const dateStr = new Date(entry.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-      
+      const dateStr = new Date(entry.date).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+      });
+
       const category = entry.category_name || entry.description || 'Transfer';
       const sign = entry.amount < 0 ? '-' : '+';
-      
+
       message += `${emoji} ${dateStr} • ${category}\n`;
       message += `   ${sign}${formatCurrency(amount)}`;
       if (entry.notes) message += ` • ${entry.notes}`;
