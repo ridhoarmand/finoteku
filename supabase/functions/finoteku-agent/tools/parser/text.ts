@@ -8,7 +8,7 @@ import type { AIProvider } from '../../providers/base.ts';
 import { BaseTool, type ToolParams } from '../base.ts';
 import type { ToolResult } from '../../types.ts';
 import type { UserContext } from '../../data/users.ts';
-import { parseWithRegex } from './regex.ts';
+import { parseAbsoluteDate, parseWithRegex } from './regex.ts';
 import { PreferenceLearner } from '../../memory/learning.ts';
 import * as transactionData from '../../data/transactions.ts';
 
@@ -58,6 +58,22 @@ export class TextParserTool extends BaseTool {
     // Coba AI dulu jika tersedia dan bukan mode regex
     if (this.ai && userContext.parserMode !== 'regex') {
       parsed = await this.parseWithAI(text, userContext, preferences, notesExamples);
+
+      // Post-process AI result: clean absolute dates from notes if found
+      if (parsed) {
+        const absDate = parseAbsoluteDate(text);
+        if (absDate) {
+          // If AI didn't calculate offset correctly or we want to trust regex date more?
+          // For now, just clean the notes. AI usually gets dateOffset right if prompt is good.
+          const dateTextToRemove = absDate.match;
+          if (dateTextToRemove) {
+            const escapedDate = dateTextToRemove.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            parsed.notes = parsed.notes.replace(new RegExp(escapedDate, 'gi'), '').trim();
+            // Clean punctuation again
+            parsed.notes = parsed.notes.replace(/^[,.\s-]+|[,.\s-]+$/g, '').replace(/\s+/g, ' ');
+          }
+        }
+      }
     }
 
     // Fallback ke regex jika AI gagal
@@ -93,9 +109,16 @@ export class TextParserTool extends BaseTool {
     // Simpan original input untuk learning saat dikonfirmasi
     parsed.originalInput = text;
 
+    // Cari parent category
+    const categoryName = parsed.categoryHint;
+    const category = userContext.categories.find((c) =>
+      c.name.toLowerCase() === categoryName.toLowerCase()
+    );
+    const parentCategory = category?.parent_name || null;
+
     return this.success(
       { ...parsed, needsConfirmation: true },
-      this.formatConfirmation(parsed, preferences),
+      this.formatConfirmation(parsed, preferences, parentCategory),
     );
   }
 
@@ -147,7 +170,14 @@ export class TextParserTool extends BaseTool {
     );
     const wallets = userContext.wallets.map((w) => w.name);
 
+    const today = new Date().toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+
     let prompt = `Kamu adalah parser transaksi keuangan untuk user Indonesia.
+HARI INI: ${today}
 
 TUGAS: Parse pesan menjadi JSON:
 {
@@ -156,17 +186,25 @@ TUGAS: Parse pesan menjadi JSON:
   "categoryHint": "nama kategori",
   "walletHint": "nama wallet" atau null,
   "notes": "deskripsi singkat",
-  "dateOffset": 0 (hari ini), -1 (kemarin), 1 (besok)
+  "dateOffset": number (selisih hari dari HARI INI. 0=hari ini, -1=kemarin, -3=tiga hari lalu)
 }
 
 ATURAN:
-- k/rb = ×1000, jt = ×1000000
-- kemarin = -1, besok = 1
-- Notes: BERSIH dari nominal, wallet, tanggal. Hanya isi/item saja.
+- k/rb = ×1000, jt/juta = ×1000000.
+- Prioritaskan angka > 1000 sebagai amount. Angka 1-31 di awal biasanya TANGGAL, bukan amount.
+- Jika ada tanggal spesifik (misal "10 Januari"), hitung selisihnya dengan HARI INI.
+- Notes: Wajib BERSIH dari nominal, wallet, tanggal, dan kategori. Contoh: "10 Jan Beli Makan 20k" -> Notes: "Makan" (Hapus "10 Jan" dan "20k").
 
 KATEGORI PEMASUKAN: ${incomeCategories.join(', ') || 'Gaji, Bonus'}
 KATEGORI PENGELUARAN: ${expenseCategories.join(', ') || 'Makanan, Transport'}
-WALLET: ${wallets.join(', ') || 'Cash, BCA'}`;
+WALLET: ${wallets.join(', ') || 'Cash, BCA'}
+
+LOGIKA DETEKSI (PENTING):
+1. INCOME Strong Keywords: "Insentif", "Bonus", "THR", "Gajian".
+2. EXPENSE Strong Keywords: "Beli", "Bayar", "Jajan".
+3. PATTERN "Masuk + Wallet" = INCOME.
+4. PATTERN "Isi + Wallet" = EXPENSE.
+5. Jika ambigu, prioritaskan Kata Kerja.`;
 
     // Sertakan contoh notes dari history user (few-shot learning)
     if (notesExamples.length > 0) {
@@ -191,7 +229,12 @@ WALLET: ${wallets.join(', ') || 'Cash, BCA'}`;
 
   /**
    * Format pesan konfirmasi untuk ditampilkan ke user
-   * Menampilkan emoji 🧠 jika menggunakan learned preference
+   * Format:
+   * Tanggal
+   * Dompet
+   * Nominal
+   * Jenis Transaksi, Kategory Parent (jika ada), Child
+   * Note
    */
   private formatConfirmation(
     parsed: ParsedTransaction,
@@ -199,35 +242,52 @@ WALLET: ${wallets.join(', ') || 'Cash, BCA'}`;
       category?: { name: string; confidence: number };
       wallet?: { name: string; confidence: number };
     },
+    parentCategory: string | null,
   ): string {
-    const emoji = parsed.type === 'income' ? '💰' : '💸';
     const amount = new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',
       minimumFractionDigits: 0,
     }).format(parsed.amount);
 
-    let msg = `${emoji} <b>Konfirmasi Transaksi</b>\n\n`;
-    msg += `📝 ${parsed.notes}\n`;
-    msg += `💵 ${amount}\n`;
-    msg += `📁 ${parsed.categoryHint}`;
-    if (preferences.category?.name === parsed.categoryHint) msg += ` 🧠`;
-    msg += `\n`;
+    let msg = `<b>Konfirmasi Transaksi</b>\n\n`;
 
+    // 1. Tanggal
+    const date = new Date();
+    date.setDate(date.getDate() + (parsed.dateOffset || 0));
+    const dateStr = date.toLocaleDateString('id-ID', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+    msg += `📅 ${dateStr}\n`;
+
+    // 2. Dompet
     if (parsed.walletHint) {
       msg += `💳 ${parsed.walletHint}`;
       if (preferences.wallet?.name === parsed.walletHint) msg += ` 🧠`;
       msg += `\n`;
+    } else {
+      msg += `💳 -\n`;
     }
 
-    if (parsed.dateOffset !== 0) {
-      const label = parsed.dateOffset === -1
-        ? 'Kemarin'
-        : parsed.dateOffset === 1
-        ? 'Besok'
-        : `${parsed.dateOffset} hari`;
-      msg += `📅 ${label}\n`;
+    // 3. Nominal
+    msg += `💵 ${amount}\n`;
+
+    // 4. Jenis & Kategori (Chain)
+    const typeLabel = parsed.type === 'income' ? 'Pemasukan' : 'Pengeluaran';
+    let categoryChain = `📁 ${typeLabel}`;
+    if (parentCategory) {
+      categoryChain += `, ${parentCategory}`;
     }
+    categoryChain += `, ${parsed.categoryHint}`;
+
+    if (preferences.category?.name === parsed.categoryHint) categoryChain += ` 🧠`;
+    msg += `${categoryChain}\n`;
+
+    // 5. Note
+    msg += `📝 ${parsed.notes}\n`;
 
     msg += `\n<b>Simpan transaksi ini?</b>`;
     return msg;

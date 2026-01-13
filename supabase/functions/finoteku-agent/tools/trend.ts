@@ -47,8 +47,18 @@ export class TrendTool extends BaseTool {
     const lastYear = thisMonth === 1 ? thisYear - 1 : thisYear;
 
     // Get monthly expenses using Data Layer
-    const thisMonthExpense = await transactionData.getMonthlyExpense(this.supabase, userContext.userId, thisYear, thisMonth);
-    const lastMonthExpense = await transactionData.getMonthlyExpense(this.supabase, userContext.userId, lastYear, lastMonth);
+    const thisMonthExpense = await transactionData.getMonthlyExpense(
+      this.supabase,
+      userContext.userId,
+      thisYear,
+      thisMonth,
+    );
+    const lastMonthExpense = await transactionData.getMonthlyExpense(
+      this.supabase,
+      userContext.userId,
+      lastYear,
+      lastMonth,
+    );
 
     // Calculate change
     let change = 0;

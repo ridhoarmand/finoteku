@@ -6,7 +6,29 @@
 import type { UserContext } from '../../data/users.ts';
 
 // Keywords for income detection
-const INCOME_KEYWORDS = ['gaji', 'gajian', 'salary', 'bonus', 'thr', 'dapat', 'terima', 'received', 'transfer masuk', 'tf masuk', 'penjualan', 'jual', 'cashback', 'refund', 'dividen', 'bunga'];
+const INCOME_KEYWORDS = [
+  'gaji',
+  'gajian',
+  'salary',
+  'bonus',
+  'thr',
+  'insentif',
+  'hadiah',
+  'reward',
+  'dapat',
+  'terima',
+  'received',
+  'transfer masuk',
+  'tf masuk',
+  'uang masuk',
+  'masuk',
+  'penjualan',
+  'jual',
+  'cashback',
+  'refund',
+  'dividen',
+  'bunga',
+];
 
 // Default category hints based on keywords
 const DEFAULT_CATEGORY_HINTS: Record<string, string[]> = {
@@ -45,30 +67,64 @@ export interface ParsedTransaction {
  */
 function parseNominal(text: string): { amount: number; position: number; length: number } | null {
   const patterns = [
-    { regex: /(\d+(?:[.,]\d+)?)\s*(jt|juta)/gi, multiplier: 1000000 },
-    { regex: /(\d+(?:[.,]\d+)?)\s*(k|rb|ribu)/gi, multiplier: 1000 },
-    { regex: /(\d+)/gi, multiplier: 1 },
+    { regex: /(\d+(?:[.,]\d+)?)\s*(jt|juta)/gi, multiplier: 1000000, priority: 1 },
+    { regex: /(\d+(?:[.,]\d+)?)\s*(k|rb|ribu)/gi, multiplier: 1000, priority: 1 },
+    { regex: /(\d+(?:[.,]\d+)?)/gi, multiplier: 1, priority: 0 },
   ];
 
-  for (const { regex, multiplier } of patterns) {
+  type MatchCandidate = { amount: number; start: number; end: number; priority: number };
+  const candidates: MatchCandidate[] = [];
+
+  const montRegex = /^\s+(jan|feb|mar|apr|mei|jun|jul|agu|sep|okt|nov|des)/i;
+
+  for (const { regex, multiplier, priority } of patterns) {
     regex.lastIndex = 0;
-    const match = regex.exec(text.toLowerCase());
-    if (match) {
-      const value = parseFloat(match[1].replace(',', '.'));
-      return {
+    let match;
+    while ((match = regex.exec(text.toLowerCase())) !== null) {
+      const valStr = match[1].replace(',', '.');
+      const value = parseFloat(valStr);
+
+      // Skip invalid numbers
+      if (isNaN(value)) continue;
+
+      const fullMatch = match[0];
+      const start = match.index;
+      const end = start + fullMatch.length;
+
+      // Check if it looks like a date (e.g. "10 " followed by "Januari")
+      // Only for priority 0 (raw numbers) and small values (<=31)
+      if (priority === 0 && value <= 31) {
+        const remainingText = text.slice(end);
+        if (montRegex.test(remainingText)) {
+          continue; // It's a date!
+        }
+      }
+
+      candidates.push({
         amount: Math.round(value * multiplier),
-        position: match.index,
-        length: match[0].length,
-      };
+        start,
+        end,
+        priority,
+      });
     }
   }
-  return null;
+
+  if (candidates.length === 0) return null;
+
+  // Sort by priority desc, then amount desc
+  candidates.sort((a, b) => {
+    if (a.priority !== b.priority) return b.priority - a.priority;
+    return b.amount - a.amount;
+  });
+
+  const best = candidates[0];
+  return { amount: best.amount, position: best.start, length: best.end - best.start };
 }
 
 /**
  * Parse date offset from text
  */
-function parseDateOffset(text: string): number {
+export function parseDateOffset(text: string): number {
   const lowerText = text.toLowerCase();
   for (const [keyword, offset] of Object.entries(DATE_KEYWORDS)) {
     if (lowerText.includes(keyword)) return offset;
@@ -131,11 +187,72 @@ function findWallet(text: string, userWallets: string[]): string | null {
   }
 
   // Common wallet names
-  const commonWallets = ['bca', 'mandiri', 'bni', 'bri', 'dana', 'ovo', 'gopay', 'shopeepay', 'cash', 'tunai'];
+  const commonWallets = [
+    'bca',
+    'mandiri',
+    'bni',
+    'bri',
+    'dana',
+    'ovo',
+    'gopay',
+    'shopeepay',
+    'cash',
+    'tunai',
+  ];
   for (const wallet of commonWallets) {
     if (matchWord(lowerText, wallet) !== -1) return wallet.toUpperCase();
   }
   return null;
+}
+
+/**
+ * Parse absolute date (e.g. "10 Januari") and return offset + matched text
+ */
+export function parseAbsoluteDate(text: string): { offset: number; match: string } | null {
+  // Regex for "10 jan", "10 januari", "tgl 10", etc.
+  // Matches: 1=day, 2=month(optional)
+  const regex = /\b(\d{1,2})\s+(jan|feb|mar|apr|mei|jun|jul|agu|sep|okt|nov|des)[a-z]*\b/gi;
+  const match = regex.exec(text.toLowerCase());
+
+  if (!match) return null;
+
+  const day = parseInt(match[1]);
+  const monthStr = match[2];
+
+  if (day > 31 || day < 1) return null;
+
+  const months = [
+    'jan',
+    'feb',
+    'mar',
+    'apr',
+    'mei',
+    'jun',
+    'jul',
+    'agu',
+    'sep',
+    'okt',
+    'nov',
+    'des',
+  ];
+  const monthIndex = months.indexOf(monthStr);
+
+  if (monthIndex === -1) return null;
+
+  const today = new Date();
+  // Adjust year: if current month is Jan and input is Dec, assume previous year
+  let year = today.getFullYear();
+  if (today.getMonth() === 0 && monthIndex === 11) {
+    year -= 1;
+  }
+
+  const targetDate = new Date(year, monthIndex, day);
+
+  // Calculate difference in days
+  const diffTime = targetDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  return { offset: diffDays, match: match[0] };
 }
 
 /**
@@ -149,17 +266,51 @@ export function parseWithRegex(text: string, userContext: UserContext): ParsedTr
   const categories = userContext.categories.filter((c) => c.type === type).map((c) => c.name);
   const wallets = userContext.wallets.map((w) => w.name);
 
-  const categoryHint = findCategory(text, categories) || (type === 'income' ? 'Pemasukan Lainnya' : 'Pengeluaran Lainnya');
+  const categoryHint = findCategory(text, categories) ||
+    (type === 'income' ? 'Pemasukan Lainnya' : 'Pengeluaran Lainnya');
   const walletHint = findWallet(text, wallets);
+
+  // Date parsing
+  let dateOffset = parseDateOffset(text);
+  const absDate = parseAbsoluteDate(text);
+  let dateTextToRemove = '';
+
+  if (absDate) {
+    dateOffset = absDate.offset;
+    dateTextToRemove = absDate.match;
+  }
 
   // Extract notes (text without amount/wallet/date keywords)
   let notes = text
-    .replace(/[\d.,]+\s*(k|rb|jt|juta|m|ribu)?/gi, '')
-    .replace(new RegExp(Object.keys(DATE_KEYWORDS).join('|'), 'gi'), '')
+    .replace(/[\d.,]+\s*(k|rb|jt|juta|m|ribu)?/gi, '') // Remove amounts
+    .replace(new RegExp(Object.keys(DATE_KEYWORDS).join('|'), 'gi'), '') // Remove date keywords
     .trim();
+
+  // Remove absolute date string
+  if (dateTextToRemove) {
+    // Escape special regex chars if any (though date match is simple)
+    const escapedDate = dateTextToRemove.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    notes = notes.replace(new RegExp(escapedDate, 'gi'), '').trim();
+  }
+
   if (walletHint) {
     notes = notes.replace(new RegExp(walletHint, 'gi'), '').trim();
   }
+
+  // Clean up category from notes if it matches the detected hint
+  if (categoryHint) {
+    const catRegex = new RegExp(`\\b${categoryHint}\\b`, 'gi');
+    notes = notes.replace(catRegex, '').trim();
+  }
+
+  // Clean up type keywords (e.g. remove "masuk" from notes if it was used to detect income)
+  if (type === 'income') {
+    const incomeKeywordsPattern = new RegExp(INCOME_KEYWORDS.join('|'), 'gi');
+    notes = notes.replace(incomeKeywordsPattern, '').trim();
+  }
+
+  // Clean remaining punctuation and excessive spaces
+  notes = notes.replace(/^[,.\s-]+|[,.\s-]+$/g, '').replace(/\s+/g, ' ');
 
   return {
     type,
@@ -168,6 +319,6 @@ export function parseWithRegex(text: string, userContext: UserContext): ParsedTr
     walletHint,
     notes: notes || text,
     confidence: 0.7,
-    dateOffset: parseDateOffset(text),
+    dateOffset,
   };
 }

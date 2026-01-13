@@ -90,20 +90,7 @@ export class PendingHandlerTool extends BaseTool {
     // 3. Hapus pending transaction
     await pendingData.remove(this.supabase, pending.conversation_id || pending.id);
 
-    // 4. Format pesan sukses
-    const emoji = pending.type === 'income' ? '💰' : '💸';
-    const amount = new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(pending.amount);
-
-    return this.success(
-      { transactionId: pending.id },
-      `${emoji} <b>Transaksi Tersimpan!</b>\n\n📝 ${pending.notes}\n💵 ${amount}\n📁 ${
-        pending.category_name || 'Kategori'
-      }`,
-    );
+    return this.success({ transactionId: pending.id }, `✅ <b>Transaksi berhasil disimpan.</b>`);
   }
 
   /**
@@ -147,12 +134,30 @@ export class PendingHandlerTool extends BaseTool {
 
     // Deteksi update nominal
     const amountMatch = text.match(/(\d+)\s*(k|rb|ribu|jt|juta)?/i);
-    if (amountMatch && (lowerText.includes('nominal') || lowerText.includes('harga'))) {
+    if (
+      amountMatch &&
+      (lowerText.includes('nominal') || lowerText.includes('harga') || lowerText.includes('jumlah'))
+    ) {
       let amount = parseInt(amountMatch[1]);
       const suffix = amountMatch[2]?.toLowerCase();
       if (suffix === 'k' || suffix === 'rb' || suffix === 'ribu') amount *= 1000;
       if (suffix === 'jt' || suffix === 'juta') amount *= 1000000;
       updates.amount = amount;
+    }
+
+    // Deteksi update notes
+    // Contoh: "Catatan Nasi Goreng", "Note beli minum", "Ubah catatan jadi..."
+    if (
+      lowerText.includes('catatan') || lowerText.includes('note') ||
+      lowerText.includes('keterangan') || lowerText.includes('deskripsi')
+    ) {
+      // Match pattern: "catatan [isi catatan]" or "catatan: [isi catatan]"
+      const match = text.match(
+        /(?:catatan|note|keterangan|deskripsi)(?:nya)?\s*(?:[:=]|jadi)?\s+(.+)/i,
+      );
+      if (match) {
+        updates.notes = match[1].trim();
+      }
     }
 
     if (Object.keys(updates).length === 0) {
@@ -180,11 +185,24 @@ export class PendingHandlerTool extends BaseTool {
       minimumFractionDigits: 0,
     }).format(updated.amount);
 
+    // Format tanggal
+    const dateObj = new Date(updated.date);
+    const dateStr = dateObj.toLocaleDateString('id-ID', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+
     return this.success(
       { ...updated, needsConfirmation: true },
-      `${emoji} <b>Transaksi Diperbarui</b>\n\n📝 ${updated.notes}\n💵 ${amount}\n📁 ${
-        updated.category_name || 'Kategori'
-      }\n💳 ${updated.wallet_name || 'Wallet'}\n\n<b>Simpan transaksi ini?</b>`,
+      `${emoji} <b>Transaksi Diperbarui</b>\n\n` +
+        `📅 ${dateStr}\n` +
+        `💳 ${updated.wallet_name || '-'}\n` +
+        `💵 ${amount}\n` +
+        `📁 ${updated.category_name || 'Kategori'}\n` +
+        `📝 ${updated.notes}\n\n` +
+        `<b>Simpan transaksi ini?</b>`,
     );
   }
 }

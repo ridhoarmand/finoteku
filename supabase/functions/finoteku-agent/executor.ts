@@ -8,9 +8,15 @@ import { ReasoningEngine } from './reasoning.ts';
 import { ToolRegistry } from './tools/base.ts';
 import type { AgentInput, AgentResponse } from './types.ts';
 import type { UserContext } from './data/users.ts';
+import * as pendingData from './data/pending.ts';
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 export class AgentExecutor {
-  constructor(private reasoning: ReasoningEngine, private tools: ToolRegistry) {}
+  constructor(
+    private reasoning: ReasoningEngine,
+    private tools: ToolRegistry,
+    private supabase: SupabaseClient,
+  ) {}
 
   /**
    * Eksekusi utama agent
@@ -64,7 +70,49 @@ export class AgentExecutor {
       if (result.success) {
         // deno-lint-ignore no-explicit-any
         const data = result.data as any;
+
         if (data && typeof data === 'object' && 'needsConfirmation' in data) {
+          // CRITICAL FIX: Persist pending transaction to DB
+          const pendingDataPayload = data;
+
+          // Resolve IDs using UserContext
+          const category = userContext.categories.find((c) =>
+            c.name.toLowerCase() === (pendingDataPayload.categoryHint || '').toLowerCase()
+          );
+          const wallet = userContext.wallets.find((w) =>
+            w.name.toLowerCase() === (pendingDataPayload.walletHint || '').toLowerCase()
+          );
+
+          // Determine date
+          const date = new Date();
+          date.setDate(date.getDate() + (pendingDataPayload.dateOffset || 0));
+
+          const saveResult = await pendingData.save(
+            this.supabase,
+            userContext.userId,
+            input.conversationId,
+            {
+              type: pendingDataPayload.type,
+              amount: pendingDataPayload.amount,
+              category_id: category?.id || userContext.categories[0]?.id, // Fallback to first category if not found
+              category_name: pendingDataPayload.categoryHint,
+              wallet_id: wallet?.id || userContext.wallets[0]?.id, // Fallback to first wallet
+              wallet_name: pendingDataPayload.walletHint,
+              notes: pendingDataPayload.notes,
+              date: date.toISOString(),
+              original_input: input.content,
+            },
+          );
+
+          if (saveResult.error) {
+            console.error('[Executor] Failed to save pending transaction:', saveResult.error);
+            return {
+              type: 'error',
+              content:
+                `❌ Gagal menyimpan transaksi sementara.\nError: ${saveResult.error.message}`,
+            };
+          }
+
           return {
             type: 'confirmation',
             content: result.message,

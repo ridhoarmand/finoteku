@@ -34,7 +34,10 @@ export class BalanceTool extends BaseTool {
       return this.error('User context required');
     }
 
-    const { data: wallets, error } = await walletData.getBalances(this.supabase, userContext.userId);
+    const { data: wallets, error } = await walletData.getBalances(
+      this.supabase,
+      userContext.userId,
+    );
 
     if (error || !wallets || wallets.length === 0) {
       return this.success([], '💳 <b>Saldo Wallet</b>\n\nBelum ada wallet yang tersimpan.');
@@ -45,7 +48,10 @@ export class BalanceTool extends BaseTool {
     const specificWallet = wallets.find((w) => lowerText.includes(w.name.toLowerCase()));
 
     if (specificWallet) {
-      return this.success(specificWallet, `💳 <b>Saldo ${specificWallet.name}</b>\n\n${formatCurrency(specificWallet.balance)}`);
+      return this.success(
+        specificWallet,
+        `💳 <b>Saldo ${specificWallet.name}</b>\n\n${formatCurrency(specificWallet.balance)}`,
+      );
     }
 
     // All wallets

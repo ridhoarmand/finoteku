@@ -40,32 +40,45 @@ export class TipsTool extends BaseTool {
     }
 
     const now = new Date();
-    const thisMonthExpense = await transactionData.getMonthlyExpense(this.supabase, userContext.userId, now.getFullYear(), now.getMonth() + 1);
+    const thisMonthExpense = await transactionData.getMonthlyExpense(
+      this.supabase,
+      userContext.userId,
+      now.getFullYear(),
+      now.getMonth() + 1,
+    );
 
     const tips: SavingTip[] = [];
 
     if (thisMonthExpense > 0) {
       const dailyBudget = Math.round(thisMonthExpense / now.getDate());
-      const remainingDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
+      const remainingDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() -
+        now.getDate();
       const projectedTotal = thisMonthExpense + dailyBudget * remainingDays;
 
       tips.push({
         category: 'Budget Harian',
-        suggestion: `Rata-rata pengeluaran harian: ${formatCurrency(dailyBudget)}. Sisa ${remainingDays} hari.`,
+        suggestion: `Rata-rata pengeluaran harian: ${
+          formatCurrency(dailyBudget)
+        }. Sisa ${remainingDays} hari.`,
         potentialSaving: Math.round(dailyBudget * 0.2 * remainingDays),
       });
 
       if (projectedTotal > thisMonthExpense * 1.5) {
         tips.push({
           category: 'Proyeksi',
-          suggestion: `Proyeksi akhir bulan: ${formatCurrency(projectedTotal)}. Pertimbangkan untuk mengurangi pengeluaran.`,
+          suggestion: `Proyeksi akhir bulan: ${
+            formatCurrency(projectedTotal)
+          }. Pertimbangkan untuk mengurangi pengeluaran.`,
           potentialSaving: Math.round(projectedTotal * 0.1),
         });
       }
     }
 
     if (tips.length === 0) {
-      return this.success([], '💡 <b>Tips Hemat</b>\n\nBelum cukup data untuk memberikan rekomendasi.');
+      return this.success(
+        [],
+        '💡 <b>Tips Hemat</b>\n\nBelum cukup data untuk memberikan rekomendasi.',
+      );
     }
 
     return this.success(tips, this.formatMessage(tips));

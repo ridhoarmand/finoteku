@@ -143,10 +143,16 @@ export class ReasoningEngine {
 
     // Jika ada pending dan bukan query, handle sebagai update pending
     if (hasPending && !intent.startsWith('query_') && intent !== 'help') {
+      let action = intent;
+      // Jika intent bukan confirm/cancel (misal: transaction, unknown), anggap sebagai update
+      if (intent !== 'confirm' && intent !== 'cancel') {
+        action = 'update_pending';
+      }
+
       return {
-        intent: intent === 'unknown' ? 'update_pending' : intent,
+        intent: action,
         tool: 'pending_handler',
-        params: { action: intent, text },
+        params: { action, text },
         confidence,
       };
     }

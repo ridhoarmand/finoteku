@@ -72,8 +72,14 @@ export async function save(
     .upsert({
       user_id: userId,
       telegram_chat_id: conversationId,
-      ...transaction,
+      type: transaction.type,
+      amount: transaction.amount,
+      category_id: transaction.category_id,
+      wallet_id: transaction.wallet_id,
+      notes: transaction.notes,
+      date: transaction.date,
       expires_at: expiresAt.toISOString(),
+      // category_name, wallet_name, original_input excluded matching schema
     })
     .select('id')
     .single();

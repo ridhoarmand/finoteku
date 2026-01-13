@@ -66,7 +66,7 @@ export class FinanceAgent {
 
     // Setup Reasoning Engine dan Executor
     const reasoning = new ReasoningEngine(ai!);
-    this.executor = new AgentExecutor(reasoning, tools);
+    this.executor = new AgentExecutor(reasoning, tools, this.supabase);
   }
 
   /**

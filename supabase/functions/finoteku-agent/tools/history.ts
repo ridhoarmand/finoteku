@@ -33,7 +33,11 @@ export class HistoryTool extends BaseTool {
       return this.error('User context required');
     }
 
-    const { data: entries, error } = await transactionData.getRecent(this.supabase, userContext.userId, 5);
+    const { data: entries, error } = await transactionData.getRecent(
+      this.supabase,
+      userContext.userId,
+      5,
+    );
 
     if (error || !entries || entries.length === 0) {
       return this.success([], '📋 <b>Riwayat Transaksi</b>\n\nBelum ada transaksi yang tercatat.');

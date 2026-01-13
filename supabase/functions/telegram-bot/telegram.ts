@@ -98,7 +98,12 @@ export function parseCallbackQuery(body: unknown): TelegramCallbackQuery | null 
 /**
  * Send a text message reply via Telegram API
  */
-export async function sendTelegramMessage(botToken: string, chatId: number, text: string, parseMode: 'HTML' | 'Markdown' = 'HTML'): Promise<boolean> {
+export async function sendTelegramMessage(
+  botToken: string,
+  chatId: number,
+  text: string,
+  parseMode: 'HTML' | 'Markdown' = 'HTML',
+): Promise<boolean> {
   try {
     const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: 'POST',
@@ -125,7 +130,13 @@ export async function sendTelegramMessage(botToken: string, chatId: number, text
 /**
  * Send a message with inline keyboard buttons
  */
-export async function sendTelegramMessageWithButtons(botToken: string, chatId: number, text: string, buttons: InlineKeyboardButton[][], parseMode: 'HTML' | 'Markdown' = 'HTML'): Promise<boolean> {
+export async function sendTelegramMessageWithButtons(
+  botToken: string,
+  chatId: number,
+  text: string,
+  buttons: InlineKeyboardButton[][],
+  parseMode: 'HTML' | 'Markdown' = 'HTML',
+): Promise<boolean> {
   try {
     const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: 'POST',
@@ -155,7 +166,11 @@ export async function sendTelegramMessageWithButtons(botToken: string, chatId: n
 /**
  * Answer callback query (acknowledge button press)
  */
-export async function answerCallbackQuery(botToken: string, callbackQueryId: string, text?: string): Promise<boolean> {
+export async function answerCallbackQuery(
+  botToken: string,
+  callbackQueryId: string,
+  text?: string,
+): Promise<boolean> {
   try {
     const response = await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
       method: 'POST',
@@ -176,7 +191,13 @@ export async function answerCallbackQuery(botToken: string, callbackQueryId: str
 /**
  * Edit message text (for updating after button press)
  */
-export async function editTelegramMessage(botToken: string, chatId: number, messageId: number, text: string, parseMode: 'HTML' | 'Markdown' = 'HTML'): Promise<boolean> {
+export async function editTelegramMessage(
+  botToken: string,
+  chatId: number,
+  messageId: number,
+  text: string,
+  parseMode: 'HTML' | 'Markdown' = 'HTML',
+): Promise<boolean> {
   try {
     const response = await fetch(`https://api.telegram.org/bot${botToken}/editMessageText`, {
       method: 'POST',
@@ -213,7 +234,9 @@ export function formatCurrency(amount: number): string {
  */
 export async function getTelegramFileUrl(botToken: string, fileId: string): Promise<string | null> {
   try {
-    const response = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`);
+    const response = await fetch(
+      `https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`,
+    );
     const data = await response.json();
 
     if (!data.ok || !data.result?.file_path) {

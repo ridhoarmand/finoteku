@@ -1,19 +1,4 @@
--- ==============================================================================
--- FINOTEKU DATABASE SCHEMA
--- ==============================================================================
--- Schema database untuk sistem Finoteku (personal finance management)
--- 
--- File ini berisi:
--- - ENUM types
--- - Functions (RPC)
--- - Tables
--- - Views
--- - Triggers
--- - RLS Policies
--- - Grants
---
--- CATATAN: Schema ini idempotent, aman untuk dijalankan ulang.
--- ==============================================================================
+
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -36,24 +21,14 @@ ALTER SCHEMA "public" OWNER TO "pg_database_owner";
 COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
--- ==============================================================================
--- ENUM TYPES
--- ==============================================================================
 
--- Tipe kategori: income (pemasukan) atau expense (pengeluaran)
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'category_type') THEN
-        CREATE TYPE "public"."category_type" AS ENUM ('income', 'expense');
-    END IF;
-END$$;
+CREATE TYPE "public"."category_type" AS ENUM (
+    'income',
+    'expense'
+);
+
 
 ALTER TYPE "public"."category_type" OWNER TO "postgres";
-
-
--- ==============================================================================
--- FUNCTIONS
--- ==============================================================================
 
 
 CREATE OR REPLACE FUNCTION "public"."cleanup_expired_pending_transactions"() RETURNS "void"
@@ -274,12 +249,29 @@ $$;
 ALTER FUNCTION "public"."delete_wallet_transfer"("p_user_id" "uuid", "p_transfer_id" "uuid") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_user_by_platform_id"("p_platform" "text", "p_platform_user_id" "text") RETURNS TABLE("user_id" "uuid", "ai_provider" "text", "ai_api_key" "text", "parser_mode" "text")
+CREATE OR REPLACE FUNCTION "public"."get_bot_link"("p_platform" "text") RETURNS TABLE("id" "uuid", "link_token" "text", "user_id" "uuid", "platform" "text", "platform_user_id" "text", "metadata" "jsonb", "is_active" boolean, "created_at" timestamp with time zone, "updated_at" timestamp with time zone)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT bl.id, bl.link_token, bl.user_id, bl.platform, bl.platform_user_id,
+           bl.metadata, bl.is_active, bl.created_at, bl.updated_at
+    FROM public.bot_links bl
+    WHERE bl.user_id = auth.uid() AND bl.platform = p_platform
+    LIMIT 1;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."get_bot_link"("p_platform" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_user_by_platform_id"("p_platform" "text", "p_platform_user_id" "text") RETURNS TABLE("user_id" "uuid", "metadata" "jsonb")
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
 BEGIN
   RETURN QUERY
-  SELECT bl.user_id, bl.ai_provider, bl.ai_api_key, bl.parser_mode
+  SELECT bl.user_id, bl.metadata
   FROM public.bot_links bl
   WHERE bl.platform = p_platform
     AND bl.platform_user_id = p_platform_user_id
@@ -339,6 +331,22 @@ $$;
 
 
 ALTER FUNCTION "public"."get_user_data_summary"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_user_parser_settings"("p_user_id" "uuid") RETURNS TABLE("parser_mode" "text", "ai_provider" "text", "ai_api_key" "text")
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+BEGIN
+    RETURN QUERY
+    SELECT u.parser_mode, u.ai_provider, u.ai_api_key
+    FROM public.users u
+    WHERE u.id = p_user_id;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."get_user_parser_settings"("p_user_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
@@ -470,39 +478,32 @@ $$;
 ALTER FUNCTION "public"."handle_updated_at"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."link_telegram_account"("p_link_token" "text", "p_telegram_id" "text", "p_telegram_username" "text" DEFAULT NULL::"text") RETURNS "void"
+CREATE OR REPLACE FUNCTION "public"."link_by_user_id"("p_user_id" "uuid", "p_platform" "text", "p_platform_user_id" "text", "p_metadata" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
-DECLARE
-  v_user_id UUID;
 BEGIN
-  -- Cari user berdasarkan link token dari tabel bot_links
-  SELECT user_id INTO v_user_id
-  FROM bot_links
-  WHERE link_token = p_link_token
-    AND link_token_expires_at > NOW();
-  
-  -- Jika tidak ditemukan atau expired, raise error
-  IF v_user_id IS NULL THEN
-    RAISE EXCEPTION 'Invalid or expired link token';
-  END IF;
-  
-  -- Update bot_links dengan telegram info
-  UPDATE bot_links
-  SET 
-    telegram_id = p_telegram_id,
-    telegram_username = p_telegram_username,
-    telegram_chat_id = p_telegram_id, -- biasanya sama dengan telegram_id untuk private chat
-    link_token = NULL,                -- hapus token setelah dipakai
-    link_token_expires_at = NULL,
-    updated_at = NOW()
-  WHERE user_id = v_user_id;
-  
+    INSERT INTO public.bot_links (link_token, user_id, platform, platform_user_id, metadata, is_active, id)
+    VALUES (
+        encode(extensions.gen_random_bytes(16), 'hex'),
+        p_user_id, 
+        p_platform, 
+        p_platform_user_id,
+        p_metadata,
+        TRUE,
+        extensions.uuid_generate_v4()
+    )
+    ON CONFLICT (user_id, platform)
+    DO UPDATE SET
+        platform_user_id = p_platform_user_id,
+        metadata = bot_links.metadata || p_metadata,
+        is_active = TRUE,
+        updated_at = NOW();
 END;
 $$;
 
 
-ALTER FUNCTION "public"."link_telegram_account"("p_link_token" "text", "p_telegram_id" "text", "p_telegram_username" "text") OWNER TO "postgres";
+ALTER FUNCTION "public"."link_by_user_id"("p_user_id" "uuid", "p_platform" "text", "p_platform_user_id" "text", "p_metadata" "jsonb") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."prevent_category_delete"() RETURNS "trigger"
@@ -574,6 +575,94 @@ $$;
 
 
 ALTER FUNCTION "public"."recalculate_wallet_balance"("p_wallet_id" "uuid", "p_user_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."unlink_platform"("p_platform" "text") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+    v_user_id UUID;
+BEGIN
+    v_user_id := auth.uid();
+    IF v_user_id IS NULL THEN 
+        RAISE EXCEPTION 'Not authenticated'; 
+    END IF;
+    
+    UPDATE public.bot_links
+    SET 
+        platform_user_id = NULL,
+        is_active = FALSE,
+        -- Keep metadata for potential reconnect, just mark inactive
+        updated_at = NOW()
+    WHERE user_id = v_user_id
+      AND platform = p_platform;
+      
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Bot link not found for platform: %', p_platform;
+    END IF;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."unlink_platform"("p_platform" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."update_bot_link_metadata"("p_platform" "text", "p_metadata" "jsonb") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+    v_user_id UUID;
+BEGIN
+    v_user_id := auth.uid();
+    IF v_user_id IS NULL THEN
+        RAISE EXCEPTION 'Not authenticated';
+    END IF;
+    
+    UPDATE public.bot_links
+    SET 
+        metadata = metadata || p_metadata,
+        updated_at = NOW()
+    WHERE user_id = v_user_id 
+      AND platform = p_platform;
+      
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Bot link not found for platform: %', p_platform;
+    END IF;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."update_bot_link_metadata"("p_platform" "text", "p_metadata" "jsonb") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."update_parser_settings"("p_parser_mode" "text", "p_ai_provider" "text", "p_ai_api_key" "text" DEFAULT NULL::"text") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+    v_user_id UUID;
+BEGIN
+    v_user_id := auth.uid();
+    IF v_user_id IS NULL THEN
+        RAISE EXCEPTION 'Not authenticated';
+    END IF;
+    
+    UPDATE public.users
+    SET 
+        parser_mode = p_parser_mode,
+        ai_provider = p_ai_provider,
+        ai_api_key = CASE 
+            WHEN p_ai_api_key IS NOT NULL THEN p_ai_api_key 
+            ELSE ai_api_key  -- Keep existing if not provided
+        END,
+        updated_at = NOW()
+    WHERE id = v_user_id;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."update_parser_settings"("p_parser_mode" "text", "p_ai_provider" "text", "p_ai_api_key" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."update_updated_at_column"() RETURNS "trigger"
@@ -730,21 +819,35 @@ SET default_table_access_method = "heap";
 
 
 CREATE TABLE IF NOT EXISTS "public"."bot_links" (
-    "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
+    "link_token" "text" NOT NULL,
     "user_id" "uuid" NOT NULL,
     "platform" "text" NOT NULL,
-    "platform_user_id" "text" NOT NULL,
-    "platform_username" "text",
-    "is_active" boolean DEFAULT true,
-    "ai_provider" "text" DEFAULT 'none'::"text",
-    "ai_api_key" "text",
+    "platform_user_id" "text",
+    "metadata" "jsonb" DEFAULT '{}'::"jsonb",
+    "is_active" boolean DEFAULT false,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "parser_mode" "text" DEFAULT 'regex'::"text"
+    "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"()
 );
 
 
 ALTER TABLE "public"."bot_links" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "public"."bot_links" IS 'Stores platform (Telegram, WhatsApp, etc) linking information for users.';
+
+
+
+COMMENT ON COLUMN "public"."bot_links"."link_token" IS 'Legacy column, kept for primary key';
+
+
+
+COMMENT ON COLUMN "public"."bot_links"."metadata" IS 'Platform-specific metadata: username, chat_id, ai_provider, ai_api_key, parser_mode, etc.';
+
+
+
+COMMENT ON COLUMN "public"."bot_links"."id" IS 'UUID identifier for Flutter model compatibility';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."categories" (
@@ -917,11 +1020,26 @@ CREATE TABLE IF NOT EXISTS "public"."users" (
     "currency" "text" DEFAULT 'IDR'::"text",
     "timezone" "text" DEFAULT 'Asia/Jakarta'::"text",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "parser_mode" "text" DEFAULT 'regex'::"text",
+    "ai_provider" "text" DEFAULT 'none'::"text",
+    "ai_api_key" "text"
 );
 
 
 ALTER TABLE "public"."users" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."users"."parser_mode" IS 'Transaction parsing mode: regex or ai';
+
+
+
+COMMENT ON COLUMN "public"."users"."ai_provider" IS 'AI provider for parsing: none, openai, gemini, anthropic, groq';
+
+
+
+COMMENT ON COLUMN "public"."users"."ai_api_key" IS 'Encrypted API key for AI provider (user_key mode)';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."wallets" (
@@ -941,7 +1059,7 @@ ALTER TABLE "public"."wallets" OWNER TO "postgres";
 
 
 ALTER TABLE ONLY "public"."bot_links"
-    ADD CONSTRAINT "bot_links_pkey" PRIMARY KEY ("id");
+    ADD CONSTRAINT "bot_links_pkey" PRIMARY KEY ("link_token");
 
 
 
@@ -1002,6 +1120,10 @@ ALTER TABLE ONLY "public"."users"
 
 ALTER TABLE ONLY "public"."wallets"
     ADD CONSTRAINT "wallets_pkey" PRIMARY KEY ("id");
+
+
+
+CREATE INDEX "idx_bot_links_link_token" ON "public"."bot_links" USING "btree" ("link_token") WHERE ("link_token" IS NOT NULL);
 
 
 
@@ -1233,6 +1355,10 @@ ALTER TABLE ONLY "public"."wallets"
 
 
 
+CREATE POLICY "Service role full access on pending_bot_transactions" ON "public"."pending_bot_transactions" USING (("auth"."role"() = 'service_role'::"text"));
+
+
+
 CREATE POLICY "Service role full access on user_preferences" ON "public"."user_preferences" USING (("auth"."role"() = 'service_role'::"text"));
 
 
@@ -1250,6 +1376,10 @@ CREATE POLICY "Users can delete own bot links" ON "public"."bot_links" FOR DELET
 
 
 CREATE POLICY "Users can delete own categories" ON "public"."categories" FOR DELETE USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can delete own pending transactions" ON "public"."pending_bot_transactions" FOR DELETE USING (("auth"."uid"() = "user_id"));
 
 
 
@@ -1274,6 +1404,10 @@ CREATE POLICY "Users can delete own wallets" ON "public"."wallets" FOR DELETE US
 
 
 CREATE POLICY "Users can insert own categories" ON "public"."categories" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can insert own pending transactions" ON "public"."pending_bot_transactions" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
 
 
 
@@ -1302,6 +1436,10 @@ CREATE POLICY "Users can update own bot links" ON "public"."bot_links" FOR UPDAT
 
 
 CREATE POLICY "Users can update own categories" ON "public"."categories" FOR UPDATE USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can update own pending transactions" ON "public"."pending_bot_transactions" FOR UPDATE USING (("auth"."uid"() = "user_id"));
 
 
 
@@ -1334,6 +1472,10 @@ CREATE POLICY "Users can view own bot links" ON "public"."bot_links" FOR SELECT 
 
 
 CREATE POLICY "Users can view own categories" ON "public"."categories" FOR SELECT USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can view own pending transactions" ON "public"."pending_bot_transactions" FOR SELECT USING (("auth"."uid"() = "user_id"));
 
 
 
@@ -1432,6 +1574,12 @@ GRANT ALL ON FUNCTION "public"."delete_wallet_transfer"("p_user_id" "uuid", "p_t
 
 
 
+GRANT ALL ON FUNCTION "public"."get_bot_link"("p_platform" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_bot_link"("p_platform" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_bot_link"("p_platform" "text") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_user_by_platform_id"("p_platform" "text", "p_platform_user_id" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_user_by_platform_id"("p_platform" "text", "p_platform_user_id" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_user_by_platform_id"("p_platform" "text", "p_platform_user_id" "text") TO "service_role";
@@ -1441,6 +1589,12 @@ GRANT ALL ON FUNCTION "public"."get_user_by_platform_id"("p_platform" "text", "p
 GRANT ALL ON FUNCTION "public"."get_user_data_summary"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_user_data_summary"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_user_data_summary"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_user_parser_settings"("p_user_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_user_parser_settings"("p_user_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_user_parser_settings"("p_user_id" "uuid") TO "service_role";
 
 
 
@@ -1468,9 +1622,9 @@ GRANT ALL ON FUNCTION "public"."handle_updated_at"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."link_telegram_account"("p_link_token" "text", "p_telegram_id" "text", "p_telegram_username" "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."link_telegram_account"("p_link_token" "text", "p_telegram_id" "text", "p_telegram_username" "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."link_telegram_account"("p_link_token" "text", "p_telegram_id" "text", "p_telegram_username" "text") TO "service_role";
+GRANT ALL ON FUNCTION "public"."link_by_user_id"("p_user_id" "uuid", "p_platform" "text", "p_platform_user_id" "text", "p_metadata" "jsonb") TO "anon";
+GRANT ALL ON FUNCTION "public"."link_by_user_id"("p_user_id" "uuid", "p_platform" "text", "p_platform_user_id" "text", "p_metadata" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."link_by_user_id"("p_user_id" "uuid", "p_platform" "text", "p_platform_user_id" "text", "p_metadata" "jsonb") TO "service_role";
 
 
 
@@ -1489,6 +1643,24 @@ GRANT ALL ON FUNCTION "public"."prevent_category_type_change"() TO "service_role
 GRANT ALL ON FUNCTION "public"."recalculate_wallet_balance"("p_wallet_id" "uuid", "p_user_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."recalculate_wallet_balance"("p_wallet_id" "uuid", "p_user_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."recalculate_wallet_balance"("p_wallet_id" "uuid", "p_user_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."unlink_platform"("p_platform" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."unlink_platform"("p_platform" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."unlink_platform"("p_platform" "text") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."update_bot_link_metadata"("p_platform" "text", "p_metadata" "jsonb") TO "anon";
+GRANT ALL ON FUNCTION "public"."update_bot_link_metadata"("p_platform" "text", "p_metadata" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_bot_link_metadata"("p_platform" "text", "p_metadata" "jsonb") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."update_parser_settings"("p_parser_mode" "text", "p_ai_provider" "text", "p_ai_api_key" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."update_parser_settings"("p_parser_mode" "text", "p_ai_provider" "text", "p_ai_api_key" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_parser_settings"("p_parser_mode" "text", "p_ai_provider" "text", "p_ai_api_key" "text") TO "service_role";
 
 
 

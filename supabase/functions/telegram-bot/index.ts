@@ -47,12 +47,52 @@ serve(async (req: Request) => {
     const update = await req.json();
     console.log('Update diterima:', JSON.stringify(update).substring(0, 200));
 
-    // 1. Handle Callback Query (tombol inline)
     const callbackQuery = parseCallbackQuery(update);
     if (callbackQuery && callbackQuery.data && callbackQuery.message) {
       console.log('Memproses callback:', callbackQuery.data);
-      // TODO: Implementasi handling callback via agent
+
+      const chatId = callbackQuery.message.chat.id;
+      // Safeguard against missing 'from'
+      if (!callbackQuery.from || !callbackQuery.from.id) {
+        console.error('Callback query missing from.id');
+        await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+        return new Response('Invalid Callback', { status: 200 });
+      }
+      const telegramId = callbackQuery.from.id;
+
+      // Lookup user ID based on telegram ID
+      const { data: userData } = await supabase.rpc('get_user_by_platform_id', {
+        p_platform: 'telegram',
+        p_platform_user_id: telegramId.toString(),
+      });
+
+      const linkedUser = Array.isArray(userData) ? userData[0] : userData;
+      if (!linkedUser) {
+        await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '⚠️ Akun tidak terhubung');
+        return new Response('User not linked', { status: 200 });
+      }
+
+      // Map callback data to agent input text
+      let inputText = '';
+      if (callbackQuery.data === 'confirm_yes') inputText = 'ya';
+      else if (callbackQuery.data === 'confirm_no') inputText = 'batal';
+      else inputText = callbackQuery.data; // Fallback
+
+      // Process with agent
+      const agentInput: AgentInput = {
+        type: 'text',
+        content: inputText,
+        userId: linkedUser.user_id,
+        conversationId: chatId.toString(),
+        platform: 'telegram',
+      };
+
+      // Send processing feedback (optional, or just answer callback)
       await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+
+      const response = await agent.process(agentInput);
+      await sendAgentResponse(TELEGRAM_BOT_TOKEN, chatId, response);
+
       return new Response('OK', { status: 200 });
     }
 
@@ -65,29 +105,78 @@ serve(async (req: Request) => {
 
     const chatId = message.chat.id;
     const telegramId = message.from.id;
+    const telegramUsername = message.from.username;
 
     // 3. Handle Commands (/start, /help, dll)
     if (message.text && message.text.startsWith('/')) {
       const command = message.text.split(' ')[0].toLowerCase();
+      const args = message.text.split(' ')[1];
 
       if (command === '/start') {
-        // Cek deep link untuk menghubungkan akun
-        const args = message.text.split(' ')[1];
-        if (args && args.startsWith('link_')) {
-          const linkToken = args.replace('link_', '');
-          const { error } = await supabase.rpc('link_telegram_account', {
-            p_link_token: linkToken,
-            p_telegram_id: telegramId.toString(),
-            p_telegram_username: message.from.username || null,
-          });
+        if (args) {
+          console.log('Attempting to link with args:', args);
 
-          if (!error) {
+          // Cek apakah args adalah UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+          if (uuidRegex.test(args)) {
+            // NEW FLOW: Link by UUID (Direct User ID)
+            const userId = args;
+
+            const { error } = await supabase.rpc('link_by_user_id', {
+              p_user_id: userId,
+              p_platform: 'telegram',
+              p_platform_user_id: telegramId.toString(),
+              p_metadata: {
+                username: telegramUsername,
+                chat_id: chatId.toString(),
+                linked_at: new Date().toISOString(),
+              },
+            });
+
+            if (error) {
+              console.error('Link by user_id error:', error);
+              await sendTelegramMessage(
+                TELEGRAM_BOT_TOKEN,
+                chatId,
+                `❌ <b>Gagal menghubungkan akun.</b>\n\nError: ${error.message}`,
+              );
+              return new Response('Link Failed', { status: 200 });
+            }
+
             await sendTelegramMessage(
               TELEGRAM_BOT_TOKEN,
               chatId,
               `✅ <b>Akun berhasil terhubung!</b>\n\nSekarang Anda bisa mencatat transaksi langsung dari Telegram.\n\nContoh:\n• <code>makan 50k cash</code>\n• <code>gaji 3jt mandiri</code>\n\nKetik /help untuk panduan.`,
             );
-            return new Response('Linked', { status: 200 });
+            return new Response('Linked via UUID', { status: 200 });
+          } else {
+            // LEGACY FLOW: Link by Token (Short token or legacy format)
+            // Extract token - hapus prefix "link_" jika ada
+            const linkToken = args.startsWith('link_') ? args.replace('link_', '') : args;
+
+            const { error } = await supabase.rpc('link_telegram_account', {
+              p_link_token: linkToken,
+              p_telegram_id: telegramId.toString(),
+              p_telegram_username: telegramUsername || null,
+            });
+
+            if (error) {
+              console.error('Link by token error:', error);
+              await sendTelegramMessage(
+                TELEGRAM_BOT_TOKEN,
+                chatId,
+                `❌ <b>Gagal menghubungkan akun.</b>\n\nError: ${error.message}\n\nPastikan link belum expired. Coba generate link baru dari aplikasi Finoteku.`,
+              );
+              return new Response('Link Failed', { status: 200 });
+            }
+
+            await sendTelegramMessage(
+              TELEGRAM_BOT_TOKEN,
+              chatId,
+              `✅ <b>Akun berhasil terhubung!</b>\n\nSekarang Anda bisa mencatat transaksi langsung dari Telegram.\n\nContoh:\n• <code>makan 50k cash</code>\n• <code>gaji 3jt mandiri</code>\n\nKetik /help untuk panduan.`,
+            );
+            return new Response('Linked via Token', { status: 200 });
           }
         }
 
@@ -109,13 +198,23 @@ serve(async (req: Request) => {
       }
     }
 
-    // 4. Cek apakah user sudah terhubung
-    const { data: userData } = await supabase.rpc('get_user_by_platform_id', {
+    // 4. Cek apakah user sudah terhubung (Improved Lookup)
+    const { data: userData, error: userError } = await supabase.rpc('get_user_by_platform_id', {
       p_platform: 'telegram',
       p_platform_user_id: telegramId.toString(),
     });
 
-    if (!userData || userData.length === 0) {
+    if (userError) {
+      console.error('Error lookup user:', userError);
+      return new Response('Error lookup', { status: 500 });
+    }
+
+    // Handle return type difference: old was array, new RPC might return single object or array
+    // Checking schema notes: get_user_by_platform_id updated to return TABLE(user_id uuid, metadata jsonb)
+    // So it returns an array of rows (likely 1 row)
+    const linkedUser = Array.isArray(userData) ? userData[0] : userData;
+
+    if (!linkedUser) {
       await sendTelegramMessage(
         TELEGRAM_BOT_TOKEN,
         chatId,
@@ -124,7 +223,7 @@ serve(async (req: Request) => {
       return new Response('User not linked', { status: 200 });
     }
 
-    const userId = userData[0].user_id;
+    const userId = linkedUser.user_id;
 
     // 5. Bangun AgentInput berdasarkan tipe pesan
     let agentInput: AgentInput;

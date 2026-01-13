@@ -8,7 +8,20 @@ import type { ToolResult } from '../types.ts';
 import * as transactionData from '../data/transactions.ts';
 import type { UserContext } from '../data/users.ts';
 
-const MONTH_NAMES = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+const MONTH_NAMES = [
+  'Januari',
+  'Februari',
+  'Maret',
+  'April',
+  'Mei',
+  'Juni',
+  'Juli',
+  'Agustus',
+  'September',
+  'Oktober',
+  'November',
+  'Desember',
+];
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('id-ID', {
@@ -56,7 +69,12 @@ export class SummaryTool extends BaseTool {
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
     const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
 
-    const { data: transactions } = await transactionData.getByDateRange(this.supabase, userContext.userId, startDate, endDate);
+    const { data: transactions } = await transactionData.getByDateRange(
+      this.supabase,
+      userContext.userId,
+      startDate,
+      endDate,
+    );
 
     // Calculate summary
     let totalIncome = 0;
@@ -132,7 +150,9 @@ export class SummaryTool extends BaseTool {
       message += `\n<b>Top Pengeluaran:</b>\n`;
       for (let i = 0; i < Math.min(3, summary.topExpenseCategories.length); i++) {
         const cat = summary.topExpenseCategories[i];
-        const percent = summary.totalExpense > 0 ? Math.round((cat.total / summary.totalExpense) * 100) : 0;
+        const percent = summary.totalExpense > 0
+          ? Math.round((cat.total / summary.totalExpense) * 100)
+          : 0;
         message += `${i + 1}. ${cat.name}: ${formatCurrency(cat.total)} (${percent}%)\n`;
       }
     }
