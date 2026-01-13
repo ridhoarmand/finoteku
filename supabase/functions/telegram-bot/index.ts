@@ -1,407 +1,231 @@
-// Telegram Bot Edge Function
+/**
+ * Telegram Bot Edge Function
+ * Webhook handler untuk menerima update dari Telegram
+ * Mendelegasikan pemrosesan ke FinanceAgent
+ */
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { encode } from 'https://deno.land/std@0.168.0/encoding/base64.ts';
 import {
+  answerCallbackQuery,
   downloadTelegramFile,
   getTelegramFileUrl,
   parseCallbackQuery,
   parseTelegramUpdate,
   sendTelegramMessage,
-} from '../_shared/platforms/telegram.ts';
-import { detectIntentSimple } from '../_shared/ai/intent.ts';
-import { parseImageWithGemini } from '../_shared/parsers/gemini.ts';
-import { transcribeWithGemini } from '../_shared/parsers/stt.ts';
-
-// Handlers
-import { handleCommand } from './handlers/commands.ts';
-import { handleQuery } from './handlers/queries.ts';
-import {
-  handleNewTransaction,
-  handlePendingTransaction,
-  handleTransactionCallback,
-} from './handlers/transactions.ts';
-
-// Utils
-import { getUserByTelegramId, getUserContext, getUserTransactionHistory } from './utils/context.ts';
-import { parseMessage } from './utils/parser.ts';
+  sendTelegramMessageWithButtons,
+} from './telegram.ts';
+import { FinanceAgent } from '../finoteku-agent/agent.ts';
+import type { AgentInput, AgentResponse } from '../finoteku-agent/types.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Environment variables
+// Environment Variables (otomatis tersedia di Supabase Edge Functions)
 const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN')!;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-// Server-side AI API key (Gemini only)
-const SERVER_GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-
-// Initialize Supabase client
+// Inisialisasi Supabase client
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+// Inisialisasi Finance Agent
+const agent = new FinanceAgent({
+  supabase,
+  defaultProvider: 'gemini',
+});
+
 serve(async (req: Request) => {
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
     const update = await req.json();
-    console.log('Received update:', JSON.stringify(update));
+    console.log('Update diterima:', JSON.stringify(update).substring(0, 200));
 
-    // 1. Handle Callback Query (Inline Buttons)
+    // 1. Handle Callback Query (tombol inline)
     const callbackQuery = parseCallbackQuery(update);
     if (callbackQuery && callbackQuery.data && callbackQuery.message) {
-      console.log('Handling callback query:', callbackQuery.data);
-      return await handleTransactionCallback(supabase, TELEGRAM_BOT_TOKEN, {
-        id: callbackQuery.id,
-        data: callbackQuery.data,
-        message: {
-          chat: { id: callbackQuery.message.chat.id },
-          message_id: callbackQuery.message.message_id,
-          text: '',
-        },
-      });
+      console.log('Memproses callback:', callbackQuery.data);
+      // TODO: Implementasi handling callback via agent
+      await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+      return new Response('OK', { status: 200 });
     }
 
-    // 2. Parse Message
+    // 2. Parse pesan dari update
     const message = parseTelegramUpdate(update);
-
-    // Accept text, photo, or voice
     if (!message || (!message.text && !message.photo && !message.voice && !message.chat.id)) {
-      console.log('Skipping update: No valid message found');
+      console.log('Skip: Tidak ada pesan valid');
       return new Response('OK', { status: 200 });
     }
 
     const chatId = message.chat.id;
     const telegramId = message.from.id;
-    const telegramUsername = message.from.username;
 
-    // 3. Handle Commands (/start, /help) - Global (Only if text exists)
+    // 3. Handle Commands (/start, /help, dll)
     if (message.text && message.text.startsWith('/')) {
-      console.log('Step 3: Handle Command');
-      const commandResponse = await handleCommand(
-        supabase,
-        TELEGRAM_BOT_TOKEN,
-        chatId,
-        message.text,
-        telegramId,
-        telegramUsername,
-      );
-      if (commandResponse) {
-        return commandResponse;
+      const command = message.text.split(' ')[0].toLowerCase();
+
+      if (command === '/start') {
+        // Cek deep link untuk menghubungkan akun
+        const args = message.text.split(' ')[1];
+        if (args && args.startsWith('link_')) {
+          const linkToken = args.replace('link_', '');
+          const { error } = await supabase.rpc('link_telegram_account', {
+            p_link_token: linkToken,
+            p_telegram_id: telegramId.toString(),
+            p_telegram_username: message.from.username || null,
+          });
+
+          if (!error) {
+            await sendTelegramMessage(
+              TELEGRAM_BOT_TOKEN,
+              chatId,
+              `✅ <b>Akun berhasil terhubung!</b>\n\nSekarang Anda bisa mencatat transaksi langsung dari Telegram.\n\nContoh:\n• <code>makan 50k cash</code>\n• <code>gaji 3jt mandiri</code>\n\nKetik /help untuk panduan.`,
+            );
+            return new Response('Linked', { status: 200 });
+          }
+        }
+
+        await sendTelegramMessage(
+          TELEGRAM_BOT_TOKEN,
+          chatId,
+          `👋 <b>Selamat datang di Finoteku Bot!</b>\n\nUntuk memulai, hubungkan akun melalui aplikasi Finoteku:\nSettings → Chat Bot → Hubungkan Telegram`,
+        );
+        return new Response('Start', { status: 200 });
+      }
+
+      if (command === '/help') {
+        await sendTelegramMessage(
+          TELEGRAM_BOT_TOKEN,
+          chatId,
+          `📖 <b>Panduan Finoteku Bot</b>\n\n<b>Catat Transaksi:</b>\n• <code>makan 50k</code> - Pengeluaran\n• <code>gaji 3jt mandiri</code> - Pemasukan\n• <code>bensin 100k kemarin</code> - Dengan tanggal\n\n<b>Cek Keuangan:</b>\n• "berapa saldo?" - Cek saldo\n• "ringkasan bulan ini" - Summary\n• "riwayat" - Transaksi terakhir\n\n<b>Media:</b>\n• 📸 Kirim foto struk\n• 🎤 Kirim voice note`,
+        );
+        return new Response('Help', { status: 200 });
       }
     }
 
-    // 4. Get User Info
-    console.log('Step 4: Get User Info');
-    const user = await getUserByTelegramId(supabase, telegramId);
+    // 4. Cek apakah user sudah terhubung
+    const { data: userData } = await supabase.rpc('get_user_by_platform_id', {
+      p_platform: 'telegram',
+      p_platform_user_id: telegramId.toString(),
+    });
 
-    if (!user) {
-      console.log('User not linked, sending warning');
+    if (!userData || userData.length === 0) {
       await sendTelegramMessage(
         TELEGRAM_BOT_TOKEN,
         chatId,
-        `⚠️ <b>Akun belum terhubung.</b>\n\nSilakan hubungkan akun Telegram Anda melalui aplikasi Finoteku.`,
+        `⚠️ <b>Akun belum terhubung.</b>\n\nSilakan hubungkan melalui aplikasi Finoteku.`,
       );
       return new Response('User not linked', { status: 200 });
     }
 
-    // 5. Get User Context (Wallets, Categories)
-    console.log('Step 5: Get User Context');
-    const userContext = await getUserContext(supabase, user.userId);
+    const userId = userData[0].user_id;
 
-    // 6. Handle Photo (Receipt Scanning)
+    // 5. Bangun AgentInput berdasarkan tipe pesan
+    let agentInput: AgentInput;
+
     if (message.photo && message.photo.length > 0) {
-      console.log('Step 6: Handle Photo (Vision AI)');
-      await sendTelegramMessage(
-        TELEGRAM_BOT_TOKEN,
-        chatId,
-        '📸 <b>Menganalisis struk...</b>\nMohon tunggu sebentar.',
-      );
+      // Handle foto (struk/nota)
+      await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '📸 <b>Menganalisis struk...</b>');
 
-      try {
-        // Get highest resolution photo (last item)
-        const photo = message.photo[message.photo.length - 1];
-        console.log('Photo file_id:', photo.file_id);
-
-        const fileUrl = await getTelegramFileUrl(TELEGRAM_BOT_TOKEN, photo.file_id);
-        console.log('File URL:', fileUrl);
-
-        if (!fileUrl) {
-          console.error('Failed to get file URL from Telegram');
-          await sendTelegramMessage(
-            TELEGRAM_BOT_TOKEN,
-            chatId,
-            '❌ <b>Gagal mengunduh foto.</b>\nSilakan coba lagi.',
-          );
-          return new Response('File URL Failed', { status: 200 });
-        }
-
-        const fileBuffer = await downloadTelegramFile(fileUrl);
-        console.log('File buffer size:', fileBuffer?.byteLength || 0);
-
-        if (!fileBuffer) {
-          console.error('Failed to download file from Telegram');
-          await sendTelegramMessage(
-            TELEGRAM_BOT_TOKEN,
-            chatId,
-            '❌ <b>Gagal mengunduh foto.</b>\nSilakan coba lagi.',
-          );
-          return new Response('Download Failed', { status: 200 });
-        }
-
-        const base64 = encode(fileBuffer);
-        console.log('Base64 length:', base64.length);
-
-        // Prioritize User Key, fallback to Server Key
-        // Note: Vision works best with Gemini 1.5/2.0 Flash
-        const apiKey = user.aiApiKey || SERVER_GEMINI_API_KEY;
-
-        if (!apiKey) {
-          console.error('No API key available for vision parsing');
-          await sendTelegramMessage(
-            TELEGRAM_BOT_TOKEN,
-            chatId,
-            '❌ <b>Gagal: API Key Tidak Ditemukan.</b>\nMohon set API Key di aplikasi.',
-          );
-          return new Response('Missing API Key', { status: 200 });
-        }
-
-        console.log('Using API key (first 8 chars):', apiKey.substring(0, 8));
-
-        // Data transformation for Gemini Context
-        const geminiContext = {
-          incomeCategories: userContext.categories.filter((c) => c.type === 'income').map((c) =>
-            c.name
-          ),
-          expenseCategories: userContext.categories.filter((c) => c.type === 'expense').map((c) =>
-            c.name
-          ),
-          walletNames: userContext.wallets.map((w) => w.name),
-          incomeCategoriesWithParent: userContext.categories.filter((c) => c.type === 'income').map(
-            (c) => ({ name: c.name, parent: c.parentName }),
-          ),
-          expenseCategoriesWithParent: userContext.categories.filter((c) => c.type === 'expense')
-            .map((c) => ({ name: c.name, parent: c.parentName })),
-        };
-
-        console.log('Calling parseImageWithGemini...');
-        const parsed = await parseImageWithGemini(base64, apiKey, geminiContext);
-        console.log('ParseImage result:', parsed);
-
-        if (parsed) {
-          console.log('Vision Parse Success:', parsed);
-          return await handleNewTransaction(
-            supabase,
-            TELEGRAM_BOT_TOKEN,
-            chatId,
-            user.userId,
-            userContext,
-            parsed,
-          );
-        }
-
-        console.error('parseImageWithGemini returned null');
-      } catch (err) {
-        console.error('Vision handling error:', err);
+      const photo = message.photo[message.photo.length - 1];
+      const fileUrl = await getTelegramFileUrl(TELEGRAM_BOT_TOKEN, photo.file_id);
+      if (!fileUrl) {
+        await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '❌ Gagal mengunduh foto.');
+        return new Response('File URL Failed', { status: 200 });
       }
 
-      await sendTelegramMessage(
-        TELEGRAM_BOT_TOKEN,
-        chatId,
-        '❌ <b>Gagal membaca gambar.</b>\nPastikan foto jelas dan coba lagi.',
-      );
-      return new Response('Vision Failed', { status: 200 });
-    }
-
-    // 6b. Handle Voice Note (Speech-to-Text)
-    if (message.voice) {
-      console.log('Step 6b: Handle Voice Note (STT)');
-      await sendTelegramMessage(
-        TELEGRAM_BOT_TOKEN,
-        chatId,
-        '🎵 <b>Mengubah suara ke teks...</b>\nMohon tunggu sebentar.',
-      );
-
-      try {
-        const voice = message.voice;
-        console.log('Voice file_id:', voice.file_id, 'duration:', voice.duration);
-
-        const fileUrl = await getTelegramFileUrl(TELEGRAM_BOT_TOKEN, voice.file_id);
-        console.log('Voice File URL:', fileUrl);
-
-        if (!fileUrl) {
-          console.error('Failed to get voice file URL from Telegram');
-          await sendTelegramMessage(
-            TELEGRAM_BOT_TOKEN,
-            chatId,
-            '❌ <b>Gagal mengunduh voice note.</b>\nSilakan coba lagi.',
-          );
-          return new Response('Voice File URL Failed', { status: 200 });
-        }
-
-        const fileBuffer = await downloadTelegramFile(fileUrl);
-        console.log('Voice file buffer size:', fileBuffer?.byteLength || 0);
-
-        if (!fileBuffer) {
-          console.error('Failed to download voice file from Telegram');
-          await sendTelegramMessage(
-            TELEGRAM_BOT_TOKEN,
-            chatId,
-            '❌ <b>Gagal mengunduh voice note.</b>\nSilakan coba lagi.',
-          );
-          return new Response('Voice Download Failed', { status: 200 });
-        }
-
-        const base64Audio = encode(fileBuffer);
-        console.log('Voice Base64 length:', base64Audio.length);
-
-        // Prioritize User Key, fallback to Server Key
-        const apiKey = user.aiApiKey || SERVER_GEMINI_API_KEY;
-
-        if (!apiKey) {
-          console.error('No API key available for STT');
-          await sendTelegramMessage(
-            TELEGRAM_BOT_TOKEN,
-            chatId,
-            '❌ <b>Gagal: API Key Tidak Ditemukan.</b>\nMohon set API Key di aplikasi.',
-          );
-          return new Response('Missing API Key for STT', { status: 200 });
-        }
-
-        // Telegram voice notes are OGG format
-        const mimeType = voice.mime_type || 'audio/ogg';
-        console.log('Voice mime_type:', mimeType);
-
-        const transcribedText = await transcribeWithGemini(base64Audio, apiKey, mimeType);
-        console.log('STT Result:', transcribedText);
-
-        if (transcribedText && transcribedText.trim().length > 0) {
-          // Now parse the transcribed text as a transaction
-          const history = user.parserMode !== 'regex'
-            ? await getUserTransactionHistory(supabase, user.userId)
-            : [];
-
-          const parsed = await parseMessage(
-            transcribedText,
-            user.parserMode,
-            user.aiApiKey,
-            SERVER_GEMINI_API_KEY,
-            userContext,
-            history,
-          );
-          console.log('Parsed from STT:', parsed);
-
-          if (parsed) {
-            return await handleNewTransaction(
-              supabase,
-              TELEGRAM_BOT_TOKEN,
-              chatId,
-              user.userId,
-              userContext,
-              parsed,
-            );
-          } else {
-            await sendTelegramMessage(
-              TELEGRAM_BOT_TOKEN,
-              chatId,
-              `ℹ️ <b>Hasil transkripsi:</b>\n<i>"${transcribedText}"</i>\n\n❌ Tidak terdeteksi sebagai transaksi.\nCoba ucapkan dengan jelas, contoh: "Makan lima puluh ribu cash"`,
-            );
-            return new Response('STT parsed but not transaction', { status: 200 });
-          }
-        }
-
-        console.error('STT returned empty text');
-      } catch (err) {
-        console.error('Voice handling error:', err);
+      const fileBuffer = await downloadTelegramFile(fileUrl);
+      if (!fileBuffer) {
+        await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '❌ Gagal mengunduh foto.');
+        return new Response('Download Failed', { status: 200 });
       }
 
-      await sendTelegramMessage(
-        TELEGRAM_BOT_TOKEN,
-        chatId,
-        '❌ <b>Gagal mengubah suara ke teks.</b>\nPastikan suara jelas dan coba lagi.',
-      );
-      return new Response('STT Failed', { status: 200 });
-    }
+      agentInput = {
+        type: 'image',
+        content: encode(fileBuffer),
+        mimeType: 'image/jpeg',
+        userId,
+        conversationId: chatId.toString(),
+        platform: 'telegram',
+      };
+    } else if (message.voice) {
+      // Handle voice note
+      await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '🎵 <b>Mengubah suara ke teks...</b>');
 
-    // 7. Handle Text Message
-    const originalText = message.text;
-    if (!originalText) {
-      return new Response('No text to process', { status: 200 });
-    }
+      const fileUrl = await getTelegramFileUrl(TELEGRAM_BOT_TOKEN, message.voice.file_id);
+      if (!fileUrl) {
+        await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '❌ Gagal mengunduh voice note.');
+        return new Response('Voice URL Failed', { status: 200 });
+      }
 
-    // 8. Handle Pending Transactions (Text updates) - Pass AI key for natural language updates
-    const aiKeyForUpdates = user.aiApiKey || SERVER_GEMINI_API_KEY;
-    const pendingResponse = await handlePendingTransaction(
-      supabase,
-      TELEGRAM_BOT_TOKEN,
-      chatId,
-      originalText,
-      userContext,
-      aiKeyForUpdates,
-    );
-    if (pendingResponse) return pendingResponse;
+      const fileBuffer = await downloadTelegramFile(fileUrl);
+      if (!fileBuffer) {
+        await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '❌ Gagal mengunduh voice note.');
+        return new Response('Voice Download Failed', { status: 200 });
+      }
 
-    // 9. Detect Intent
-    console.log('Step 9: Detect Intent');
-    const intentResult = detectIntentSimple(originalText);
-    console.log('Detected intent:', intentResult.intent);
-
-    // 10. Handle Queries
-    if (intentResult.intent.startsWith('query_')) {
-      const queryResponse = await handleQuery(
-        supabase,
-        TELEGRAM_BOT_TOKEN,
-        chatId,
-        user.userId,
-        intentResult.intent,
-        originalText,
-      );
-      if (queryResponse) return queryResponse;
-    }
-
-    // 11. Parse Transaction (Text)
-    console.log('Step 11: Parse Text Transaction');
-    const history = user.parserMode !== 'regex'
-      ? await getUserTransactionHistory(supabase, user.userId)
-      : [];
-
-    const parsed = await parseMessage(
-      originalText,
-      user.parserMode,
-      user.aiApiKey,
-      SERVER_GEMINI_API_KEY,
-      userContext,
-      history,
-    );
-    console.log('Parsed result:', parsed);
-
-    if (parsed) {
-      return await handleNewTransaction(
-        supabase,
-        TELEGRAM_BOT_TOKEN,
-        chatId,
-        user.userId,
-        userContext,
-        parsed,
-      );
+      agentInput = {
+        type: 'voice',
+        content: encode(fileBuffer),
+        mimeType: message.voice.mime_type || 'audio/ogg',
+        userId,
+        conversationId: chatId.toString(),
+        platform: 'telegram',
+      };
+    } else if (message.text) {
+      // Handle teks biasa
+      agentInput = {
+        type: 'text',
+        content: message.text,
+        userId,
+        conversationId: chatId.toString(),
+        platform: 'telegram',
+      };
     } else {
-      console.log('Parse failed, sending fallback message');
-      await sendTelegramMessage(
-        TELEGRAM_BOT_TOKEN,
-        chatId,
-        `❌ <b>Tidak dapat memahami pesan</b>\n\nFormat: <code>[kategori] [nominal] [wallet]</code>\nAtau kirim <b>Foto Struk</b> untuk scan otomatis! 📸`,
-      );
-      return new Response('Parse failed', { status: 200 });
+      return new Response('No processable input', { status: 200 });
     }
+
+    // 6. Proses dengan Agent
+    const response = await agent.process(agentInput);
+
+    // 7. Kirim response ke user
+    await sendAgentResponse(TELEGRAM_BOT_TOKEN, chatId, response);
+
+    return new Response('OK', { status: 200 });
   } catch (error) {
-    console.error('Error processing request:', error);
+    console.error('Error:', error);
     return new Response(JSON.stringify({ error: (error as Error).message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });
   }
 });
+
+/**
+ * Kirim response dari agent ke Telegram
+ * Jika ada actions, tampilkan sebagai inline buttons
+ */
+async function sendAgentResponse(
+  token: string,
+  chatId: number,
+  response: AgentResponse,
+): Promise<void> {
+  if (response.type === 'confirmation' && response.actions) {
+    // Kirim dengan inline buttons
+    await sendTelegramMessageWithButtons(token, chatId, response.content, [
+      response.actions.map((action) => ({
+        text: action.text,
+        callback_data: action.action,
+      })),
+    ]);
+  } else {
+    // Kirim pesan biasa
+    await sendTelegramMessage(token, chatId, response.content);
+  }
+}
