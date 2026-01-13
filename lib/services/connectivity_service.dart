@@ -22,15 +22,29 @@ class ConnectivityService {
     // Check initial connectivity
     await checkConnectivity();
 
-    // Listen to connectivity changes
-    _connectivity.onConnectivityChanged.listen((
-      List<ConnectivityResult> results,
-    ) async {
+    // Listen to connectivity changes (wrapped in try-catch for Windows compatibility)
+    try {
+      _connectivity.onConnectivityChanged.listen(
+        (List<ConnectivityResult> results) async {
+          if (kDebugMode) {
+            print('🌐 Connectivity changed: $results');
+          }
+          await checkConnectivity();
+        },
+        onError: (e) {
+          // Ignore stream errors (common on Windows desktop)
+          if (kDebugMode) {
+            print('⚠️ Connectivity stream error (ignored): $e');
+          }
+        },
+      );
+    } catch (e) {
+      // Fallback: assume online if listener fails (Windows desktop issue)
       if (kDebugMode) {
-        print('🌐 Connectivity changed: $results');
+        print('⚠️ Connectivity listener failed (Windows): $e');
       }
-      await checkConnectivity();
-    });
+      _updateConnectionStatus(true);
+    }
   }
 
   /// Check if device has internet connectivity

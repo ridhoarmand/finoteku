@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/bot_link.dart';
 import '../../services/supabase_service.dart';
+import '../../services/user_service.dart';
+import 'bot_link_service.dart';
 import 'bot_provider.dart';
 
 /// Bot Settings Screen - Configure Telegram and Parser Mode
@@ -61,6 +63,8 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
     ThemeData theme,
     BotLink? botLink,
   ) {
+    final userProfileAsync = ref.watch(userProfileProvider);
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -69,10 +73,23 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
 
         const SizedBox(height: 24),
 
-        // Parser Configuration (only show if connected)
-        if (botLink != null) ...[
-          _buildParserConfigCard(context, theme, botLink),
-        ],
+        // Parser Configuration (ALWAYS show - stored in users table)
+        userProfileAsync.when(
+          loading: () => const Card(
+            child: Padding(
+              padding: EdgeInsets.all(32),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ),
+          error: (e, _) => Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text('Error loading settings: $e'),
+            ),
+          ),
+          data: (userProfile) =>
+              _buildParserConfigCard(context, theme, userProfile),
+        ),
       ],
     );
   }
@@ -82,7 +99,8 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
     ThemeData theme,
     BotLink? botLink,
   ) {
-    final isConnected = botLink != null;
+    // Check if actually connected (has platform_user_id), not just if row exists
+    final isConnected = botLink?.platformUserId != null;
 
     return Card(
       child: Padding(
@@ -117,7 +135,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                       ),
                       Text(
                         isConnected
-                            ? 'Terhubung${botLink.platformUsername != null ? ' (@${botLink.platformUsername})' : ''}'
+                            ? 'Terhubung${botLink?.platformUsername != null ? ' (@${botLink!.platformUsername})' : ''}'
                             : 'Belum terhubung',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: isConnected ? Colors.green : Colors.grey,
@@ -165,20 +183,28 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
   Widget _buildParserConfigCard(
     BuildContext context,
     ThemeData theme,
-    BotLink botLink,
+    Map<String, dynamic>? userProfile,
   ) {
-    // Initialize state from botLink on first build only
-    if (!_hasInitialized) {
+    // Initialize state from user profile on first build only
+    if (!_hasInitialized && userProfile != null) {
       _hasInitialized = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           setState(() {
-            _selectedParserMode = ParserMode.fromValue(botLink.parserMode);
-            _selectedAIProvider = AIProvider.fromValue(botLink.aiProvider);
+            _selectedParserMode = ParserMode.fromValue(
+              userProfile['parser_mode'] as String? ?? 'regex',
+            );
+            _selectedAIProvider = AIProvider.fromValue(
+              userProfile['ai_provider'] as String? ?? 'none',
+            );
           });
         }
       });
     }
+
+    final hasApiKey =
+        userProfile?['ai_api_key'] != null &&
+        (userProfile!['ai_api_key'] as String).isNotEmpty;
 
     return Card(
       child: Padding(
@@ -226,7 +252,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
 
             // Parser mode selection
             ...ParserMode.values.map(
-              (mode) => _buildParserModeOption(theme, mode, botLink),
+              (mode) => _buildParserModeOption(theme, mode),
             ),
 
             // Show AI provider and API key input only for user_key mode
@@ -258,8 +284,8 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
               const SizedBox(height: 16),
 
               // API Key status or input
-              if (botLink.hasApiKey && !_isEditing)
-                _buildApiKeyStatus(theme, botLink)
+              if (hasApiKey && !_isEditing)
+                _buildApiKeyStatus(theme, userProfile)
               else
                 _buildApiKeyInput(theme),
             ],
@@ -291,11 +317,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
     );
   }
 
-  Widget _buildParserModeOption(
-    ThemeData theme,
-    ParserMode mode,
-    BotLink botLink,
-  ) {
+  Widget _buildParserModeOption(ThemeData theme, ParserMode mode) {
     final isSelected = _selectedParserMode == mode;
 
     return Padding(
@@ -361,7 +383,12 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
     );
   }
 
-  Widget _buildApiKeyStatus(ThemeData theme, BotLink botLink) {
+  Widget _buildApiKeyStatus(ThemeData theme, Map<String, dynamic> userProfile) {
+    final apiKey = userProfile['ai_api_key'] as String? ?? '';
+    final maskedKey = apiKey.length <= 8
+        ? '••••••••'
+        : '${apiKey.substring(0, 4)}••••${apiKey.substring(apiKey.length - 4)}';
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -385,7 +412,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                   ),
                 ),
                 Text(
-                  botLink.maskedApiKey,
+                  maskedKey,
                   style: TextStyle(
                     color: Colors.green.shade700,
                     fontFamily: 'monospace',
@@ -555,12 +582,15 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
       }
 
       await ref
-          .read(telegramBotLinkProvider.notifier)
+          .read(botLinkServiceProvider)
           .updateParserConfig(
             parserMode: _selectedParserMode.value,
             aiProvider: aiProvider,
-            apiKey: apiKey,
+            aiApiKey: apiKey,
           );
+
+      // Refresh user profile to reflect new settings
+      ref.invalidate(userProfileProvider);
 
       setState(() {
         _isEditing = false;

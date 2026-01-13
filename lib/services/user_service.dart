@@ -9,7 +9,7 @@ class UserService {
 
   UserService(this._supabase);
 
-  /// Get user profile data including timezone
+  /// Get user profile data including timezone and parser settings
   Future<Map<String, dynamic>?> getUserProfile() async {
     try {
       final userId = _supabase.auth.currentUser?.id;
@@ -17,7 +17,9 @@ class UserService {
 
       final response = await _supabase
           .from('users')
-          .select('id, email, full_name, currency, timezone, created_at, updated_at')
+          .select(
+            'id, email, full_name, currency, timezone, parser_mode, ai_provider, ai_api_key, created_at, updated_at',
+          )
           .eq('id', userId)
           .single();
 
@@ -78,10 +80,7 @@ class UserService {
       if (currency != null) updateData['currency'] = currency;
       if (timezone != null) updateData['timezone'] = timezone;
 
-      await _supabase
-          .from('users')
-          .update(updateData)
-          .eq('id', userId);
+      await _supabase.from('users').update(updateData).eq('id', userId);
     } on PostgrestException catch (e) {
       throw Exception('Database error: ${e.message}');
     } catch (e) {

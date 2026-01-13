@@ -18,18 +18,30 @@ class BotLinkService {
 
   BotLinkService(this._supabase);
 
-  /// Get bot link for a specific platform
-  Future<BotLink?> getBotLink(String userId, String platform) async {
+  /// Check if platform is linked (platform_user_id != null)
+  Future<bool> isLinked(String platform) async {
     try {
-      final response = await _supabase
-          .from('bot_links')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('platform', platform)
-          .maybeSingle();
+      final response =
+          await _supabase.rpc('get_bot_link', params: {'p_platform': platform})
+              as List?;
+      if (response == null || response.isEmpty) return false;
+      final data = response.first as Map<String, dynamic>;
+      return data['platform_user_id'] != null;
+    } catch (e, st) {
+      AppLogger.e('isLinked error', error: e, stackTrace: st);
+      return false;
+    }
+  }
 
-      if (response == null) return null;
-      return BotLink.fromJson(response);
+  /// Get bot link for a specific platform
+  Future<BotLink?> getBotLink(String platform) async {
+    try {
+      final response =
+          await _supabase.rpc('get_bot_link', params: {'p_platform': platform})
+              as List?;
+
+      if (response == null || response.isEmpty) return null;
+      return BotLink.fromJson(response.first as Map<String, dynamic>);
     } catch (e, st) {
       AppLogger.e('getBotLink error', error: e, stackTrace: st);
       throw mapException(e, st);
@@ -37,102 +49,67 @@ class BotLinkService {
   }
 
   /// Get all bot links for user
-  Future<List<BotLink>> getAllBotLinks(String userId) async {
+  Future<List<BotLink>> getAllBotLinks() async {
     try {
       final response = await _supabase
           .from('bot_links')
           .select('*')
-          .eq('user_id', userId)
           .order('created_at');
 
       if (response.isEmpty) return [];
-      return (response as List).map((j) => BotLink.fromJson(j)).toList();
+      return (response as List)
+          .map((j) => BotLink.fromJson(j as Map<String, dynamic>))
+          .toList();
     } catch (e, st) {
       AppLogger.e('getAllBotLinks error', error: e, stackTrace: st);
       throw mapException(e, st);
     }
   }
 
-  /// Create a new bot link
-  Future<BotLink> createBotLink({
-    required String userId,
-    required String platform,
-    required String platformUserId,
-    String? platformUsername,
-  }) async {
+  /// Update metadata (settings) for bot link
+  Future<void> updateMetadata(
+    String platform,
+    Map<String, dynamic> metadata,
+  ) async {
     try {
-      final data = {
-        'user_id': userId,
-        'platform': platform,
-        'platform_user_id': platformUserId,
-        'platform_username': platformUsername,
-        'is_active': true,
-        'ai_provider': 'none',
-      };
-
-      final response = await _supabase
-          .from('bot_links')
-          .insert(data)
-          .select()
-          .single();
-
-      return BotLink.fromJson(response);
+      await _supabase.rpc(
+        'update_bot_link_metadata',
+        params: {'p_platform': platform, 'p_metadata': metadata},
+      );
     } catch (e, st) {
-      AppLogger.e('createBotLink error', error: e, stackTrace: st);
+      AppLogger.e('updateMetadata error', error: e, stackTrace: st);
       throw mapException(e, st);
     }
   }
 
-  /// Update parser configuration for a bot link
-  Future<BotLink> updateParserConfig({
-    required String botLinkId,
-    required String userId,
+  /// Unlink platform
+  Future<void> unlinkPlatform(String platform) async {
+    try {
+      await _supabase.rpc('unlink_platform', params: {'p_platform': platform});
+    } catch (e, st) {
+      AppLogger.e('unlinkPlatform error', error: e, stackTrace: st);
+      throw mapException(e, st);
+    }
+  }
+
+  /// Update parser configuration (stored in users table, not bot_links)
+  Future<void> updateParserConfig({
     required String parserMode,
     required String aiProvider,
     String? aiApiKey,
   }) async {
     try {
-      final data = <String, dynamic>{
-        'parser_mode': parserMode,
-        'ai_provider': aiProvider,
-      };
-      if (aiApiKey != null && aiApiKey.isNotEmpty) {
-        data['ai_api_key'] = aiApiKey;
-      }
-
-      final response = await _supabase
-          .from('bot_links')
-          .update(data)
-          .eq('id', botLinkId)
-          .eq('user_id', userId)
-          .select()
-          .single();
-
-      return BotLink.fromJson(response);
+      await _supabase.rpc(
+        'update_parser_settings',
+        params: {
+          'p_parser_mode': parserMode,
+          'p_ai_provider': aiProvider,
+          'p_ai_api_key': aiApiKey,
+        },
+      );
     } catch (e, st) {
       AppLogger.e('updateParserConfig error', error: e, stackTrace: st);
       throw mapException(e, st);
     }
-  }
-
-  /// Delete bot link (disconnect)
-  Future<void> deleteBotLink(String botLinkId, String userId) async {
-    try {
-      await _supabase
-          .from('bot_links')
-          .delete()
-          .eq('id', botLinkId)
-          .eq('user_id', userId);
-    } catch (e, st) {
-      AppLogger.e('deleteBotLink error', error: e, stackTrace: st);
-      throw mapException(e, st);
-    }
-  }
-
-  /// Generate Telegram deep link for connecting
-  String generateTelegramDeepLink(String botUsername, String userId) {
-    // The user will click this link to start the bot
-    // The bot will receive /start command with the userId as payload
-    return 'https://t.me/$botUsername?start=$userId';
   }
 }

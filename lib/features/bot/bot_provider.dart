@@ -24,7 +24,7 @@ class TelegramBotLinkNotifier extends AsyncNotifier<BotLink?> {
 
     try {
       final service = ref.watch(botLinkServiceProvider);
-      final botLink = await service.getBotLink(user.id, 'telegram');
+      final botLink = await service.getBotLink('telegram');
       debugPrint(
         '🔗 BotLink: Fetched link = ${botLink?.platformUsername ?? "null"}',
       );
@@ -42,51 +42,19 @@ class TelegramBotLinkNotifier extends AsyncNotifier<BotLink?> {
     state = await AsyncValue.guard(() => build());
   }
 
-  /// Update parser configuration (parser_mode, ai_provider, api_key)
-  Future<void> updateParserConfig({
-    required String parserMode,
-    required String aiProvider,
-    String? apiKey,
-  }) async {
-    final currentLink = state.value;
-    if (currentLink == null) return;
-
-    final userAsync = ref.read(currentUserProvider);
-    final user = userAsync.value;
-    if (user == null) return;
-
+  /// Disconnect Telegram
+  Future<void> disconnect() async {
     final service = ref.read(botLinkServiceProvider);
 
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      return service.updateParserConfig(
-        botLinkId: currentLink.id,
-        userId: user.id,
-        parserMode: parserMode,
-        aiProvider: aiProvider,
-        aiApiKey: apiKey,
-      );
-    });
-  }
-
-  /// Disconnect Telegram
-  Future<void> disconnect() async {
-    final currentLink = state.value;
-    if (currentLink == null) return;
-
-    final userAsync = ref.read(currentUserProvider);
-    final user = userAsync.value;
-    if (user == null) return;
-
-    final service = ref.read(botLinkServiceProvider);
-
-    await service.deleteBotLink(currentLink.id, user.id);
+    await service.unlinkPlatform('telegram');
     state = const AsyncValue.data(null);
   }
 }
 
-/// Check if Telegram is connected
+/// Check if Telegram is connected (has platform_user_id)
 final isTelegramConnectedProvider = Provider<bool>((ref) {
   final link = ref.watch(telegramBotLinkProvider);
-  return link.value != null;
+  // Row exists but check if actually linked (platform_user_id != null)
+  return link.value?.platformUserId != null;
 });

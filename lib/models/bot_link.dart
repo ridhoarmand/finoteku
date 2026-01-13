@@ -1,42 +1,38 @@
 /// Model for bot link configuration
 class BotLink {
   final String id;
+  final String? linkToken;
   final String userId;
   final String platform;
-  final String platformUserId;
-  final String? platformUsername;
+  final String? platformUserId;
+  final Map<String, dynamic> metadata; // Flexible JSONB storage
   final bool isActive;
-  final String aiProvider;
-  final String? aiApiKey;
-  final String parserMode;
   final DateTime createdAt;
   final DateTime updatedAt;
 
   const BotLink({
     required this.id,
+    this.linkToken,
     required this.userId,
     required this.platform,
-    required this.platformUserId,
-    this.platformUsername,
+    this.platformUserId,
+    this.metadata = const {},
     this.isActive = true,
-    this.aiProvider = 'none',
-    this.aiApiKey,
-    this.parserMode = 'regex',
     required this.createdAt,
     required this.updatedAt,
   });
 
   factory BotLink.fromJson(Map<String, dynamic> json) {
+    // Support both 'id' column and fallback to 'link_token' for compatibility
+    final id = json['id'] as String? ?? json['link_token'] as String;
     return BotLink(
-      id: json['id'] as String,
+      id: id,
+      linkToken: json['link_token'] as String?,
       userId: json['user_id'] as String,
       platform: json['platform'] as String,
-      platformUserId: json['platform_user_id'] as String,
-      platformUsername: json['platform_username'] as String?,
+      platformUserId: json['platform_user_id'] as String?,
+      metadata: (json['metadata'] as Map<String, dynamic>?) ?? {},
       isActive: json['is_active'] as bool? ?? true,
-      aiProvider: json['ai_provider'] as String? ?? 'none',
-      aiApiKey: json['ai_api_key'] as String?,
-      parserMode: json['parser_mode'] as String? ?? 'regex',
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -45,42 +41,43 @@ class BotLink {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'link_token': linkToken,
       'user_id': userId,
       'platform': platform,
       'platform_user_id': platformUserId,
-      'platform_username': platformUsername,
+      'metadata': metadata,
       'is_active': isActive,
-      'ai_provider': aiProvider,
-      'ai_api_key': aiApiKey,
-      'parser_mode': parserMode,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
   }
 
+  // Convenience getters untuk metadata fields
+  String? get platformUsername => metadata['username'] as String?;
+  String? get chatId => metadata['chat_id'] as String?;
+  String get aiProvider => metadata['ai_provider'] as String? ?? 'none';
+  String? get aiApiKey => metadata['ai_api_key'] as String?;
+  String get parserMode => metadata['parser_mode'] as String? ?? 'regex';
+
   BotLink copyWith({
     String? id,
+    String? linkToken,
     String? userId,
     String? platform,
     String? platformUserId,
-    String? platformUsername,
+    Map<String, dynamic>? metadata,
     bool? isActive,
-    String? aiProvider,
-    String? aiApiKey,
-    String? parserMode,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
     return BotLink(
       id: id ?? this.id,
+      linkToken: linkToken ?? this.linkToken,
       userId: userId ?? this.userId,
       platform: platform ?? this.platform,
       platformUserId: platformUserId ?? this.platformUserId,
-      platformUsername: platformUsername ?? this.platformUsername,
+      metadata: metadata ?? this.metadata,
       isActive: isActive ?? this.isActive,
-      aiProvider: aiProvider ?? this.aiProvider,
-      aiApiKey: aiApiKey ?? this.aiApiKey,
-      parserMode: parserMode ?? this.parserMode,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
