@@ -217,15 +217,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION public.recalculate_all_wallet_balances(p_user_id UUID) RETURNS VOID AS $$
-DECLARE wallet_record RECORD;
-BEGIN
-  FOR wallet_record IN SELECT id FROM public.wallets WHERE user_id = p_user_id LOOP
-    PERFORM public.recalculate_wallet_balance(wallet_record.id, p_user_id);
-  END LOOP;
-END;
-$$ LANGUAGE plpgsql;
-
 CREATE OR REPLACE FUNCTION public.update_wallet_balance() RETURNS TRIGGER AS $$
 DECLARE
   old_sign NUMERIC := 0; new_sign NUMERIC := 0;
@@ -353,6 +344,259 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- 3.8 Wallet Transfer Management
+CREATE OR REPLACE FUNCTION public.delete_wallet_transfer(
+  p_user_id UUID,
+  p_transfer_id UUID
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_old RECORD;
+BEGIN
+  SELECT * INTO v_old FROM public.transfers WHERE id = p_transfer_id AND user_id = p_user_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Transfer not found';
+  END IF;
+
+  -- Remove fee transactions linked to this transfer via marker in notes
+  DELETE FROM public.transactions
+  WHERE user_id = p_user_id
+    AND notes LIKE ('%' || '[transfer:' || p_transfer_id || ']');
+
+  -- Delete the transfer row (trigger will handle balance adjustments)
+  DELETE FROM public.transfers WHERE id = p_transfer_id AND user_id = p_user_id;
+
+  -- No manual recalculation needed - the trigger handles balance updates correctly
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.update_wallet_transfer(
+  p_user_id UUID,
+  p_transfer_id UUID,
+  p_from_wallet_id UUID DEFAULT NULL,
+  p_to_wallet_id UUID DEFAULT NULL,
+  p_amount NUMERIC DEFAULT NULL,
+  p_fee NUMERIC DEFAULT NULL,
+  p_notes TEXT DEFAULT NULL,
+  p_date DATE DEFAULT NULL,
+  p_fee_category_id UUID DEFAULT NULL
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_old RECORD;
+  v_new_from UUID;
+  v_new_to UUID;
+  v_new_amount DECIMAL(15, 2);
+  v_new_fee DECIMAL(15, 2);
+  v_new_notes TEXT;
+  v_new_date DATE;
+  v_fee_tx RECORD;
+  v_fee_type category_type;
+BEGIN
+  SELECT * INTO v_old FROM public.transfers WHERE id = p_transfer_id AND user_id = p_user_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Transfer not found';
+  END IF;
+
+  v_new_from := COALESCE(p_from_wallet_id, v_old.from_wallet_id);
+  v_new_to := COALESCE(p_to_wallet_id, v_old.to_wallet_id);
+  v_new_amount := COALESCE(p_amount, v_old.amount);
+  v_new_fee := COALESCE(p_fee, v_old.fee);
+  v_new_notes := COALESCE(p_notes, v_old.notes);
+  v_new_date := COALESCE(p_date, v_old.date);
+
+  IF v_new_from = v_new_to THEN
+    RAISE EXCEPTION 'Source and destination wallet must be different';
+  END IF;
+  IF v_new_amount IS NULL OR v_new_amount <= 0 THEN
+    RAISE EXCEPTION 'Amount must be greater than 0';
+  END IF;
+  IF v_new_fee IS NULL THEN v_new_fee := 0.00; END IF;
+
+  -- Update transfer row (triggers will handle balance movements for amount/from/to changes)
+  UPDATE public.transfers
+    SET from_wallet_id = v_new_from,
+        to_wallet_id = v_new_to,
+        amount = v_new_amount,
+        fee = v_new_fee,
+        notes = v_new_notes,
+        date = v_new_date,
+        updated_at = TIMEZONE('utc'::text, NOW())
+  WHERE id = p_transfer_id AND user_id = p_user_id;
+
+  -- Fee transaction handling
+  -- Handle fee expense transaction linked by marker [transfer:<id>] in notes
+  SELECT t.* INTO v_fee_tx
+  FROM public.transactions t
+  WHERE t.user_id = p_user_id
+    AND t.notes LIKE ('%' || '[transfer:' || p_transfer_id || ']')
+  ORDER BY t.created_at DESC
+  LIMIT 1;
+
+  IF v_old.fee > 0 AND v_new_fee > 0 THEN
+    -- Update existing fee transaction (amount/date/wallet/notes)
+    UPDATE public.transactions
+      SET amount = v_new_fee,
+          wallet_id = v_new_from,
+          notes = ('Transfer Fee' || CASE WHEN v_new_notes IS NOT NULL THEN ' - ' || v_new_notes ELSE '' END || ' [transfer:' || p_transfer_id || ']'),
+          date = v_new_date,
+          updated_at = TIMEZONE('utc'::text, NOW())
+    WHERE id = v_fee_tx.id AND user_id = p_user_id;
+  ELSIF v_old.fee > 0 AND v_new_fee = 0 THEN
+    -- Remove fee transaction
+    DELETE FROM public.transactions WHERE id = v_fee_tx.id AND user_id = p_user_id;
+  ELSIF v_old.fee = 0 AND v_new_fee > 0 THEN
+    -- Need fee category to create new expense
+    IF p_fee_category_id IS NULL THEN
+      RAISE EXCEPTION 'Fee category is required when adding a new fee';
+    END IF;
+    SELECT type INTO v_fee_type FROM public.categories WHERE id = p_fee_category_id AND user_id = p_user_id;
+    IF v_fee_type IS DISTINCT FROM 'expense' THEN
+      RAISE EXCEPTION 'Fee category must be expense';
+    END IF;
+    INSERT INTO public.transactions (user_id, wallet_id, category_id, amount, notes, date)
+    VALUES (p_user_id, v_new_from, p_fee_category_id, v_new_fee,
+            'Transfer Fee' || CASE WHEN v_new_notes IS NOT NULL THEN ' - ' || v_new_notes ELSE '' END || ' [transfer:' || p_transfer_id || ']',
+            v_new_date);
+  END IF;
+
+  -- The improved trigger handles balance updates correctly, no manual recalculation needed
+  RETURN p_transfer_id;
+END;
+$$;
+
+-- 3.9 User Data Summary
+CREATE OR REPLACE FUNCTION public.get_user_data_summary()
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE 
+  current_user_id UUID;
+  wallets_count INTEGER;
+  categories_count INTEGER;
+  transactions_count INTEGER;
+  transfers_count INTEGER;
+BEGIN
+  current_user_id := auth.uid();
+  IF current_user_id IS NULL THEN
+    RAISE EXCEPTION 'User not authenticated';
+  END IF;
+
+  -- Count wallets (tidak termasuk yang hidden)
+  SELECT COUNT(*) INTO wallets_count
+  FROM public.wallets 
+  WHERE user_id = current_user_id AND is_hidden = false;
+
+  -- Count categories (tidak termasuk yang hidden)
+  SELECT COUNT(*) INTO categories_count
+  FROM public.categories 
+  WHERE user_id = current_user_id AND is_hidden = false;
+
+  -- Count transactions
+  SELECT COUNT(*) INTO transactions_count
+  FROM public.transactions 
+  WHERE user_id = current_user_id;
+
+  -- Count transfers
+  SELECT COUNT(*) INTO transfers_count
+  FROM public.transfers 
+  WHERE user_id = current_user_id;
+
+  -- Return as JSON
+  RETURN json_build_object(
+    'walletsCount', wallets_count,
+    'categoriesCount', categories_count,
+    'transactionsCount', transactions_count,
+    'transfersCount', transfers_count
+  );
+END;
+$$;
+
+-- 3.10 Telegram Bot Integration
+CREATE OR REPLACE FUNCTION public.link_telegram_account(
+  p_link_token TEXT,
+  p_telegram_id TEXT,
+  p_telegram_username TEXT DEFAULT NULL
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_user_id UUID;
+BEGIN
+  -- Cari user berdasarkan link token dari tabel bot_links
+  SELECT user_id INTO v_user_id
+  FROM bot_links
+  WHERE link_token = p_link_token
+    AND link_token_expires_at > NOW();
+  
+  -- Jika tidak ditemukan atau expired, raise error
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Invalid or expired link token';
+  END IF;
+  
+  -- Update bot_links dengan telegram info
+  UPDATE bot_links
+  SET 
+    telegram_id = p_telegram_id,
+    telegram_username = p_telegram_username,
+    telegram_chat_id = p_telegram_id, -- biasanya sama dengan telegram_id untuk private chat
+    link_token = NULL,                -- hapus token setelah dipakai
+    link_token_expires_at = NULL,
+    updated_at = NOW()
+  WHERE user_id = v_user_id;
+  
+END;
+$$;
+
+-- 3.11 Category Protection (prevent destructive edits when used by transactions)
+CREATE OR REPLACE FUNCTION public.prevent_category_delete() RETURNS TRIGGER AS $$
+DECLARE usage_exists BOOLEAN;
+BEGIN
+  SELECT EXISTS(
+    SELECT 1 FROM public.transactions t
+    WHERE t.category_id = OLD.id LIMIT 1
+  ) INTO usage_exists;
+  IF usage_exists THEN
+    RAISE EXCEPTION 'Cannot delete category with existing transactions. Use hide instead.';
+  END IF;
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION public.prevent_category_type_change() RETURNS TRIGGER AS $$
+DECLARE usage_exists BOOLEAN;
+BEGIN
+  IF OLD.type != NEW.type THEN
+    SELECT EXISTS(
+      SELECT 1 FROM public.transactions t WHERE t.category_id = OLD.id LIMIT 1
+    ) INTO usage_exists;
+    IF usage_exists THEN
+      RAISE EXCEPTION 'Cannot change category type after it is used by transactions';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS prevent_category_delete_trigger ON public.categories;
+CREATE TRIGGER prevent_category_delete_trigger
+BEFORE DELETE ON public.categories
+FOR EACH ROW EXECUTE FUNCTION public.prevent_category_delete();
+
+DROP TRIGGER IF EXISTS prevent_category_type_change_trigger ON public.categories;
+CREATE TRIGGER prevent_category_type_change_trigger
+BEFORE UPDATE ON public.categories
+FOR EACH ROW EXECUTE FUNCTION public.prevent_category_type_change();
+
 -- =============================================
 -- [SECTION 4] STORAGE SETUP
 -- =============================================
@@ -405,5 +649,9 @@ CREATE POLICY "Users Update Self" ON public.users FOR UPDATE USING (auth.uid() =
 -- [SECTION 6] API GRANTS
 -- =============================================
 GRANT EXECUTE ON FUNCTION public.create_wallet_transfer(UUID, UUID, UUID, DECIMAL, DECIMAL, TEXT, DATE, UUID) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.recalculate_all_wallet_balances(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.recalculate_wallet_balance(UUID, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.delete_wallet_transfer(UUID, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.update_wallet_transfer(UUID, UUID, UUID, UUID, NUMERIC, NUMERIC, TEXT, DATE, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_user_data_summary() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.delete_user_account_complete() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.link_telegram_account(TEXT, TEXT, TEXT) TO service_role;

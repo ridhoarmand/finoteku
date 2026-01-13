@@ -307,26 +307,35 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
         .deleteAccount(password);
 
     if (success && mounted) {
-      // 1. Close the dialog immediately
-      Navigator.of(context).pop();
+      // Account deleted successfully
+      Navigator.of(context).pop(); // Close dialog
 
-      // 2. Show success message (using root context if possible, or current context before nav)
+      // Wait a bit for auth state to propagate
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Force invalidate authentication providers
+      ref.invalidate(currentUserProvider);
+      ref.invalidate(authStateProvider);
+
+      // Wait a bit more for providers to refresh
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      if (!mounted) return;
+
+      // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(ref.trRead('delete_success')),
+          content: Text(ref.tr(context, 'delete_success')),
           backgroundColor: Colors.green,
           duration: const Duration(seconds: 2),
         ),
       );
 
-      // 3. Invalidate auth providers to ensure app state consistency
-      // This might trigger auto-redirect, but explicit navigation is safer for UX flow
-      ref.invalidate(currentUserProvider);
-      ref.invalidate(authStateProvider);
-
-      // 4. Force navigation to login immediately
-      // context.go clears the stack, which helps avoid "blank" screens from lingering states
-      if (mounted) {
+      // Clear navigation stack and go to login to avoid black screen
+      if (context.mounted) {
+        while (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
         context.go('/login');
       }
     }

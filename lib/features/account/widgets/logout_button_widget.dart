@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../auth/services/auth_service.dart';
-import '../../../services/supabase_service.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../services/supabase_service.dart';
 
 class LogoutButtonWidget extends ConsumerWidget {
   const LogoutButtonWidget({super.key});
@@ -20,16 +20,16 @@ class LogoutButtonWidget extends ConsumerWidget {
           final shouldLogout = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              title: Text(ref.trRead('logout_title')),
-              content: Text(ref.trRead('logout_confirm_message')),
+              title: Text(ref.tr(context, 'logout_title')),
+              content: Text(ref.tr(context, 'logout_confirm_message')),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
-                  child: Text(ref.trRead('cancel')),
+                  child: Text(ref.tr(context, 'cancel')),
                 ),
                 FilledButton(
                   onPressed: () => Navigator.of(context).pop(true),
-                  child: Text(ref.trRead('logout')),
+                  child: Text(ref.tr(context, 'logout')),
                 ),
               ],
             ),
@@ -61,7 +61,7 @@ class LogoutButtonWidget extends ConsumerWidget {
                   SnackBar(
                     content: Text(
                       ref
-                          .trRead('logout_failed')
+                          .tr(context, 'logout_failed')
                           .replaceFirst('{0}', e.toString()),
                     ),
                     backgroundColor: Colors.red,

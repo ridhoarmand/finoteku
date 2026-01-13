@@ -36,21 +36,6 @@ const Map<String, String> accountStringsEn = {
   'error_loading_user': 'Error loading user data',
   'profile_updated_successfully': 'Profile updated successfully',
   'error_saving_profile': 'Error saving profile',
-  'photo_new_selected': 'New photo selected',
-  'photo_tap_to_change': 'Tap camera icon to change photo',
-  'photo_select_title': 'Select Photo',
-  'photo_camera': 'Camera',
-  'photo_gallery': 'Gallery',
-  'photo_remove': 'Remove Photo',
-  'photo_permission_required': 'Permission required to access photos/camera',
-
-  // Discard changes dialog
-  'discard_changes_title': 'Discard Changes?',
-  'discard_changes_confirm':
-      'You have unsaved changes. Are you sure you want to leave without saving?',
-  'discard_action': 'Discard',
-  'cancel': 'Cancel',
-  'dismiss': 'Dismiss',
 
   // Account actions
   'change_password': 'Change Password',
@@ -105,10 +90,6 @@ const Map<String, String> accountStringsEn = {
   'password_min_length': 'Password must be at least 6 characters',
   'password_confirm_required': 'Please confirm your new password',
   'passwords_not_match': 'Passwords do not match',
-  'current_password': 'Current Password',
-  'current_password_placeholder': 'Enter current password',
-  'current_password_required': 'Current password is required',
-  'error_current_password_incorrect': 'Incorrect current password',
   'security_tips': 'Security Tips',
   'security_tips_content':
       '• Use a password with at least 6 characters\n• Include uppercase, lowercase, numbers, and symbols\n• Don\'t reuse passwords from other accounts\n• Consider using a password manager',
@@ -180,21 +161,6 @@ const Map<String, String> accountStringsId = {
   'error_loading_user': 'Gagal memuat data pengguna',
   'profile_updated_successfully': 'Profil berhasil diperbarui',
   'error_saving_profile': 'Gagal menyimpan profil',
-  'photo_new_selected': 'Foto baru dipilih',
-  'photo_tap_to_change': 'Ketuk ikon kamera untuk ubah foto',
-  'photo_select_title': 'Pilih Foto',
-  'photo_camera': 'Kamera',
-  'photo_gallery': 'Galeri',
-  'photo_remove': 'Hapus Foto',
-  'photo_permission_required': 'Izin diperlukan untuk mengakses foto/kamera',
-
-  // Discard changes dialog
-  'discard_changes_title': 'Buang Perubahan?',
-  'discard_changes_confirm':
-      'Anda memiliki perubahan yang belum disimpan. Yakin ingin keluar tanpa menyimpan?',
-  'discard_action': 'Buang',
-  'cancel': 'Batal',
-  'dismiss': 'Tutup',
 
   // Account actions
   'change_password': 'Ganti Password',
@@ -249,10 +215,6 @@ const Map<String, String> accountStringsId = {
   'password_min_length': 'Password minimal 6 karakter',
   'password_confirm_required': 'Konfirmasi password baru Anda',
   'passwords_not_match': 'Password tidak cocok',
-  'current_password': 'Password Saat Ini',
-  'current_password_placeholder': 'Masukkan password saat ini',
-  'current_password_required': 'Password saat ini wajib diisi',
-  'error_current_password_incorrect': 'Password saat ini salah',
   'security_tips': 'Tips Keamanan',
   'security_tips_content':
       '• Gunakan password minimal 6 karakter\n• Kombinasikan huruf besar, kecil, angka, dan simbol\n• Jangan gunakan password yang sama di akun lain\n• Pertimbangkan menggunakan pengelola password',

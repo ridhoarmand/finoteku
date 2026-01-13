@@ -12,16 +12,22 @@
 - 📊 **Transaction Management** - Catat income dan expense dengan mudah
 - 🏷️ **Smart Categorization** - Sistem kategori hierarkis untuk pengorganisasian yang lebih baik
 - 🔄 **Transfer Between Wallets** - Transfer antar wallet dengan fee calculation
-- 📱 **Cross-Platform** - Support untuk Android, iOS, dan web
+- 🤖 **AI-Powered Bot Integration** - Telegram bot untuk mencatat transaksi (lihat [finoteku-agent](https://github.com/ridhoarmand/finoteku-agent))
+- 📱 **Cross-Platform** - Support untuk Android, Linux, Windows, dan Web
 - 🎨 **Modern UI** - Material Design 3 dengan light/dark theme
+- 🌍 **Multi-Language** - Support Bahasa Indonesia dan English
 
 ## 🚀 Tech Stack
 
 - **Framework**: Flutter dengan Dart 3.8.0+
-- **State Management**: Riverpod
+- **State Management**: Riverpod 2.x
+- **Routing**: GoRouter
 - **UI/UX**: Material Design 3 + Flex Color Scheme
 - **Backend**: Supabase (PostgreSQL + Auth + Storage)
-- **Authentication**: Supabase Auth
+- **Database**: PostgreSQL dengan RLS (Row Level Security)
+- **Authentication**: Supabase Auth (Email & Social Login)
+- **Localization**: Custom i18n implementation
+- **AI Bot**: Deno-based dengan Telegram bot (separate repo)
 
 ## 📋 Quick Start
 
@@ -32,47 +38,91 @@
 - Git
 
 ### Installation
+
 ```bash
-# Clone repository
-git clone <repository-url>
+# 1. Clone repository
+git clone https://github.com/ridhoarmand/finoteku.git
 cd finoteku
 
-# Install dependencies
+# 2. Install Flutter dependencies
 flutter pub get
 
-# Setup Supabase 
-# Follow instructions in supabase/README.md
+# 3. Setup environment variables
+# Copy .env.example to .env dan isi dengan credentials Supabase Anda
+cp .env.example .env
 
-# Run the app
+# 4. Run the app
 flutter run
 ```
 
 ### Supabase Setup
-Ikuti panduan setup di **[supabase/README.md](./supabase/README.md)** untuk konfigurasi database backend.
+
+**⚠️ Supabase database setup instructions telah dipindahkan ke [finoteku-agent](https://github.com/ridhoarmand/finoteku-agent) repository.**
+
+Untuk setup Supabase:
+
+1. Follow detailed setup instructions di: **[finoteku-agent/README.md](https://github.com/ridhoarmand/finoteku-agent#-supabase-setup)**
+2. Database schema, migrations, dan konfigurasi ada di project agent
+3. Setelah setup Supabase, configure app dengan credentials:
+
+```env
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+```
+
+### Bot Integration (Recommended)
+
+Untuk fitur lengkap dengan Telegram bot AI-powered:
+
+**Repository**: [finoteku-agent](https://github.com/ridhoarmand/finoteku-agent)
+
+```bash
+# Clone agent repository
+git clone https://github.com/ridhoarmand/finoteku-agent.git
+cd finoteku-agent
+
+# Follow setup instructions
+```
 
 ## 🏗️ Project Structure
 
 ```
 finoteku/
-├── supabase/               # Database schema & configuration
-│   ├── schema.sql          # Database schema
-│   ├── policies.sql        # Row Level Security
-│   ├── storage.sql         # Storage configuration
-│   └── README.md           # Setup instructions
-├── lib/                    # Flutter source code
-│   ├── core/               # Core utilities and constants
-│   ├── features/           # Feature modules
-│   ├── models/             # Data models
-│   ├── routes/             # App routing
-│   ├── services/           # External services
-│   ├── theme/              # Theme configuration
-│   ├── utils/              # Utility functions
-│   └── widgets/            # Reusable UI components
-└── assets/                 # Static assets
-    ├── banks/              # Bank icons
-    ├── ewallets/           # E-wallet icons
-    └── onboardings/        # Onboarding images
+├── supabase/                      # Database schema & configuration
+│   ├── setup.sql                  # Complete database setup
+│   └── resetdb.sql                # Database reset script
+├── lib/                           # Flutter source code
+│   ├── core/                      # Core utilities
+│   │   ├── errors/                # Error handling
+│   │   ├── i18n/                  # Internationalization
+│   │   ├── localization/          # Localization setup
+│   │   └── logging/               # Logging configuration
+│   ├── features/                  # Feature modules (Clean Architecture)
+│   │   ├── auth/                  # Authentication
+│   │   ├── wallet/                # Wallet management
+│   │   ├── category/              # Category management
+│   │   ├── transaction/           # Transaction management
+│   │   ├── transfer/              # Transfer between wallets
+│   │   ├── home/                  # Home dashboard
+│   │   ├── account/               # User account
+│   │   └── report/                # Financial reports
+│   ├── models/                    # Data models
+│   ├── routes/                    # App routing (GoRouter)
+│   ├── services/                  # External services
+│   ├── theme/                     # Theme configuration
+│   ├── utils/                     # Utility functions
+│   └── widgets/                   # Reusable UI components
+├── assets/                        # Static assets
+│   ├── banks/                     # Bank icons
+│   ├── ewallets/                  # E-wallet icons
+│   ├── wallets/                   # Wallet type icons
+│   └── onboardings/               # Onboarding images
+└── android/linux/windows/web/     # Platform-specific code
 ```
+
+## 🔗 Related Projects
+
+- **[Finoteku Agent](https://github.com/ridhoarmand/finoteku-agent)** - AI-powered Telegram bot untuk mencatat transaksi dengan natural language processing
 
 ## 🤝 Contributing
 
@@ -81,6 +131,14 @@ finoteku/
 3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
+
+### Development Guidelines
+
+- Follow Flutter best practices dan clean architecture
+- Gunakan Riverpod untuk state management
+- Tulis kode yang readable dan maintainable
+- Test fitur sebelum create PR
+- Update documentation jika perlu
 
 ## 📄 License
 

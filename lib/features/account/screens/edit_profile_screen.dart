@@ -157,16 +157,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final shouldDiscard = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(ref.tr(context, 'discard_changes_title')),
-        content: Text(ref.tr(context, 'discard_changes_confirm')),
+        title: const Text('Discard Changes?'),
+        content: const Text(
+          'You have unsaved changes. Are you sure you want to leave without saving?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text(ref.tr(context, 'cancel')),
+            child: const Text('Cancel'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(ref.tr(context, 'discard_action')),
+            child: const Text('Discard'),
           ),
         ],
       ),
