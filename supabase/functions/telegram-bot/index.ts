@@ -12,6 +12,7 @@ import {
   getTelegramFileUrl,
   parseCallbackQuery,
   parseTelegramUpdate,
+  removeMessageButtons,
   sendTelegramMessage,
   sendTelegramMessageWithButtons,
 } from './telegram.ts';
@@ -87,8 +88,9 @@ serve(async (req: Request) => {
         platform: 'telegram',
       };
 
-      // Send processing feedback (optional, or just answer callback)
+      // Answer callback and remove old buttons
       await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+      await removeMessageButtons(TELEGRAM_BOT_TOKEN, chatId, callbackQuery.message.message_id);
 
       const response = await agent.process(agentInput);
       await sendAgentResponse(TELEGRAM_BOT_TOKEN, chatId, response);
@@ -277,6 +279,72 @@ serve(async (req: Request) => {
         conversationId: chatId.toString(),
         platform: 'telegram',
       };
+    } else if (message.document) {
+      // Handle document files - check if it's image or audio
+      const doc = message.document;
+      const mimeType = doc.mime_type || '';
+
+      if (mimeType.startsWith('image/')) {
+        // Document is an image → Process as OCR
+        await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '📸 <b>Menganalisis gambar...</b>');
+
+        const fileUrl = await getTelegramFileUrl(TELEGRAM_BOT_TOKEN, doc.file_id);
+        if (!fileUrl) {
+          await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '❌ Gagal mengunduh file.');
+          return new Response('File URL Failed', { status: 200 });
+        }
+
+        const fileBuffer = await downloadTelegramFile(fileUrl);
+        if (!fileBuffer) {
+          await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '❌ Gagal mengunduh file.');
+          return new Response('Download Failed', { status: 200 });
+        }
+
+        agentInput = {
+          type: 'image',
+          content: encode(fileBuffer),
+          mimeType,
+          userId,
+          conversationId: chatId.toString(),
+          platform: 'telegram',
+        };
+      } else if (mimeType.startsWith('audio/')) {
+        // Document is audio → Process as STT
+        await sendTelegramMessage(
+          TELEGRAM_BOT_TOKEN,
+          chatId,
+          '🎵 <b>Mengubah audio ke teks...</b>',
+        );
+
+        const fileUrl = await getTelegramFileUrl(TELEGRAM_BOT_TOKEN, doc.file_id);
+        if (!fileUrl) {
+          await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '❌ Gagal mengunduh file.');
+          return new Response('File URL Failed', { status: 200 });
+        }
+
+        const fileBuffer = await downloadTelegramFile(fileUrl);
+        if (!fileBuffer) {
+          await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '❌ Gagal mengunduh file.');
+          return new Response('Download Failed', { status: 200 });
+        }
+
+        agentInput = {
+          type: 'voice',
+          content: encode(fileBuffer),
+          mimeType,
+          userId,
+          conversationId: chatId.toString(),
+          platform: 'telegram',
+        };
+      } else {
+        // Other documents (pdf, doc, etc) - skip
+        await sendTelegramMessage(
+          TELEGRAM_BOT_TOKEN,
+          chatId,
+          '⚠️ <b>File tidak didukung.</b>\n\nSaat ini hanya mendukung:\n• 📸 Gambar (JPG, PNG, dll)\n• 🎤 Audio (MP3, OGG, dll)\n\nUntuk struk, kirim sebagai <b>foto</b> bukan dokumen.',
+        );
+        return new Response('Unsupported document', { status: 200 });
+      }
     } else if (message.text) {
       // Handle teks biasa
       agentInput = {

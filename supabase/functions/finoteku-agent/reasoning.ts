@@ -24,8 +24,7 @@ const TIPS_KEYWORDS = ['hemat', 'saran', 'tips', 'rekomendasi', 'boros', 'kurang
 const CONFIRM_KEYWORDS = ['ya', 'y', 'yes', 'ok', 'oke', 'simpan', 'save'];
 const CANCEL_KEYWORDS = ['tidak', 'no', 'n', 'batal', 'cancel', 'batalkan'];
 
-// Indikator pertanyaan dan pola transaksi
-const QUESTION_INDICATORS = ['?', 'berapa', 'gimana', 'bagaimana', 'apa', 'mana', 'kapan'];
+// Pola transaksi (angka dengan suffix)
 const TRANSACTION_PATTERNS = [/\d+\s*(k|rb|ribu|jt|juta|m)/i, /\d{2,}/];
 
 export class ReasoningEngine {
@@ -60,7 +59,7 @@ export class ReasoningEngine {
 
     // Cek indikator transaksi (angka dengan k/rb/jt)
     const hasTransaction = TRANSACTION_PATTERNS.some((p) => p.test(lowerText));
-    const isQuestion = QUESTION_INDICATORS.some((q) => lowerText.includes(q));
+    const isQuestion = this.isQuestion(lowerText);
 
     // Query tips keuangan
     if (TIPS_KEYWORDS.some((k) => lowerText.includes(k)) && !hasTransaction) {
@@ -78,7 +77,7 @@ export class ReasoningEngine {
     }
 
     // Query ringkasan
-    if (SUMMARY_KEYWORDS.some((k) => lowerText.includes(k))) {
+    if (SUMMARY_KEYWORDS.some((k) => lowerText.includes(k)) && !hasTransaction) {
       return { intent: 'query_summary', confidence: 0.85 };
     }
 
@@ -87,12 +86,73 @@ export class ReasoningEngine {
       return { intent: 'query_transactions', confidence: 0.8 };
     }
 
+    // Pertanyaan tanpa transaksi → classify as data or web
+    if (isQuestion && !hasTransaction) {
+      return this.classifyQuestion(lowerText);
+    }
+
     // Input transaksi (ada nominal)
     if (hasTransaction) {
       return { intent: 'transaction', confidence: 0.9 };
     }
 
     return { intent: 'unknown', confidence: 0.3 };
+  }
+
+  /**
+   * Cek apakah input adalah pertanyaan
+   */
+  private isQuestion(text: string): boolean {
+    const questionIndicators = [
+      '?',
+      'berapa',
+      'apa',
+      'gimana',
+      'bagaimana',
+      'kenapa',
+      'mengapa',
+      'siapa',
+      'kapan',
+      'dimana',
+      'jelaskan',
+      'ceritakan',
+      'tolong',
+      'bisa',
+      'apakah',
+    ];
+    return questionIndicators.some((q) => text.includes(q));
+  }
+
+  /**
+   * Klasifikasi pertanyaan: tentang data user atau butuh web search
+   */
+  private classifyQuestion(text: string): { intent: Intent; confidence: number } {
+    const dataKeywords = [
+      'pengeluaran',
+      'pemasukan',
+      'saldo',
+      'transaksi',
+      'bulan',
+      'minggu',
+      'hari',
+      'kategori',
+      'wallet',
+      'dompet',
+      'total',
+      'rata-rata',
+      'tertinggi',
+      'terendah',
+      'uang',
+      'keuangan',
+      'tabungan',
+    ];
+    const isDataQuestion = dataKeywords.some((k) => text.includes(k));
+
+    if (isDataQuestion) {
+      return { intent: 'query_data', confidence: 0.85 };
+    }
+    // Pertanyaan umum → web search
+    return { intent: 'query_web', confidence: 0.7 };
   }
 
   /**
@@ -134,6 +194,8 @@ export class ReasoningEngine {
       query_transactions: 'query',
       query_trend: 'query',
       query_tips: 'query',
+      query_data: 'data_query',
+      query_web: 'web_search',
       update_pending: 'pending_handler',
       confirm: 'pending_handler',
       cancel: 'pending_handler',
@@ -141,18 +203,37 @@ export class ReasoningEngine {
       unknown: 'fallback',
     };
 
-    // Jika ada pending dan bukan query, handle sebagai update pending
+    // Jika ada pending, cek apakah input adalah transaksi baru yang lengkap atau partial update
     if (hasPending && !intent.startsWith('query_') && intent !== 'help') {
-      let action = intent;
-      // Jika intent bukan confirm/cancel (misal: transaction, unknown), anggap sebagai update
-      if (intent !== 'confirm' && intent !== 'cancel') {
-        action = 'update_pending';
+      // Cek apakah input punya nominal (indikasi transaksi baru yang lengkap)
+      const hasAmount = /\d+\s*(k|rb|ribu|jt|juta)?/i.test(text);
+
+      if (intent === 'confirm' || intent === 'cancel') {
+        // Eksplisit konfirmasi/batal
+        return {
+          intent,
+          tool: 'pending_handler',
+          params: { action: intent, text },
+          confidence,
+        };
       }
 
+      if (hasAmount && intent === 'transaction') {
+        // Input lengkap dengan nominal → RE-PARSE sebagai transaksi baru (replace pending)
+        console.log('[Reasoning] Full transaction input detected, routing to parser');
+        return {
+          intent: 'transaction',
+          tool: toolMap['transaction'] || 'text_parser',
+          params: { text, intent: 'transaction' },
+          confidence,
+        };
+      }
+
+      // Partial update (tanpa nominal): kategorinya X, walletnya Y, catatan Z
       return {
-        intent: action,
+        intent: 'update_pending',
         tool: 'pending_handler',
-        params: { action, text },
+        params: { action: 'update_pending', text },
         confidence,
       };
     }

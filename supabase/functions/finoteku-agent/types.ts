@@ -51,6 +51,8 @@ export type Intent =
   | 'query_transactions' // Tanya riwayat
   | 'query_trend' // Tanya tren
   | 'query_tips' // Minta tips hemat
+  | 'query_data' // Pertanyaan tentang data keuangan user (NEW)
+  | 'query_web' // Pertanyaan umum yang perlu cari di web (NEW)
   | 'update_pending' // Update transaksi pending
   | 'confirm' // Konfirmasi transaksi
   | 'cancel' // Batalkan transaksi

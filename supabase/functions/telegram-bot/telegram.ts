@@ -19,6 +19,14 @@ export interface TelegramVoice {
   file_size?: number;
 }
 
+export interface TelegramDocument {
+  file_id: string;
+  file_unique_id: string;
+  file_name?: string;
+  mime_type?: string;
+  file_size?: number;
+}
+
 export interface TelegramMessage {
   message_id: number;
   from: {
@@ -33,6 +41,7 @@ export interface TelegramMessage {
   text?: string;
   photo?: TelegramPhoto[];
   voice?: TelegramVoice;
+  document?: TelegramDocument;
   caption?: string;
   date: number;
 }
@@ -213,6 +222,32 @@ export async function editTelegramMessage(
     return response.ok;
   } catch (error) {
     console.error('Error editing Telegram message:', error);
+    return false;
+  }
+}
+
+/**
+ * Remove inline keyboard buttons from a message
+ */
+export async function removeMessageButtons(
+  botToken: string,
+  chatId: number,
+  messageId: number,
+): Promise<boolean> {
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/editMessageReplyMarkup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId,
+        reply_markup: { inline_keyboard: [] },
+      }),
+    });
+
+    return response.ok;
+  } catch (error) {
+    console.error('Error removing message buttons:', error);
     return false;
   }
 }

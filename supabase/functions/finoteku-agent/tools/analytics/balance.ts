@@ -3,10 +3,10 @@
  * Query saldo wallet
  */
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { BaseTool, type ToolParams } from './base.ts';
-import type { ToolResult } from '../types.ts';
-import * as walletData from '../data/wallets.ts';
-import type { UserContext } from '../data/users.ts';
+import { BaseTool, type ToolParams } from '../core/base.ts';
+import type { ToolResult } from '../../types.ts';
+import * as walletData from '../../data/wallets.ts';
+import type { UserContext } from '../../data/users.ts';
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('id-ID', {

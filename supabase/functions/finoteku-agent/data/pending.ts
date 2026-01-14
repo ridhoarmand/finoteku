@@ -1,45 +1,65 @@
 /**
  * Pending Transactions Data Access Layer
- * Query Supabase untuk transaksi pending (menunggu konfirmasi)
+ * Multi-platform support with view-based data loading
  */
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+export type Platform = 'telegram' | 'discord' | 'whatsapp' | 'api';
 
 export interface PendingTransaction {
   id: string;
   user_id: string;
-  conversation_id: string;
+  platform: Platform;
+  platform_identifier: string;
+  telegram_chat_id?: string; // Legacy, kept for compatibility
   type: 'income' | 'expense';
   amount: number;
   category_id: string;
-  category_name?: string;
+  category_name: string; // From VIEW join
+  category_parent?: string; // From VIEW join
   wallet_id: string;
-  wallet_name?: string;
+  wallet_name: string; // From VIEW join
   notes: string;
   date: string;
+  original_input?: string;
   expires_at: string;
-  original_input?: string; // Untuk learning
 }
 
 export interface PendingTransactionInput {
   type: 'income' | 'expense';
   amount: number;
   category_id: string;
-  category_name?: string;
   wallet_id: string;
-  wallet_name?: string;
   notes: string;
   date: string;
   original_input?: string;
 }
 
 /**
- * Ambil transaksi pending berdasarkan conversation ID
+ * Ambil transaksi pending berdasarkan user + platform
+ * Menggunakan VIEW untuk mendapatkan nama kategori dan wallet
  */
 export async function get(
   supabase: SupabaseClient,
+  userId: string,
+  platform: Platform,
+): Promise<PendingTransaction | null> {
+  const { data } = await supabase.from('pending_transactions_view').select('*').eq(
+    'user_id',
+    userId,
+  ).eq('platform', platform).gt('expires_at', new Date().toISOString()).single();
+
+  return data;
+}
+
+/**
+ * Ambil transaksi pending berdasarkan conversation ID (legacy compatibility)
+ */
+export async function getByConversationId(
+  supabase: SupabaseClient,
   conversationId: string,
 ): Promise<PendingTransaction | null> {
-  const { data } = await supabase.from('pending_bot_transactions').select('*').eq(
+  const { data } = await supabase.from('pending_transactions_view').select('*').eq(
     'telegram_chat_id',
     conversationId,
   ).gt('expires_at', new Date().toISOString()).single();
@@ -48,10 +68,25 @@ export async function get(
 }
 
 /**
- * Cek apakah ada transaksi pending
+ * Cek apakah ada transaksi pending untuk user + platform
  */
-export async function exists(supabase: SupabaseClient, conversationId: string): Promise<boolean> {
-  const pending = await get(supabase, conversationId);
+export async function exists(
+  supabase: SupabaseClient,
+  userId: string,
+  platform: Platform,
+): Promise<boolean> {
+  const pending = await get(supabase, userId, platform);
+  return !!pending;
+}
+
+/**
+ * Cek apakah ada transaksi pending berdasarkan conversation ID (legacy)
+ */
+export async function existsByConversationId(
+  supabase: SupabaseClient,
+  conversationId: string,
+): Promise<boolean> {
+  const pending = await getByConversationId(supabase, conversationId);
   return !!pending;
 }
 
@@ -61,7 +96,8 @@ export async function exists(supabase: SupabaseClient, conversationId: string): 
 export async function save(
   supabase: SupabaseClient,
   userId: string,
-  conversationId: string,
+  platform: Platform,
+  platformIdentifier: string,
   transaction: PendingTransactionInput,
 ): Promise<{ id: string | null; error: Error | null }> {
   const expiresAt = new Date();
@@ -69,18 +105,23 @@ export async function save(
 
   const { data, error } = await supabase
     .from('pending_bot_transactions')
-    .upsert({
-      user_id: userId,
-      telegram_chat_id: conversationId,
-      type: transaction.type,
-      amount: transaction.amount,
-      category_id: transaction.category_id,
-      wallet_id: transaction.wallet_id,
-      notes: transaction.notes,
-      date: transaction.date,
-      expires_at: expiresAt.toISOString(),
-      // category_name, wallet_name, original_input excluded matching schema
-    })
+    .upsert(
+      {
+        user_id: userId,
+        platform,
+        platform_identifier: platformIdentifier,
+        telegram_chat_id: platform === 'telegram' ? platformIdentifier : null,
+        type: transaction.type,
+        amount: transaction.amount,
+        category_id: transaction.category_id,
+        wallet_id: transaction.wallet_id,
+        notes: transaction.notes,
+        date: transaction.date,
+        original_input: transaction.original_input,
+        expires_at: expiresAt.toISOString(),
+      },
+      { onConflict: 'user_id,platform' },
+    )
     .select('id')
     .single();
 
@@ -92,26 +133,56 @@ export async function save(
  */
 export async function remove(
   supabase: SupabaseClient,
+  userId: string,
+  platform: Platform,
+): Promise<{ success: boolean; error: Error | null }> {
+  const { error } = await supabase.from('pending_bot_transactions').delete().eq('user_id', userId)
+    .eq('platform', platform);
+
+  return { success: !error, error };
+}
+
+/**
+ * Hapus berdasarkan conversation ID (legacy)
+ */
+export async function removeByConversationId(
+  supabase: SupabaseClient,
   conversationId: string,
 ): Promise<{ success: boolean; error: Error | null }> {
   const { error } = await supabase.from('pending_bot_transactions').delete().eq(
     'telegram_chat_id',
     conversationId,
   );
+
   return { success: !error, error };
 }
 
 /**
- * Update field tertentu di transaksi pending
+ * Update field tertentu di transaksi pending (PARTIAL UPDATE)
+ * Hanya field yang ada di updates yang akan diubah
  */
 export async function update(
   supabase: SupabaseClient,
-  conversationId: string,
+  userId: string,
+  platform: Platform,
   updates: Partial<PendingTransactionInput>,
 ): Promise<{ success: boolean; error: Error | null }> {
-  const { error } = await supabase.from('pending_bot_transactions').update(updates).eq(
-    'telegram_chat_id',
-    conversationId,
-  );
+  // Filter out undefined values to ensure true partial update
+  const cleanUpdates: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(updates)) {
+    if (value !== undefined) {
+      cleanUpdates[key] = value;
+    }
+  }
+
+  if (Object.keys(cleanUpdates).length === 0) {
+    return { success: true, error: null }; // Nothing to update
+  }
+
+  const { error } = await supabase.from('pending_bot_transactions').update(cleanUpdates).eq(
+    'user_id',
+    userId,
+  ).eq('platform', platform);
+
   return { success: !error, error };
 }

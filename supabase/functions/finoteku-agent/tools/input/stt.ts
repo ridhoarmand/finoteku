@@ -2,9 +2,9 @@
  * Speech To Text Tool
  * Transkripsi voice message ke teks
  */
-import type { AIProvider } from '../providers/base.ts';
-import { BaseTool, type ToolParams } from './base.ts';
-import type { ToolResult } from '../types.ts';
+import type { AIProvider } from '../../providers/base.ts';
+import { BaseTool, type ToolParams } from '../core/base.ts';
+import type { ToolResult } from '../../types.ts';
 
 export interface TranscribeResult {
   text: string;

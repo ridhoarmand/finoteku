@@ -5,9 +5,10 @@
  */
 
 import { ReasoningEngine } from './reasoning.ts';
-import { ToolRegistry } from './tools/base.ts';
+import { ToolRegistry } from './tools/core/index.ts';
 import type { AgentInput, AgentResponse } from './types.ts';
 import type { UserContext } from './data/users.ts';
+import type { UserPatterns } from './data/patterns.ts';
 import * as pendingData from './data/pending.ts';
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -22,11 +23,13 @@ export class AgentExecutor {
    * Eksekusi utama agent
    * @param input - Input dari user
    * @param userContext - Context user (kategori, wallet, preferensi)
+   * @param patterns - User patterns dari history
    * @param hasPending - Apakah ada transaksi pending
    */
   async execute(
     input: AgentInput,
     userContext: UserContext,
+    patterns: UserPatterns,
     hasPending?: boolean,
   ): Promise<AgentResponse> {
     try {
@@ -37,11 +40,11 @@ export class AgentExecutor {
 
       // 2. Handle media input (memerlukan chaining)
       if (input.type === 'voice') {
-        return await this.handleVoiceInput(input, userContext, hasPending);
+        return await this.handleVoiceInput(input, userContext, patterns, hasPending);
       }
 
       if (input.type === 'image') {
-        return await this.handleImageInput(input, userContext);
+        return await this.handleImageInput(input, userContext, patterns, hasPending);
       }
 
       // 3. EXECUTE - Jalankan tool yang sesuai
@@ -59,6 +62,7 @@ export class AgentExecutor {
       const result = await tool.execute({
         ...plan.params,
         userContext,
+        patterns, // NEW: pass patterns to tool
         conversationId: input.conversationId,
       });
 
@@ -75,29 +79,69 @@ export class AgentExecutor {
           // CRITICAL FIX: Persist pending transaction to DB
           const pendingDataPayload = data;
 
-          // Resolve IDs using UserContext
-          const category = userContext.categories.find((c) =>
-            c.name.toLowerCase() === (pendingDataPayload.categoryHint || '').toLowerCase()
-          );
-          const wallet = userContext.wallets.find((w) =>
-            w.name.toLowerCase() === (pendingDataPayload.walletHint || '').toLowerCase()
-          );
+          // Resolve IDs using UserContext with better matching
+          const categoryHint = (pendingDataPayload.categoryHint || '').toLowerCase();
+          const walletHint = (pendingDataPayload.walletHint || '').toLowerCase();
+
+          // Try exact match first, then partial match
+          let category = userContext.categories.find((c) => c.name.toLowerCase() === categoryHint);
+          if (!category) {
+            category = userContext.categories.find((c) =>
+              c.name.toLowerCase().includes(categoryHint) ||
+              categoryHint.includes(c.name.toLowerCase())
+            );
+          }
+
+          let wallet = userContext.wallets.find((w) => w.name.toLowerCase() === walletHint);
+          if (!wallet && walletHint) {
+            wallet = userContext.wallets.find((w) =>
+              w.name.toLowerCase().includes(walletHint) || walletHint.includes(w.name.toLowerCase())
+            );
+          }
+
+          // CRITICAL: Category MUST exist in user's database
+          // NO FALLBACK to first category - show error instead
+          if (!category) {
+            console.error(`[Executor] Category not found: "${categoryHint}"`);
+            return {
+              type: 'error',
+              content:
+                `❌ <b>Kategori tidak ditemukan</b>\n\nKategori "${categoryHint}" tidak ada di akun Anda.\n\nGunakan salah satu kategori berikut:\n${
+                  userContext.categories
+                    .filter((c) => c.type === pendingDataPayload.type)
+                    .map((c) => `• ${c.name}`)
+                    .join('\n')
+                }`,
+            };
+          }
+
+          // Wallet is optional - use first wallet if not specified
+          if (!wallet) {
+            if (walletHint) {
+              console.warn(`[Executor] No wallet match for: "${walletHint}"`);
+            }
+            // Use first wallet as fallback - database requires valid UUID
+            wallet = userContext.wallets[0];
+          }
 
           // Determine date
           const date = new Date();
           date.setDate(date.getDate() + (pendingDataPayload.dateOffset || 0));
 
+          // Get platform info from input
+          const platform = (input.platform as pendingData.Platform) || 'telegram';
+          const platformIdentifier = input.conversationId;
+
           const saveResult = await pendingData.save(
             this.supabase,
             userContext.userId,
-            input.conversationId,
+            platform,
+            platformIdentifier,
             {
               type: pendingDataPayload.type,
               amount: pendingDataPayload.amount,
-              category_id: category?.id || userContext.categories[0]?.id, // Fallback to first category if not found
-              category_name: pendingDataPayload.categoryHint,
-              wallet_id: wallet?.id || userContext.wallets[0]?.id, // Fallback to first wallet
-              wallet_name: pendingDataPayload.walletHint,
+              category_id: category.id,
+              wallet_id: wallet.id,
               notes: pendingDataPayload.notes,
               date: date.toISOString(),
               original_input: input.content,
@@ -150,6 +194,7 @@ export class AgentExecutor {
   private async handleVoiceInput(
     input: AgentInput,
     userContext: UserContext,
+    patterns: UserPatterns,
     hasPending?: boolean,
   ): Promise<AgentResponse> {
     // Step 1: Konversi suara ke teks
@@ -176,16 +221,19 @@ export class AgentExecutor {
       content: text,
     };
 
-    return this.execute(textInput, userContext, hasPending);
+    return this.execute(textInput, userContext, patterns, hasPending);
   }
 
   /**
-   * Handle image input dengan OCR Scanner
+   * Handle image input dengan chaining: OCR → Text Parser
    */
   private async handleImageInput(
     input: AgentInput,
     userContext: UserContext,
+    patterns: UserPatterns,
+    hasPending?: boolean,
   ): Promise<AgentResponse> {
+    // Step 1: Extract text from image (OCR)
     const scannerTool = this.tools.get('image_scanner');
     if (!scannerTool) {
       return { type: 'error', content: '❌ OCR scanner tidak tersedia.' };
@@ -200,14 +248,15 @@ export class AgentExecutor {
       return { type: 'error', content: scanResult.message };
     }
 
-    return {
-      type: 'confirmation',
-      content: scanResult.message + '\n\n<b>Simpan transaksi ini?</b>',
-      data: { ...(scanResult.data as Record<string, unknown>), needsConfirmation: true },
-      actions: [
-        { text: '✅ Ya, Simpan', action: 'confirm_yes' },
-        { text: '❌ Tidak', action: 'confirm_no' },
-      ],
+    // Step 2: Parse extracted text (same as text/voice input)
+    // deno-lint-ignore no-explicit-any
+    const text = (scanResult.data as any).text;
+    const textInput: AgentInput = {
+      ...input,
+      type: 'text',
+      content: text,
     };
+
+    return this.execute(textInput, userContext, patterns, hasPending);
   }
 }
