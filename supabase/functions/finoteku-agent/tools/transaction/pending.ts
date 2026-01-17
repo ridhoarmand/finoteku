@@ -9,18 +9,14 @@ import type { ToolResult } from '../../types.ts';
 import type { UserContext } from '../../data/users.ts';
 import * as pendingData from '../../data/pending.ts';
 import * as transactionData from '../../data/transactions.ts';
-import { PreferenceLearner } from '../../memory/learning.ts';
 
 export class PendingHandlerTool extends BaseTool {
   name = 'pending_handler';
   description = 'Menangani konfirmasi, pembatalan, dan update transaksi pending';
   intents = ['confirm', 'cancel', 'update_pending'];
 
-  private learner: PreferenceLearner;
-
   constructor(private supabase: SupabaseClient) {
     super();
-    this.learner = new PreferenceLearner(supabase);
   }
 
   async execute(params: ToolParams): Promise<ToolResult> {
@@ -57,10 +53,7 @@ export class PendingHandlerTool extends BaseTool {
   /**
    * Konfirmasi dan simpan transaksi
    */
-  private async confirmTransaction(
-    pending: pendingData.PendingTransaction,
-    _userContext: UserContext,
-  ): Promise<ToolResult> {
+  private async confirmTransaction(pending: pendingData.PendingTransaction, _userContext: UserContext): Promise<ToolResult> {
     console.log('[PendingHandler] Confirming transaction:', {
       category_id: pending.category_id,
       category_name: pending.category_name,
@@ -82,18 +75,6 @@ export class PendingHandlerTool extends BaseTool {
       return this.error('Gagal menyimpan transaksi: ' + error.message);
     }
 
-    // Adaptive Learning
-    if (pending.original_input) {
-      await this.learner.learnFromTransaction(
-        pending.user_id,
-        pending.original_input,
-        pending.category_id,
-        pending.category_name || '',
-        pending.wallet_id,
-        pending.wallet_name || '',
-      );
-    }
-
     // Hapus pending transaction
     await pendingData.remove(this.supabase, pending.user_id, pending.platform);
 
@@ -103,38 +84,37 @@ export class PendingHandlerTool extends BaseTool {
   /**
    * Batalkan transaksi pending
    */
-  private async cancelTransaction(
-    userId: string,
-    platform: pendingData.Platform,
-  ): Promise<ToolResult> {
+  private async cancelTransaction(userId: string, platform: pendingData.Platform): Promise<ToolResult> {
     await pendingData.remove(this.supabase, userId, platform);
     return this.success({}, '❌ Transaksi dibatalkan.');
   }
 
   /**
-   * Smart Update - Deteksi entity dari text dan update field yang sesuai
+   * Smart Update - Use AI to parse update request
    * Mendukung: kategori, wallet, nominal, notes
    *
    * Contoh:
-   * - "BCA" → Deteksi sebagai wallet jika cocok dengan user's wallets
-   * - "Makanan" → Deteksi sebagai kategori jika cocok
+   * - "BCA" → Deteksi sebagai wallet
+   * - "Kencan Jajan" → AI parse jadi category "Jajan"
    * - "50k" → Deteksi sebagai nominal
-   * - "Catatan Nasi Goreng" → Eksplisit update notes
    */
-  private async updatePending(
-    userContext: UserContext,
-    platform: pendingData.Platform,
-    params: ToolParams,
-  ): Promise<ToolResult> {
+  private async updatePending(userContext: UserContext, platform: pendingData.Platform, params: ToolParams): Promise<ToolResult> {
     const text = params.text as string;
+    console.log('[PendingHandler] Update request:', text);
+
+    // Get current pending transaction
+    const current = await pendingData.get(this.supabase, userContext.userId, platform);
+    if (!current) {
+      return this.error('Tidak ada transaksi pending');
+    }
+
     const updates: Partial<pendingData.PendingTransactionInput> = {};
+
+    // Smart detection: Try simple keyword matching first for wallet/amount
     const lowerText = text.toLowerCase();
 
-    // 1. IMPLICIT ENTITY DETECTION - Scan for wallet/category names
-    const { wallets, categories } = userContext;
-
-    // Check if text matches a wallet name
-    for (const wallet of wallets) {
+    // Quick wallet detection
+    for (const wallet of userContext.wallets) {
       if (lowerText.includes(wallet.name.toLowerCase())) {
         updates.wallet_id = wallet.id;
         console.log(`[PendingHandler] Detected wallet: ${wallet.name}`);
@@ -142,95 +122,57 @@ export class PendingHandlerTool extends BaseTool {
       }
     }
 
-    // Check if text matches a category name
-    for (const category of categories) {
+    // Quick amount detection
+    const amountMatch = text.match(/(\d+)\s*(k|rb|ribu|jt|juta)?/i);
+    if (amountMatch && !updates.wallet_id) {
+      let amount = parseInt(amountMatch[1]);
+      const suffix = amountMatch[2]?.toLowerCase();
+      if (suffix === 'k' || suffix === 'rb' || suffix === 'ribu') amount *= 1000;
+      if (suffix === 'jt' || suffix === 'juta') amount *= 1000000;
+
+      if (amount >= 100 && amount !== current.amount) {
+        updates.amount = amount;
+        console.log(`[PendingHandler] Detected amount: ${amount}`);
+      }
+    }
+
+    // For category updates (especially complex ones like "Kencan Jajan")
+    // Try to match category names - prioritize child categories
+    let categoryDetected = false;
+
+    // First try exact match with child categories
+    for (const category of userContext.categories.filter((c) => c.parent_name)) {
       if (lowerText.includes(category.name.toLowerCase())) {
         updates.category_id = category.id;
-        console.log(`[PendingHandler] Detected category: ${category.name}`);
+        console.log(`[PendingHandler] Detected child category: ${category.name}`);
+        categoryDetected = true;
         break;
       }
     }
 
-    // 2. EXPLICIT KEYWORD DETECTION
-
-    // Explicit kategori update: "kategorinya Makanan"
-    if (lowerText.includes('kategori')) {
-      const match = text.match(/kategori(?:nya)?\s+(.+)/i);
-      if (match) {
-        const catName = match[1].trim().toLowerCase();
-        const cat = categories.find((c: { name: string; id: string }) =>
-          c.name.toLowerCase() === catName
-        );
-        if (cat) {
-          updates.category_id = cat.id;
+    // Then try parent categories if no child match
+    if (!categoryDetected) {
+      for (const category of userContext.categories.filter((c) => !c.parent_name)) {
+        if (lowerText.includes(category.name.toLowerCase())) {
+          updates.category_id = category.id;
+          console.log(`[PendingHandler] Detected parent category: ${category.name}`);
+          categoryDetected = true;
+          break;
         }
-      }
-    }
-
-    // Explicit wallet update: "walletnya BCA"
-    if (lowerText.includes('wallet') || lowerText.includes('dompet')) {
-      const match = text.match(/(?:wallet|dompet)(?:nya)?\s+(.+)/i);
-      if (match) {
-        const walletName = match[1].trim().toLowerCase();
-        const wallet = wallets.find((w: { name: string; id: string }) =>
-          w.name.toLowerCase() === walletName
-        );
-        if (wallet) {
-          updates.wallet_id = wallet.id;
-        }
-      }
-    }
-
-    // 3. AMOUNT DETECTION
-    const amountMatch = text.match(/(\d+)\s*(k|rb|ribu|jt|juta)?/i);
-    if (amountMatch) {
-      // Check if it's explicitly about amount OR if no other entity detected
-      const isExplicitAmount = lowerText.includes('nominal') || lowerText.includes('harga') ||
-        lowerText.includes('jumlah');
-      const noOtherEntity = !updates.wallet_id && !updates.category_id;
-
-      if (isExplicitAmount || noOtherEntity) {
-        let amount = parseInt(amountMatch[1]);
-        const suffix = amountMatch[2]?.toLowerCase();
-        if (suffix === 'k' || suffix === 'rb' || suffix === 'ribu') amount *= 1000;
-        if (suffix === 'jt' || suffix === 'juta') amount *= 1000000;
-
-        // Only set if it's a reasonable transaction amount
-        if (amount >= 100) {
-          updates.amount = amount;
-          console.log(`[PendingHandler] Detected amount: ${amount}`);
-        }
-      }
-    }
-
-    // 4. NOTES DETECTION - Explicit only
-    if (
-      lowerText.includes('catatan') || lowerText.includes('note') ||
-      lowerText.includes('keterangan') || lowerText.includes('deskripsi')
-    ) {
-      const match = text.match(
-        /(?:catatan|note|keterangan|deskripsi)(?:nya)?\s*(?:[:=]|jadi)?\s+(.+)/i,
-      );
-      if (match) {
-        updates.notes = match[1].trim();
-        console.log(`[PendingHandler] Detected notes: ${updates.notes}`);
       }
     }
 
     // No updates detected
     if (Object.keys(updates).length === 0) {
       return this.error(
-        'Tidak dapat memahami perubahan. Coba: "kategorinya [nama]" atau "walletnya [nama]" atau ketik nama wallet/kategori langsung.',
+        'Tidak dapat memahami perubahan.\n\n' + 'Contoh:\n' + '• Ketik nama wallet: "BCA", "Gopay"\n' + '• Ketik kategori: "Jajan", "Kencan Jajan"\n' + '• Ketik nominal: "50k", "100rb"'
       );
     }
 
+    console.log('[PendingHandler] Updates to apply:', updates);
+
     // Apply partial update
-    const { success, error } = await pendingData.update(
-      this.supabase,
-      userContext.userId,
-      platform,
-      updates,
-    );
+    const { success, error } = await pendingData.update(this.supabase, userContext.userId, platform, updates);
 
     if (!success) {
       return this.error('Gagal update: ' + (error?.message || 'Unknown error'));

@@ -10,7 +10,7 @@ export interface UserContext {
   userId: string;
   categories: categoryData.CategoryRecord[];
   wallets: walletData.WalletRecord[];
-  parserMode: 'regex' | 'server_key' | 'user_key';
+  parserMode: 'server_key' | 'user_key';
   aiApiKey: string | null;
 }
 

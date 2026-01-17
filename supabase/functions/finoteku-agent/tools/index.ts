@@ -10,8 +10,8 @@ export type { ToolResult } from '../types.ts';
 // Input Processing
 export { ImageScannerTool, SpeechToTextTool } from './input/index.ts';
 
-// Text Parsing
-export { classify, TextParserTool, tokenize } from './parser/index.ts';
+// Transaction Parsing (AI-first)
+export { TransactionParserTool } from './parser/index.ts';
 
 // Transaction Management
 export { PendingHandlerTool } from './transaction/index.ts';

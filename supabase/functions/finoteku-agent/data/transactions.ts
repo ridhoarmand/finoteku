@@ -118,7 +118,6 @@ export async function getMonthlyExpense(
     userId,
   ).gte('date', startDate).lte('date', endDate);
 
-  // deno-lint-ignore no-explicit-any
   return (data || []).filter((t: any) => t.categories?.type === 'expense').reduce(
     (sum: number, t: any) => sum + Math.abs(Number(t.amount)),
     0,

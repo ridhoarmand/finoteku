@@ -12,7 +12,7 @@ import { GeminiProvider } from './providers/gemini.ts';
 import { ToolRegistry } from './tools/core/index.ts';
 
 // Parser Tools
-import { DataEnrichmentTool } from './tools/parser/enrichment.ts';
+import { TransactionParserTool } from './tools/parser/parser.ts';
 import { ImageScannerTool, SpeechToTextTool } from './tools/input/index.ts';
 
 // Analytics Tools
@@ -27,7 +27,6 @@ import { PendingHandlerTool } from './tools/transaction/index.ts';
 // Data Layer
 import * as userData from './data/users.ts';
 import * as pendingData from './data/pending.ts';
-import * as patternData from './data/patterns.ts';
 
 import type { AgentConfig, AgentInput, AgentResponse } from './types.ts';
 
@@ -52,8 +51,8 @@ export class FinanceAgent {
     // Inisialisasi Tools
     const tools = new ToolRegistry();
 
-    // NEW: Data Enrichment Tool (smart all-in-one parser)
-    tools.register(new DataEnrichmentTool(this.supabase, ai));
+    // Transaction Parser Tool (AI-first)
+    tools.register(new TransactionParserTool(this.supabase, ai));
 
     // Input processing
     tools.register(new ImageScannerTool(ai!));
@@ -97,16 +96,12 @@ export class FinanceAgent {
       };
     }
 
-    // NEW: Load user patterns untuk smart parsing
-    console.log('[FinanceAgent] Loading user patterns...');
-    const patterns = await patternData.buildUserPatterns(this.supabase, userContext.userId);
-
     // Cek apakah ada transaksi pending yang menunggu konfirmasi
     const platform = (input.platform as pendingData.Platform) || 'telegram';
     const hasPending = await pendingData.exists(this.supabase, userContext.userId, platform);
 
-    // Jalankan agent loop: Plan → Execute → Evaluate (dengan patterns!)
-    const response = await this.executor.execute(input, userContext, patterns, hasPending);
+    // Jalankan agent loop: Plan → Execute → Evaluate
+    const response = await this.executor.execute(input, userContext, hasPending);
 
     return response;
   }
