@@ -97,89 +97,109 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
         automaticallyImplyLeading: false,
       ),
       resizeToAvoidBottomInset: false, // Mencegah overflow saat keyboard muncul
-      body: Column(
-        children: [
-          // Balance Section - Fixed at top
-          TransactionBalanceSection(
-            walletsAsync: walletsAsync,
-            selectedWalletId: _selectedWalletId,
-            onWalletChanged: (val) => setState(() => _selectedWalletId = val),
-          ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          // Invalidate all relevant providers to reload data
+          ref.invalidate(
+            ledgerEntriesProvider((
+              userId: user.id,
+              walletId: _selectedWalletId,
+              startDate: _startDate,
+              endDate: _endDate,
+            )),
+          );
+          ref.invalidate(activeWalletsProvider(user.id));
+          ref.invalidate(walletsProvider(user.id));
+          ref.invalidate(categoriesProvider(user.id));
+          // Also trigger the global refresh
+          ref.read(transactionRefreshTriggerProvider.notifier).bump();
+        },
+        child: Column(
+          children: [
+            // Balance Section - Fixed at top
+            TransactionBalanceSection(
+              walletsAsync: walletsAsync,
+              selectedWalletId: _selectedWalletId,
+              onWalletChanged: (val) => setState(() => _selectedWalletId = val),
+            ),
 
-          // Search and Filter Section - Fixed below balance
-          TransactionSearchFilter(
-            searchController: _searchController,
-            searchQuery: _searchQuery,
-            showFilters: _showFilters,
-            selectedCategoryId: _selectedCategoryId,
-            startDate: _startDate,
-            endDate: _endDate,
-            categoriesAsync: categoriesAsync,
-            onSearchChanged: (value) => setState(() => _searchQuery = value),
-            onToggleFilters: () => setState(() => _showFilters = !_showFilters),
-            onCategoryChanged: (categoryId) =>
-                setState(() => _selectedCategoryId = categoryId),
-            onStartDateChanged: (date) => setState(() => _startDate = date),
-            onEndDateChanged: (date) => setState(() => _endDate = date),
-            onClearSearch: () {
-              _searchController.clear();
-              setState(() => _searchQuery = '');
-            },
-            onResetFilters: () {
-              setState(() {
-                _selectedCategoryId = null;
-                _startDate = null;
-                _endDate = null;
-              });
-            },
-          ),
+            // Search and Filter Section - Fixed below balance
+            TransactionSearchFilter(
+              searchController: _searchController,
+              searchQuery: _searchQuery,
+              showFilters: _showFilters,
+              selectedCategoryId: _selectedCategoryId,
+              startDate: _startDate,
+              endDate: _endDate,
+              categoriesAsync: categoriesAsync,
+              onSearchChanged: (value) => setState(() => _searchQuery = value),
+              onToggleFilters: () =>
+                  setState(() => _showFilters = !_showFilters),
+              onCategoryChanged: (categoryId) =>
+                  setState(() => _selectedCategoryId = categoryId),
+              onStartDateChanged: (date) => setState(() => _startDate = date),
+              onEndDateChanged: (date) => setState(() => _endDate = date),
+              onClearSearch: () {
+                _searchController.clear();
+                setState(() => _searchQuery = '');
+              },
+              onResetFilters: () {
+                setState(() {
+                  _selectedCategoryId = null;
+                  _startDate = null;
+                  _endDate = null;
+                });
+              },
+            ),
 
-          // Transaction List - Scrollable
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: ledgerAsync.when(
-                data: (entries) {
-                  return allWalletsAsync.when(
-                    data: (allWallets) {
-                      return categoriesAsync.when(
-                        data: (categories) {
-                          final filtered = _filterLedgerBySearch(
-                            entries,
-                            categories,
-                            allWallets,
-                          );
-                          if (filtered.isEmpty) {
-                            return _buildEmptyState(context, theme);
-                          }
-                          return TransactionListWidget(
-                            entries: filtered,
-                            categories: categories,
-                            wallets: allWallets,
-                            userId: user.id,
-                            scrollController: _scrollController,
-                            isLoadingMore: _isLoadingMore,
-                          );
-                        },
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
-                        error: (error, stack) =>
-                            _buildErrorState(error, user.id, theme),
-                      );
-                    },
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (error, stack) =>
-                        _buildErrorState(error, user.id, theme),
-                  );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) =>
-                    _buildErrorState(error, user.id, theme),
+            // Transaction List - Scrollable
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: ledgerAsync.when(
+                  data: (entries) {
+                    return allWalletsAsync.when(
+                      data: (allWallets) {
+                        return categoriesAsync.when(
+                          data: (categories) {
+                            final filtered = _filterLedgerBySearch(
+                              entries,
+                              categories,
+                              allWallets,
+                            );
+                            if (filtered.isEmpty) {
+                              return _buildEmptyState(context, theme);
+                            }
+                            return TransactionListWidget(
+                              entries: filtered,
+                              categories: categories,
+                              wallets: allWallets,
+                              userId: user.id,
+                              scrollController: _scrollController,
+                              isLoadingMore: _isLoadingMore,
+                            );
+                          },
+                          loading: () =>
+                              const Center(child: CircularProgressIndicator()),
+                          error: (error, stack) =>
+                              _buildErrorState(error, user.id, theme),
+                        );
+                      },
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (error, stack) =>
+                          _buildErrorState(error, user.id, theme),
+                    );
+                  },
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (error, stack) =>
+                      _buildErrorState(error, user.id, theme),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {

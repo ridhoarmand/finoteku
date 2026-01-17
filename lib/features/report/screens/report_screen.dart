@@ -30,54 +30,61 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            const ReportHeader(),
+        child: RefreshIndicator(
+          onRefresh: () async {
+            // Invalidate report data provider to reload data
+            ref.invalidate(reportDataProvider(currentUserId));
+          },
+          child: Column(
+            children: [
+              // Header
+              const ReportHeader(),
 
-            // Content
-            Expanded(
-              child: reportDataAsync.when(
-                data: (data) => _buildContent(data, reportState),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 64,
-                        color: theme.colorScheme.error,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Gagal memuat data laporan',
-                        style: theme.textTheme.titleMedium?.copyWith(
+              // Content
+              Expanded(
+                child: reportDataAsync.when(
+                  data: (data) => _buildContent(data, reportState),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (error, stack) => Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 64,
                           color: theme.colorScheme.error,
-                          fontWeight: FontWeight.w500,
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        error.toString(),
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+                        const SizedBox(height: 16),
+                        Text(
+                          'Gagal memuat data laporan',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: theme.colorScheme.error,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () {
-                          ref.invalidate(reportDataProvider(currentUserId));
-                        },
-                        child: const Text('Coba Lagi'),
-                      ),
-                    ],
+                        const SizedBox(height: 8),
+                        Text(
+                          error.toString(),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            ref.invalidate(reportDataProvider(currentUserId));
+                          },
+                          child: const Text('Coba Lagi'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

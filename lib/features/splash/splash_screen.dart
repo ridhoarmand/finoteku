@@ -298,7 +298,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 return Transform.scale(
                   scale: _logoAnimation.value,
                   child: Image.asset(
-                    'assets/icon.png',
+                    'assets/icon_transparent.png',
                     width: 120,
                     height: 120,
                   ),

@@ -22,6 +22,7 @@ import '../../transfer/models/transfer_models.dart';
 import '../../transfer/models/transfer.dart' as transfer_model;
 import '../../transfer/screens/transfer_detail_screen.dart'; // Import untuk transferByIdProvider
 import '../widgets/ledger_transfer_card.dart'; // Import untuk transferDataProvider
+import '../utils/transaction_screen_helpers.dart';
 
 class AddEditTransactionScreen extends ConsumerStatefulWidget {
   final Transaction? initialTransaction;
@@ -225,76 +226,183 @@ class _AddEditTransactionScreenState
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.initialTransfer != null
-              ? ref.tr(context, 'edit_transfer_title')
-              : (widget.initialTransaction != null
-                    ? ref.tr(context, 'edit_transaction_title')
-                    : ref.tr(context, 'add_transaction_title')),
-        ),
-      ),
-      body: GestureDetector(
-        onTap: () {
-          // Dismiss keyboard when tapping outside
-          FocusScope.of(context).unfocus();
-        },
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(2), // Reduced from 6 to 4
-            children: [
-              // Date Section
-              _buildDateSection(),
-              // Amount Section
-              _buildAmountSection(),
-              // Transfer Toggle
-              _buildTransferToggle(),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
 
-              ...(!_isTransfer
-                  ? [
-                      // Wallet Selection
-                      _buildWalletSection(user.id),
-                      // Category Selection
-                      _buildCategorySection(user.id),
-                    ]
-                  : [
-                      // Source wallet, destination wallet and optional fee for transfer
-                      _buildWalletSection(user.id),
-                      _buildToWalletSection(user.id),
-                      _buildFeeSection(user.id),
-                    ]),
+        final hasChanges = _hasChanges;
+        if (!hasChanges) {
+          if (context.mounted) Navigator.pop(context);
+          return;
+        }
 
-              // Notes Section
-              _buildNotesSection(),
-              // Save Button
+        final shouldPop = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(ref.tr(context, 'discard_changes_title')),
+            content: Text(ref.tr(context, 'discard_changes_content')),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(ref.tr(context, 'cancel_button')),
+              ),
               FilledButton(
-                onPressed: _isLoading ? null : _saveTransaction,
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                    : Text(
-                        widget.initialTransfer != null
-                            ? ref.tr(context, 'update_transfer_button')
-                            : (widget.initialTransaction != null
-                                  ? ref.tr(context, 'update_transaction_button')
-                                  : ref.tr(context, 'add_transaction_button')),
-                      ),
+                onPressed: () => Navigator.pop(context, true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                  foregroundColor: Theme.of(context).colorScheme.onError,
+                ),
+                child: Text(ref.tr(context, 'discard_button')),
               ),
             ],
+          ),
+        );
+
+        if (shouldPop == true && context.mounted) {
+          Navigator.pop(context);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            widget.initialTransfer != null
+                ? ref.tr(context, 'edit_transfer_title')
+                : (widget.initialTransaction != null
+                      ? ref.tr(context, 'edit_transaction_title')
+                      : ref.tr(context, 'add_transaction_title')),
+          ),
+        ),
+        body: GestureDetector(
+          onTap: () {
+            // Dismiss keyboard when tapping outside
+            FocusScope.of(context).unfocus();
+          },
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(2), // Reduced from 6 to 4
+              children: [
+                // Date Section
+                _buildDateSection(),
+                // Amount Section
+                _buildAmountSection(),
+                // Transfer Toggle
+                _buildTransferToggle(),
+
+                ...(!_isTransfer
+                    ? [
+                        // Wallet Selection
+                        _buildWalletSection(user.id),
+                        // Category Selection
+                        _buildCategorySection(user.id),
+                      ]
+                    : [
+                        // Source wallet, destination wallet and optional fee for transfer
+                        _buildWalletSection(user.id),
+                        _buildToWalletSection(user.id),
+                        _buildFeeSection(user.id),
+                      ]),
+
+                // Notes Section
+                _buildNotesSection(),
+                // Save Button
+                FilledButton(
+                  onPressed: _isLoading ? null : _saveTransaction,
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : Text(
+                          widget.initialTransfer != null
+                              ? ref.tr(context, 'update_transfer_button')
+                              : (widget.initialTransaction != null
+                                    ? ref.tr(
+                                        context,
+                                        'update_transaction_button',
+                                      )
+                                    : ref.tr(
+                                        context,
+                                        'add_transaction_button',
+                                      )),
+                        ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  bool get _hasChanges {
+    // 1. Check basic text fields first (fastest)
+    final currentAmountText = _amountController.text.trim().replaceAll('.', '');
+    final currentNotes = _notesController.text.trim();
+
+    // Initial State Check for New Entry
+    if (widget.initialTransaction == null && widget.initialTransfer == null) {
+      if (currentAmountText.isNotEmpty) return true;
+      if (currentNotes.isNotEmpty) return true;
+      if (_selectedDate.difference(DateTime.now()).inMinutes.abs() > 1)
+        return true; // Date changed significantly
+      if (_selectedCategory != null) return true;
+      // Note: _selectedWallet may be auto-selected, so usually we don't count it as a change unless user explicitly picked it?
+      // strict: if (_selectedWallet != null) return true;
+      // loose: ignore wallet for now as it might be default
+
+      if (_isTransfer) {
+        if (_toWallet != null) return true;
+        if (_feeController.text.isNotEmpty) return true;
+      }
+
+      return false;
+    }
+
+    // 2. Check Editing Existing Transaction
+    if (widget.initialTransaction != null) {
+      final initial = widget.initialTransaction!;
+      final initialAmount = initial.amount.abs();
+      final currentAmount = double.tryParse(currentAmountText) ?? 0.0;
+
+      if ((initialAmount - currentAmount).abs() > 0.01) return true;
+      if (currentNotes != (initial.notes ?? '')) return true;
+      if (!TransactionScreenHelpers.isSameDay(_selectedDate, initial.date))
+        return true;
+      if (_selectedCategory?.id != initial.categoryId) return true;
+      if (_selectedWallet?.id != initial.walletId) return true;
+
+      return false;
+    }
+
+    // 3. Check Editing Existing Transfer
+    if (widget.initialTransfer != null) {
+      final initial = widget.initialTransfer!;
+      final initialAmount = initial.amount.abs();
+      final currentAmount = double.tryParse(currentAmountText) ?? 0.0;
+
+      if ((initialAmount - currentAmount).abs() > 0.01) return true;
+      if (currentNotes != (initial.notes ?? '')) return true;
+      if (!TransactionScreenHelpers.isSameDay(_selectedDate, initial.date))
+        return true;
+      if (_selectedWallet?.id != initial.fromWalletId) return true;
+      if (_toWallet?.id != initial.toWalletId) return true;
+
+      final currentFeeText = _feeController.text.trim().replaceAll('.', '');
+      final currentFee = double.tryParse(currentFeeText) ?? 0.0;
+      if ((currentFee - initial.fee.abs()).abs() > 0.01) return true;
+
+      return false;
+    }
+
+    return false;
   }
 
   Widget _buildDateSection() =>

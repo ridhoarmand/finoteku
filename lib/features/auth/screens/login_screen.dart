@@ -206,7 +206,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               height: 140,
                               width: 140,
                               child: Image.asset(
-                                'assets/icon.png',
+                                'assets/icon_transparent.png',
                                 fit: BoxFit.contain,
                               ),
                             ),

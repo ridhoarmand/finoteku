@@ -134,7 +134,11 @@ class _MyAppState extends ConsumerState<MyApp> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // App Logo
-                Image.asset('assets/icon.png', width: 100, height: 100),
+                Image.asset(
+                  'assets/icon_transparent.png',
+                  width: 100,
+                  height: 100,
+                ),
                 const SizedBox(height: 24),
 
                 // App Name

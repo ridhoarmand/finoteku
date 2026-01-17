@@ -30,7 +30,7 @@ Future<void> configureDesktopWindow() async {
 
       // Attempt to set window icon from bundled asset for Linux/Windows
       try {
-        final data = await rootBundle.load('assets/icon_desktop.png');
+        final data = await rootBundle.load('assets/icon_apps.png');
         final tempDir = await getTemporaryDirectory();
         final iconPath = '${tempDir.path}/finoteku_icon.png';
         final iconFile = File(iconPath);

@@ -27,7 +27,7 @@ const Map<String, String> homeStringsEn = {
   'all_wallets': 'All Wallets',
 
   // Recent transactions
-  'recent_transactions': 'Recent Transactions',
+  'recent_transactions': 'Recent Expenses',
   'view_all': 'View All',
   'no_recent_transactions': 'No recent transactions',
   'start_by_adding': 'Start by adding your first transaction',
@@ -59,7 +59,7 @@ const Map<String, String> homeStringsId = {
   'all_wallets': 'Semua Dompet',
 
   // Recent transactions
-  'recent_transactions': 'Transaksi Terbaru',
+  'recent_transactions': 'Pengeluaran Terakhir',
   'view_all': 'Lihat Semua',
   'no_recent_transactions': 'Tidak ada transaksi terbaru',
   'start_by_adding': 'Mulai dengan menambahkan transaksi pertama Anda',

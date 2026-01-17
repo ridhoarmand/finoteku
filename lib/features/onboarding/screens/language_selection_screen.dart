@@ -58,7 +58,11 @@ class _LanguageSelectionScreenState
 
               // App Logo
               Center(
-                child: Image.asset('assets/icon.png', width: 100, height: 100),
+                child: Image.asset(
+                  'assets/icon_transparent.png',
+                  width: 100,
+                  height: 100,
+                ),
               ),
 
               const SizedBox(height: 32),

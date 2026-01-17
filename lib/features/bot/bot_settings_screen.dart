@@ -19,7 +19,7 @@ class BotSettingsScreen extends ConsumerStatefulWidget {
 
 class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
   final _apiKeyController = TextEditingController();
-  ParserMode _selectedParserMode = ParserMode.regex;
+  ParserMode _selectedParserMode = ParserMode.serverKey;
   AIProvider _selectedAIProvider = AIProvider.gemini;
   bool _showApiKey = false;
   bool _isSaving = false;
@@ -38,18 +38,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
     final botLinkAsync = ref.watch(telegramBotLinkProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chat Bot'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh status',
-            onPressed: () {
-              ref.read(telegramBotLinkProvider.notifier).refresh();
-            },
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Chat Bot')),
       body: botLinkAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
@@ -65,32 +54,39 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
   ) {
     final userProfileAsync = ref.watch(userProfileProvider);
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // Telegram Connection Card
-        _buildTelegramCard(context, theme, botLink),
+    return RefreshIndicator(
+      onRefresh: () async {
+        // Invalidate providers to reload data
+        ref.invalidate(telegramBotLinkProvider);
+        ref.invalidate(userProfileProvider);
+      },
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Telegram Connection Card
+          _buildTelegramCard(context, theme, botLink),
 
-        const SizedBox(height: 24),
+          const SizedBox(height: 24),
 
-        // Parser Configuration (ALWAYS show - stored in users table)
-        userProfileAsync.when(
-          loading: () => const Card(
-            child: Padding(
-              padding: EdgeInsets.all(32),
-              child: Center(child: CircularProgressIndicator()),
+          // Parser Configuration (ALWAYS show - stored in users table)
+          userProfileAsync.when(
+            loading: () => const Card(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: Center(child: CircularProgressIndicator()),
+              ),
             ),
-          ),
-          error: (e, _) => Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text('Error loading settings: $e'),
+            error: (e, _) => Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text('Error loading settings: $e'),
+              ),
             ),
+            data: (userProfile) =>
+                _buildParserConfigCard(context, theme, userProfile),
           ),
-          data: (userProfile) =>
-              _buildParserConfigCard(context, theme, userProfile),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -192,7 +188,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
         if (mounted) {
           setState(() {
             _selectedParserMode = ParserMode.fromValue(
-              userProfile['parser_mode'] as String? ?? 'regex',
+              userProfile['parser_mode'] as String? ?? 'server_key',
             );
             _selectedAIProvider = AIProvider.fromValue(
               userProfile['ai_provider'] as String? ?? 'none',
@@ -250,10 +246,10 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Parser mode selection
-            ...ParserMode.values.map(
-              (mode) => _buildParserModeOption(theme, mode),
-            ),
+            // Parser mode selection (exclude regex)
+            ...ParserMode.values
+                .where((mode) => mode != ParserMode.regex)
+                .map((mode) => _buildParserModeOption(theme, mode)),
 
             // Show AI provider and API key input only for user_key mode
             if (_selectedParserMode == ParserMode.userKey) ...[
@@ -471,10 +467,6 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
     Color color;
 
     switch (_selectedParserMode) {
-      case ParserMode.regex:
-        info = 'Parsing dengan aturan kata kunci sederhana. Akurasi ~70-80%.';
-        icon = Icons.rule;
-        color = Colors.orange;
       case ParserMode.serverKey:
         info = 'Parsing dengan AI menggunakan server. Akurasi ~95%. Gratis!';
         icon = Icons.cloud;
@@ -483,6 +475,11 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
         info = 'Parsing dengan AI menggunakan API key Anda. Akurasi ~95%.';
         icon = Icons.key;
         color = theme.colorScheme.primary;
+      case ParserMode.regex:
+        // Shouldn't reach here since regex is filtered out
+        info = 'Mode tidak tersedia';
+        icon = Icons.error;
+        color = Colors.grey;
     }
 
     return Container(

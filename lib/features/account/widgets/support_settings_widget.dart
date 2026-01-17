@@ -42,7 +42,7 @@ class SupportSettingsWidget extends ConsumerWidget {
         builder: (context) => AlertDialog(
           title: Row(
             children: [
-              Image.asset('assets/icon.png', width: 40, height: 40),
+              Image.asset('assets/icon_transparent.png', width: 40, height: 40),
               const SizedBox(width: 12),
               Text(
                 'Finoteku',

@@ -6,10 +6,7 @@ import '../../../models/wallet.dart';
 import '../utils/transaction_screen_helpers.dart';
 import '../widgets/ledger_transfer_card.dart';
 import '../widgets/ledger_transaction_card.dart';
-import '../providers/transaction_providers.dart';
-import '../../wallet/providers/wallet_providers.dart';
-import '../../category/providers/category_providers.dart';
-import '../../../services/supabase_service.dart';
+
 import '../../../core/localization/app_localizations.dart';
 import '../screens/transaction_detail_screen.dart';
 import '../../transfer/screens/transfer_detail_screen.dart';
@@ -41,105 +38,93 @@ class TransactionListWidget extends ConsumerWidget {
     // Build flattened list with date headers
     final items = _buildTransactionItems(entries);
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        // Refresh all transaction-related providers
-        final user = ref.read(currentUserProvider).value;
-        if (user != null) {
-          ref.invalidate(transactionsProvider(user.id));
-          refreshWalletProviders(ref);
-          refreshCategoryProviders(ref);
+    return ListView.builder(
+      controller: scrollController,
+      itemCount: items.length + (isLoadingMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        // Show loading indicator at the end
+        if (index == items.length) {
+          return const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Center(child: CircularProgressIndicator()),
+          );
         }
-      },
-      child: ListView.builder(
-        controller: scrollController,
-        itemCount: items.length + (isLoadingMore ? 1 : 0),
-        itemBuilder: (context, index) {
-          // Show loading indicator at the end
-          if (index == items.length) {
-            return const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
 
-          final item = items[index];
-          if (item.isHeader) {
-            final label = TransactionScreenHelpers.formatDate(
-              item.date!,
-              (key) => ref.tr(context, key),
-            );
-            return Padding(
-              padding: const EdgeInsets.all(1), // Kurangi padding date header
-              child: Text(
-                label,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.primary,
-                  letterSpacing: 0.3,
-                ),
+        final item = items[index];
+        if (item.isHeader) {
+          final label = TransactionScreenHelpers.formatDate(
+            item.date!,
+            (key) => ref.tr(context, key),
+          );
+          return Padding(
+            padding: const EdgeInsets.all(1), // Kurangi padding date header
+            child: Text(
+              label,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.primary,
+                letterSpacing: 0.3,
               ),
-            );
-          }
+            ),
+          );
+        }
 
-          // Handle unified transfer card separately
-          if (item.isTransfer) {
-            final a = item.entry!;
-            final b = item.counterpart;
-            return Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: 1,
-                horizontal: 1,
-              ), // Kurangi padding transfer card
-              child: LedgerTransferCard(
-                a: a,
-                counterpart: b,
-                walletMap: walletMap,
-                theme: theme,
-                userId: userId,
-                onTap: (id) {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          TransferDetailScreen(transferId: id),
-                    ),
-                  );
-                },
-                currency: 'IDR',
-              ),
-            );
-          }
-
-          final entry = item.entry!;
-          final category = entry.categoryId != null
-              ? categoryMap[entry.categoryId]
-              : null;
-          final wallet = walletMap[entry.walletId];
-
+        // Handle unified transfer card separately
+        if (item.isTransfer) {
+          final a = item.entry!;
+          final b = item.counterpart;
           return Padding(
             padding: const EdgeInsets.symmetric(
               vertical: 1,
               horizontal: 1,
-            ), // Kurangi padding transaction card
-            child: LedgerTransactionCard(
-              entry: entry,
-              category: category,
-              wallet: wallet,
+            ), // Kurangi padding transfer card
+            child: LedgerTransferCard(
+              a: a,
+              counterpart: b,
+              walletMap: walletMap,
               theme: theme,
-              onTap: () {
-                if (entry.kind == 'transaction') {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          TransactionDetailScreen(transactionId: entry.entryId),
-                    ),
-                  );
-                }
+              userId: userId,
+              onTap: (id) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => TransferDetailScreen(transferId: id),
+                  ),
+                );
               },
+              currency: 'IDR',
             ),
           );
-        },
-      ),
+        }
+
+        final entry = item.entry!;
+        final category = entry.categoryId != null
+            ? categoryMap[entry.categoryId]
+            : null;
+        final wallet = walletMap[entry.walletId];
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: 1,
+            horizontal: 1,
+          ), // Kurangi padding transaction card
+          child: LedgerTransactionCard(
+            entry: entry,
+            category: category,
+            wallet: wallet,
+            theme: theme,
+            onTap: () {
+              if (entry.kind == 'transaction') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        TransactionDetailScreen(transactionId: entry.entryId),
+                  ),
+                );
+              }
+            },
+          ),
+        );
+      },
     );
   }
 

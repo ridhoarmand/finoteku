@@ -57,7 +57,7 @@ class BotLink {
   String? get chatId => metadata['chat_id'] as String?;
   String get aiProvider => metadata['ai_provider'] as String? ?? 'none';
   String? get aiApiKey => metadata['ai_api_key'] as String?;
-  String get parserMode => metadata['parser_mode'] as String? ?? 'regex';
+  String get parserMode => metadata['parser_mode'] as String? ?? 'server_key';
 
   BotLink copyWith({
     String? id,
@@ -137,7 +137,7 @@ enum ParserMode {
   static ParserMode fromValue(String value) {
     return ParserMode.values.firstWhere(
       (e) => e.value == value,
-      orElse: () => ParserMode.regex,
+      orElse: () => ParserMode.serverKey,
     );
   }
 }
