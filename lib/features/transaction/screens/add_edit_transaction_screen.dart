@@ -351,8 +351,9 @@ class _AddEditTransactionScreenState
     if (widget.initialTransaction == null && widget.initialTransfer == null) {
       if (currentAmountText.isNotEmpty) return true;
       if (currentNotes.isNotEmpty) return true;
-      if (_selectedDate.difference(DateTime.now()).inMinutes.abs() > 1)
+      if (_selectedDate.difference(DateTime.now()).inMinutes.abs() > 1) {
         return true; // Date changed significantly
+      }
       if (_selectedCategory != null) return true;
       // Note: _selectedWallet may be auto-selected, so usually we don't count it as a change unless user explicitly picked it?
       // strict: if (_selectedWallet != null) return true;
@@ -374,8 +375,9 @@ class _AddEditTransactionScreenState
 
       if ((initialAmount - currentAmount).abs() > 0.01) return true;
       if (currentNotes != (initial.notes ?? '')) return true;
-      if (!TransactionScreenHelpers.isSameDay(_selectedDate, initial.date))
+      if (!TransactionScreenHelpers.isSameDay(_selectedDate, initial.date)) {
         return true;
+      }
       if (_selectedCategory?.id != initial.categoryId) return true;
       if (_selectedWallet?.id != initial.walletId) return true;
 
@@ -390,8 +392,9 @@ class _AddEditTransactionScreenState
 
       if ((initialAmount - currentAmount).abs() > 0.01) return true;
       if (currentNotes != (initial.notes ?? '')) return true;
-      if (!TransactionScreenHelpers.isSameDay(_selectedDate, initial.date))
+      if (!TransactionScreenHelpers.isSameDay(_selectedDate, initial.date)) {
         return true;
+      }
       if (_selectedWallet?.id != initial.fromWalletId) return true;
       if (_toWallet?.id != initial.toWalletId) return true;
 

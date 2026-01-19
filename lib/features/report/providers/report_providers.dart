@@ -105,7 +105,8 @@ final canGoToNextPeriodProvider = Provider<bool>((ref) {
         state.selectedMonth.year,
         state.selectedMonth.month + 1,
       );
-      return nextMonth.month <= now.month && nextMonth.year <= now.year;
+      // Compare using isAfter to properly handle year boundaries
+      return !nextMonth.isAfter(DateTime(now.year, now.month));
     }(),
     ReportPeriod.yearly =>
       DateTime(state.selectedMonth.year + 1).year <= now.year,

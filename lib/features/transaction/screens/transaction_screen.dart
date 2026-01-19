@@ -23,6 +23,8 @@ class TransactionScreen extends ConsumerStatefulWidget {
 class _TransactionScreenState extends ConsumerState<TransactionScreen> {
   String? _selectedWalletId; // null means "All Wallets"
   String? _selectedCategoryId; // null means "All Categories"
+  bool _includeChildren =
+      true; // default include children when category selected
   DateTime? _startDate;
   DateTime? _endDate;
   String _searchQuery = '';
@@ -129,14 +131,24 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
               searchQuery: _searchQuery,
               showFilters: _showFilters,
               selectedCategoryId: _selectedCategoryId,
+              includeChildren: _includeChildren,
               startDate: _startDate,
               endDate: _endDate,
               categoriesAsync: categoriesAsync,
               onSearchChanged: (value) => setState(() => _searchQuery = value),
               onToggleFilters: () =>
                   setState(() => _showFilters = !_showFilters),
-              onCategoryChanged: (categoryId) =>
-                  setState(() => _selectedCategoryId = categoryId),
+              onCategoryChanged: (categoryId) {
+                setState(() {
+                  _selectedCategoryId = categoryId;
+                  // Default include children when category selected
+                  if (categoryId != null) {
+                    _includeChildren = true;
+                  }
+                });
+              },
+              onIncludeChildrenChanged: (value) =>
+                  setState(() => _includeChildren = value),
               onStartDateChanged: (date) => setState(() => _startDate = date),
               onEndDateChanged: (date) => setState(() => _endDate = date),
               onClearSearch: () {
@@ -146,6 +158,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
               onResetFilters: () {
                 setState(() {
                   _selectedCategoryId = null;
+                  _includeChildren = true;
                   _startDate = null;
                   _endDate = null;
                 });
@@ -232,9 +245,25 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
 
     // Filter by category first if selected
     if (_selectedCategoryId != null) {
-      filtered = filtered
-          .where((e) => e.categoryId == _selectedCategoryId)
-          .toList();
+      if (_includeChildren) {
+        // Include child categories
+        final childCategoryIds = categories
+            .where((c) => c.parentId == _selectedCategoryId)
+            .map((c) => c.id)
+            .toSet();
+        // Include both parent and all children
+        final allowedIds = {_selectedCategoryId!, ...childCategoryIds};
+        filtered = filtered
+            .where(
+              (e) => e.categoryId != null && allowedIds.contains(e.categoryId),
+            )
+            .toList();
+      } else {
+        // Exact match only
+        filtered = filtered
+            .where((e) => e.categoryId == _selectedCategoryId)
+            .toList();
+      }
     }
 
     // Filter by date range if selected

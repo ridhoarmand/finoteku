@@ -354,6 +354,42 @@ class ReportService {
         return _getDateRange(previousYear, periodType);
     }
   }
+
+  /// Get transactions for a specific category within a report period
+  Future<List<Transaction>> getTransactionsByCategory({
+    required String userId,
+    required String categoryId,
+    required DateTime period,
+    required ReportPeriod periodType,
+  }) async {
+    try {
+      final dateRange = _getDateRange(period, periodType);
+      final client = SupabaseService.client;
+
+      // Get child category IDs as well
+      final categories = await _getCategories(userId);
+      final childIds = categories
+          .where((c) => c.parentId == categoryId)
+          .map((c) => c.id)
+          .toList();
+      final allCategoryIds = [categoryId, ...childIds];
+
+      final response = await client
+          .from('transactions')
+          .select()
+          .eq('user_id', userId)
+          .inFilter('category_id', allCategoryIds)
+          .gte('date', dateRange.start.toIso8601String())
+          .lte('date', dateRange.end.toIso8601String())
+          .order('date', ascending: false);
+
+      return (response as List)
+          .map((json) => Transaction.fromJson(json))
+          .toList();
+    } catch (e) {
+      throw Exception('Failed to get transactions by category: $e');
+    }
+  }
 }
 
 class DateTimeRange {

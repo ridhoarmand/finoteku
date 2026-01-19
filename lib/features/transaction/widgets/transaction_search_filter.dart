@@ -7,12 +7,14 @@ class TransactionSearchFilter extends ConsumerWidget {
   final String searchQuery;
   final bool showFilters;
   final String? selectedCategoryId;
+  final bool includeChildren;
   final DateTime? startDate;
   final DateTime? endDate;
   final AsyncValue<List<Category>> categoriesAsync;
   final Function(String) onSearchChanged;
   final Function() onToggleFilters;
   final Function(String?) onCategoryChanged;
+  final Function(bool) onIncludeChildrenChanged;
   final Function(DateTime?) onStartDateChanged;
   final Function(DateTime?) onEndDateChanged;
   final VoidCallback onClearSearch;
@@ -24,12 +26,14 @@ class TransactionSearchFilter extends ConsumerWidget {
     required this.searchQuery,
     required this.showFilters,
     required this.selectedCategoryId,
+    required this.includeChildren,
     required this.startDate,
     required this.endDate,
     required this.categoriesAsync,
     required this.onSearchChanged,
     required this.onToggleFilters,
     required this.onCategoryChanged,
+    required this.onIncludeChildrenChanged,
     required this.onStartDateChanged,
     required this.onEndDateChanged,
     required this.onClearSearch,
@@ -357,65 +361,107 @@ class TransactionSearchFilter extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: theme.colorScheme.outline.withValues(alpha: 0.3),
-                ),
-                borderRadius: BorderRadius.circular(8),
-                color: theme.colorScheme.surface,
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String?>(
-                  value: selectedCategoryId,
-                  hint: Text(
-                    'Pilih Kategori',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
                     ),
-                  ),
-                  isExpanded: true,
-                  icon: Icon(
-                    Icons.arrow_drop_down,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                  dropdownColor: theme.colorScheme.surface,
-                  items: [
-                    // All categories option
-                    DropdownMenuItem<String?>(
-                      value: null,
-                      child: Text(
-                        'Semua Kategori',
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: theme.colorScheme.outline.withValues(alpha: 0.3),
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                      color: theme.colorScheme.surface,
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String?>(
+                        value: selectedCategoryId,
+                        hint: Text(
+                          'Pilih Kategori',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.6,
+                            ),
+                          ),
+                        ),
+                        isExpanded: true,
+                        icon: Icon(
+                          Icons.arrow_drop_down,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
+                        ),
                         style: TextStyle(
                           fontSize: 12,
                           color: theme.colorScheme.onSurface,
                         ),
+                        dropdownColor: theme.colorScheme.surface,
+                        items: [
+                          // All categories option
+                          DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text(
+                              'Semua Kategori',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                          // Category options
+                          ...categories.map(
+                            (category) => DropdownMenuItem<String?>(
+                              value: category.id,
+                              child: Text(
+                                category.name,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                        onChanged: onCategoryChanged,
                       ),
                     ),
-                    // Category options
-                    ...categories.map(
-                      (category) => DropdownMenuItem<String?>(
-                        value: category.id,
-                        child: Text(
-                          category.name,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: theme.colorScheme.onSurface,
-                          ),
-                        ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Include Children Checkbox
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: Checkbox(
+                        value: includeChildren,
+                        onChanged: selectedCategoryId != null
+                            ? (value) => onIncludeChildrenChanged(value ?? true)
+                            : null,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Sub',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: selectedCategoryId != null
+                            ? theme.colorScheme.onSurface
+                            : theme.colorScheme.onSurface.withValues(
+                                alpha: 0.4,
+                              ),
                       ),
                     ),
                   ],
-                  onChanged: onCategoryChanged,
                 ),
-              ),
+              ],
             ),
           ],
         );

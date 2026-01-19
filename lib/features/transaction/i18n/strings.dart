@@ -82,6 +82,12 @@ final StrMap transactionStringsEn = {
       'Insufficient balance in wallet. Your balance would go negative.',
   'insufficient_balance_for_transfer':
       'Insufficient balance in source wallet for transfer and fee.',
+  // Discard changes dialog
+  'discard_changes_title': 'Discard changes?',
+  'discard_changes_content':
+      'You have unsaved changes. Are you sure you want to discard them?',
+  'discard_button': 'Discard',
+  'cancel_button': 'Cancel',
 };
 
 final StrMap transactionStringsId = {
@@ -166,4 +172,10 @@ final StrMap transactionStringsId = {
   'insufficient_balance_error': 'Saldo tidak cukup. Saldo tidak boleh minus.',
   'insufficient_balance_for_transfer':
       'Saldo tidak cukup untuk transfer dan biaya admin.',
+  // Discard changes dialog
+  'discard_changes_title': 'Buang perubahan?',
+  'discard_changes_content':
+      'Anda memiliki perubahan yang belum disimpan. Yakin ingin membuangnya?',
+  'discard_button': 'Buang',
+  'cancel_button': 'Batal',
 };

@@ -5,6 +5,9 @@ import '../widgets/report_header.dart';
 import '../widgets/income_expense_toggle.dart';
 import '../widgets/category_pie_chart.dart';
 import '../widgets/category_list_tile.dart';
+import '../widgets/category_transactions_sheet.dart';
+import '../services/report_service.dart';
+import '../../transaction/screens/transaction_detail_screen.dart';
 import '../models/report_models.dart';
 
 class ReportScreen extends ConsumerStatefulWidget {
@@ -203,6 +206,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
           return CategoryListTile(
             category: category,
             index: index, // Pass index untuk warna yang sama dengan chart
+            // onTap: () => _showCategoryTransactions(category, reportState), // Disabled temporarily
           );
         } else {
           // Others category
@@ -236,6 +240,66 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
         }
       },
     );
+  }
+
+  Future<void> _showCategoryTransactions(
+    CategoryReportItem category,
+    ReportState state,
+  ) async {
+    final currentUserId = ref.read(currentUserIdProvider);
+    if (currentUserId == null) return;
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final transactions = await const ReportService()
+          .getTransactionsByCategory(
+            userId: currentUserId,
+            categoryId: category.id,
+            period: state.selectedMonth,
+            periodType: state.period,
+          );
+
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading
+
+      // Show sheet
+      await showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (sheetContext) => CategoryTransactionsSheet(
+          category: category,
+          transactions: transactions,
+          onTransactionTap: (transactionId) async {
+            // Navigate to detail
+            final result = await Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) =>
+                    TransactionDetailScreen(transactionId: transactionId),
+              ),
+            );
+
+            // If transaction changed/deleted, refresh report and close sheet
+            if (result == true && mounted) {
+              Navigator.of(context).pop();
+              ref.invalidate(reportDataProvider(currentUserId));
+            }
+          },
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading on error
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal memuat transaksi: $e')));
+    }
   }
 
   void _showOthersDetail(

@@ -395,7 +395,7 @@ class TransactionDetailScreen extends ConsumerWidget {
               ),
             ),
 
-            const Spacer(),
+            const SizedBox(height: 24),
 
             // Action Buttons
             Row(
