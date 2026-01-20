@@ -37,6 +37,16 @@ const Map<String, String> accountStringsEn = {
   'profile_updated_successfully': 'Profile updated successfully',
   'error_saving_profile': 'Error saving profile',
 
+  // Photo management
+  'photo_tap_to_change': 'Tap to change photo',
+  'photo_new_selected': 'New photo selected',
+  'photo_select_title': 'Select Photo',
+  'photo_camera': 'Camera',
+  'photo_gallery': 'Gallery',
+  'photo_remove': 'Remove Photo',
+  'photo_permission_required':
+      'Permission is required to access camera/gallery',
+
   // Account actions
   'change_password': 'Change Password',
   'change_password_sub': 'Update your account password',
@@ -82,6 +92,9 @@ const Map<String, String> accountStringsEn = {
   'change_password_header': 'Change Password',
   'change_password_description':
       'Choose a new secure password for your account.',
+  'current_password': 'Current Password',
+  'current_password_required': 'Please enter your current password',
+  'error_current_password_incorrect': 'Current password is incorrect',
   'new_password': 'New Password',
   'confirm_new_password': 'Confirm New Password',
   'change_password_button': 'Change Password',
@@ -162,6 +175,15 @@ const Map<String, String> accountStringsId = {
   'profile_updated_successfully': 'Profil berhasil diperbarui',
   'error_saving_profile': 'Gagal menyimpan profil',
 
+  // Photo management
+  'photo_tap_to_change': 'Ketuk untuk mengubah foto',
+  'photo_new_selected': 'Foto baru dipilih',
+  'photo_select_title': 'Pilih Foto',
+  'photo_camera': 'Kamera',
+  'photo_gallery': 'Galeri',
+  'photo_remove': 'Hapus Foto',
+  'photo_permission_required': 'Izin diperlukan untuk mengakses kamera/galeri',
+
   // Account actions
   'change_password': 'Ganti Password',
   'change_password_sub': 'Perbarui password akun Anda',
@@ -207,6 +229,9 @@ const Map<String, String> accountStringsId = {
   'change_password_header': 'Ganti Password',
   'change_password_description':
       'Pilih password baru yang aman untuk akun Anda.',
+  'current_password': 'Password Saat Ini',
+  'current_password_required': 'Masukkan password saat ini',
+  'error_current_password_incorrect': 'Password saat ini salah',
   'new_password': 'Password Baru',
   'confirm_new_password': 'Konfirmasi Password Baru',
   'change_password_button': 'Ganti Password',

@@ -33,7 +33,8 @@ class ProfileAvatarWidget extends ConsumerWidget {
                           fit: BoxFit.cover,
                         ),
                       )
-                    : (profileState.avatarUrl != null
+                    : (profileState.avatarUrl != null &&
+                              profileState.avatarUrl!.isNotEmpty
                           ? ClipOval(
                               child: CachedNetworkImage(
                                 imageUrl: profileState.avatarUrl!,
@@ -45,18 +46,21 @@ class ProfileAvatarWidget extends ConsumerWidget {
                                       strokeWidth: 2,
                                       color: theme.colorScheme.onPrimary,
                                     ),
-                                errorWidget: (context, url, error) => Text(
-                                  fullNameController.text.isNotEmpty
-                                      ? fullNameController.text
-                                            .substring(0, 1)
-                                            .toUpperCase()
-                                      : 'U',
-                                  style: TextStyle(
-                                    color: theme.colorScheme.onPrimary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 32,
-                                  ),
-                                ),
+                                errorWidget: (context, url, error) {
+                                  debugPrint('Avatar load error: $error');
+                                  return Text(
+                                    fullNameController.text.isNotEmpty
+                                        ? fullNameController.text
+                                              .substring(0, 1)
+                                              .toUpperCase()
+                                        : 'U',
+                                    style: TextStyle(
+                                      color: theme.colorScheme.onPrimary,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 32,
+                                    ),
+                                  );
+                                },
                               ),
                             )
                           : Text(

@@ -48,22 +48,20 @@ final reportStateProvider = NotifierProvider<ReportStateNotifier, ReportState>(
   ReportStateNotifier.new,
 );
 
-// Report data provider
-final reportDataProvider = FutureProvider.family<ReportData, String>((
-  ref,
-  userId,
-) async {
-  final reportService = ref.read(reportServiceProvider);
-  final state = ref.watch(reportStateProvider);
+// Report data provider - using autoDispose to refresh when returning to tab
+final reportDataProvider = FutureProvider.autoDispose
+    .family<ReportData, String>((ref, userId) async {
+      final reportService = ref.read(reportServiceProvider);
+      final state = ref.watch(reportStateProvider);
 
-  return await reportService.getReportData(
-    userId: userId,
-    period: state.selectedMonth,
-    type: state.type,
-    periodType: state.period,
-    showDetailCategories: state.showDetailCategories,
-  );
-});
+      return await reportService.getReportData(
+        userId: userId,
+        period: state.selectedMonth,
+        type: state.type,
+        periodType: state.period,
+        showDetailCategories: state.showDetailCategories,
+      );
+    });
 
 // Helper providers untuk UI
 final currentUserIdProvider = Provider<String?>((ref) {

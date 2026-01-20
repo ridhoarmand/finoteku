@@ -175,6 +175,9 @@ class HomeBalanceCard extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -216,74 +219,79 @@ class HomeBalanceCard extends ConsumerWidget {
             ),
 
             // Wallet options
-            ListView(
-              shrinkWrap: true,
-              children: [
-                // All wallets option
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.account_balance_wallet,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
-                    ),
-                  ),
-                  title: Text(ref.tr(context, 'all_wallets')),
-                  subtitle: Text('${wallets.length} wallet'),
-                  trailing: selectedWalletId == null
-                      ? Icon(
-                          Icons.check,
-                          color: Theme.of(context).colorScheme.primary,
-                        )
-                      : null,
-                  onTap: () {
-                    ref.read(selectedHomeWalletProvider.notifier).clear();
-                    Navigator.pop(context);
-                  },
-                ),
-                const Divider(height: 1),
-
-                // Individual wallets
-                ...wallets.map(
-                  (wallet) => ListTile(
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  // All wallets option
+                  ListTile(
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withValues(alpha: 0.1),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
-                        Icons.wallet,
-                        color: Colors.blue,
+                      child: Icon(
+                        Icons.account_balance_wallet,
+                        color: Theme.of(context).colorScheme.primary,
                         size: 20,
                       ),
                     ),
-                    title: Text(wallet.name),
-                    subtitle: Text(
-                      CurrencyFormatter.format(wallet.balance, wallet.currency),
-                    ),
-                    trailing: selectedWalletId == wallet.id
+                    title: Text(ref.tr(context, 'all_wallets')),
+                    subtitle: Text('${wallets.length} wallet'),
+                    trailing: selectedWalletId == null
                         ? Icon(
                             Icons.check,
                             color: Theme.of(context).colorScheme.primary,
                           )
                         : null,
                     onTap: () {
-                      ref
-                          .read(selectedHomeWalletProvider.notifier)
-                          .select(wallet.id);
+                      ref.read(selectedHomeWalletProvider.notifier).clear();
                       Navigator.pop(context);
                     },
                   ),
-                ),
-              ],
+                  const Divider(height: 1),
+
+                  // Individual wallets
+                  ...wallets.map(
+                    (wallet) => ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.wallet,
+                          color: Colors.blue,
+                          size: 20,
+                        ),
+                      ),
+                      title: Text(wallet.name),
+                      subtitle: Text(
+                        CurrencyFormatter.format(
+                          wallet.balance,
+                          wallet.currency,
+                        ),
+                      ),
+                      trailing: selectedWalletId == wallet.id
+                          ? Icon(
+                              Icons.check,
+                              color: Theme.of(context).colorScheme.primary,
+                            )
+                          : null,
+                      onTap: () {
+                        ref
+                            .read(selectedHomeWalletProvider.notifier)
+                            .select(wallet.id);
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
 
             // Bottom padding

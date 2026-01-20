@@ -242,6 +242,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     );
   }
 
+  // ignore: unused_element
   Future<void> _showCategoryTransactions(
     CategoryReportItem category,
     ReportState state,
