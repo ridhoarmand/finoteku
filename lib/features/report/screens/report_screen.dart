@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/report_models.dart';
+import '../services/report_service.dart';
 import '../providers/report_providers.dart';
 import '../widgets/report_header.dart';
 import '../widgets/income_expense_toggle.dart';
 import '../widgets/category_pie_chart.dart';
 import '../widgets/category_list_tile.dart';
 import '../widgets/category_transactions_sheet.dart';
-import '../services/report_service.dart';
 import '../../transaction/screens/transaction_detail_screen.dart';
-import '../models/report_models.dart';
 
 class ReportScreen extends ConsumerStatefulWidget {
   const ReportScreen({super.key});
@@ -18,6 +18,15 @@ class ReportScreen extends ConsumerStatefulWidget {
 }
 
 class _ReportScreenState extends ConsumerState<ReportScreen> {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final currentUserId = ref.read(currentUserIdProvider);
+    if (currentUserId != null) {
+      ref.invalidate(reportDataProvider(currentUserId));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);

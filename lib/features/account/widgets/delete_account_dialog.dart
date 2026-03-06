@@ -323,13 +323,15 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
       if (!mounted) return;
 
       // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(ref.tr(context, 'delete_success')),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ref.tr(context, 'delete_success')),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
 
       // Clear navigation stack and go to login to avoid black screen
       if (context.mounted) {

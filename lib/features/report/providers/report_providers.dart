@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/report_models.dart';
 import '../services/report_service.dart';
+import '../../transaction/providers/transaction_providers.dart';
 import '../../../services/supabase_service.dart';
 
 // Service provider
@@ -48,9 +49,10 @@ final reportStateProvider = NotifierProvider<ReportStateNotifier, ReportState>(
   ReportStateNotifier.new,
 );
 
-// Report data provider - using autoDispose to refresh when returning to tab
 final reportDataProvider = FutureProvider.autoDispose
     .family<ReportData, String>((ref, userId) async {
+      // Watch transaction refresh trigger agar report auto-refresh
+      ref.watch(transactionRefreshTriggerProvider);
       final reportService = ref.read(reportServiceProvider);
       final state = ref.watch(reportStateProvider);
 

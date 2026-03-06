@@ -846,8 +846,10 @@ class _AddEditTransactionScreenState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              widget.initialTransfer != null
-                  ? ref.tr(context, 'transfer_updated_successfully')
+              _isTransfer
+                  ? (widget.initialTransfer != null
+                        ? ref.tr(context, 'transfer_updated_successfully')
+                        : ref.tr(context, 'transfer_added_successfully'))
                   : (widget.initialTransaction != null
                         ? ref.tr(context, 'transaction_updated_successfully')
                         : ref.tr(context, 'transaction_added_successfully')),

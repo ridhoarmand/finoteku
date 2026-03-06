@@ -144,7 +144,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               label: ref.tr(context, 'dismiss'),
               textColor: Colors.white,
               onPressed: () {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                }
               },
             ),
           ),

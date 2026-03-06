@@ -1,12 +1,12 @@
 ; Inno Setup Script for Finoteku
 #define MyAppName "Finoteku"
-#define MyAppVersion "0.3.2"
+#define MyAppVersion "1.0.0"
 #define MyAppPublisher "Ridho Armand"
-#define MyAppURL "https://github.com/ridhoarmand/finoteku"
+#define MyAppURL "https://finoteku.com"
 #define MyAppExeName "finoteku.exe"
 
 [Setup]
-AppId={{F1120ACA-862B-6969-A3C1-7AAF6BF9E6BA}
+AppId={{YOUR-UNIQUE-GUID-HERE}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
@@ -17,7 +17,7 @@ DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 ; Output settings
-OutputDir=C:\Users\DRB\Documents
+OutputDir=installer_output
 OutputBaseFilename=Finoteku_Setup_{#MyAppVersion}
 ; Compression
 Compression=lzma

@@ -58,7 +58,6 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           _emailSent = true;
         });
         _startCooldown();
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(ref.tr(context, 'reset_email_sent')),
