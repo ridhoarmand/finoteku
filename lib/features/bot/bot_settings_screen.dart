@@ -9,7 +9,10 @@ import '../../services/user_service.dart';
 import 'bot_link_service.dart';
 import 'bot_provider.dart';
 
-/// Bot Settings Screen - Configure Telegram and Parser Mode
+// Ganti sesuai nomor Whatsapp bot Finoteku yang online
+const String waBotNumber = "6285156897928"; // Placeholder, can be changed later
+
+/// Bot Settings Screen - Configure Telegram, WhatsApp and Parser Mode
 class BotSettingsScreen extends ConsumerStatefulWidget {
   const BotSettingsScreen({super.key});
 
@@ -35,14 +38,22 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final botLinkAsync = ref.watch(telegramBotLinkProvider);
+    final telegramBotLinkAsync = ref.watch(telegramBotLinkProvider);
+    final whatsappBotLinkAsync = ref.watch(whatsappBotLinkProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Chat Bot')),
-      body: botLinkAsync.when(
+      body: telegramBotLinkAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
-        data: (botLink) => _buildContent(context, theme, botLink),
+        data: (telegramBotLink) {
+          return whatsappBotLinkAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error: $e')),
+            data: (whatsappBotLink) =>
+                _buildContent(context, theme, telegramBotLink, whatsappBotLink),
+          );
+        },
       ),
     );
   }
@@ -50,7 +61,8 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
   Widget _buildContent(
     BuildContext context,
     ThemeData theme,
-    BotLink? botLink,
+    BotLink? telegramBotLink,
+    BotLink? whatsappBotLink,
   ) {
     final userProfileAsync = ref.watch(userProfileProvider);
 
@@ -58,13 +70,19 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
       onRefresh: () async {
         // Invalidate providers to reload data
         ref.invalidate(telegramBotLinkProvider);
+        ref.invalidate(whatsappBotLinkProvider);
         ref.invalidate(userProfileProvider);
       },
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // WhatsApp Connection Card
+          _buildWhatsAppCard(context, theme, whatsappBotLink),
+
+          const SizedBox(height: 16),
+
           // Telegram Connection Card
-          _buildTelegramCard(context, theme, botLink),
+          _buildTelegramCard(context, theme, telegramBotLink),
 
           const SizedBox(height: 24),
 
@@ -562,6 +580,170 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
     if (confirmed == true) {
       await ref.read(telegramBotLinkProvider.notifier).disconnect();
     }
+  }
+
+  Future<void> _openWhatsAppBot() async {
+    // 1. Dapatkan User ID saat ini
+    final userAsync = ref.read(currentUserProvider);
+    final user = userAsync.value;
+
+    if (user == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Silakan login terlebih dahulu')),
+        );
+      }
+      return;
+    }
+
+    final String userId = user.id;
+
+    // 2. Siapkan format pesan yang diwajibkan oleh Edge Function WA
+    final String message = "/hubungkan $userId";
+
+    // 3. Konversi menjadi URI skema whatsapp
+    final Uri whatsappUri = Uri.parse(
+      "https://wa.me/$waBotNumber?text=${Uri.encodeComponent(message)}",
+    );
+
+    // 4. Buka aplikasi WhatsApp
+    if (await canLaunchUrl(whatsappUri)) {
+      await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+
+      // After returning from WhatsApp, refresh the bot link state
+      // Add a small delay to allow the Edge Function to process
+      await Future.delayed(const Duration(seconds: 2));
+      ref.invalidate(whatsappBotLinkProvider);
+    } else {
+      // Tampilkan Alert/Tooltip bila aplikasi WhatsApp tidak terinstal
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Tidak dapat membuka WhatsApp. Pastikan aplikasi telah terinstal.',
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmDisconnectWhatsApp() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Putuskan Koneksi WhatsApp?'),
+        content: const Text(
+          'Anda tidak akan bisa mencatat transaksi via WhatsApp setelah memutuskan koneksi.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Putuskan'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await ref.read(whatsappBotLinkProvider.notifier).disconnect();
+    }
+  }
+
+  Widget _buildWhatsAppCard(
+    BuildContext context,
+    ThemeData theme,
+    BotLink? botLink,
+  ) {
+    // Check if actually connected (has platform_user_id), not just if row exists
+    final isConnected = botLink?.platformUserId != null;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF25D366).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons
+                        .wechat, // Using wechat as a generic chat icon, or replace with an image
+                    color: Color(0xFF25D366),
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'WhatsApp Bot',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        isConnected
+                            ? 'Terhubung${botLink?.platformUserId != null ? ' (${botLink!.platformUserId})' : ''}'
+                            : 'Belum terhubung',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: isConnected ? Colors.green : Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  isConnected ? Icons.check_circle : Icons.circle_outlined,
+                  color: isConnected ? Colors.green : Colors.grey,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              isConnected
+                  ? 'Anda dapat mencatat transaksi dengan mengirim pesan WhatsApp ke Bot Finoteku.'
+                  : 'Hubungkan WhatsApp untuk mencatat transaksi dengan mudah via chat.',
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            if (isConnected)
+              OutlinedButton.icon(
+                onPressed: _confirmDisconnectWhatsApp,
+                icon: const Icon(Icons.link_off),
+                label: const Text('Putuskan Koneksi'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  side: const BorderSide(color: Colors.red),
+                ),
+              )
+            else
+              FilledButton.icon(
+                onPressed: _openWhatsAppBot,
+                icon: const Icon(Icons.link),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF25D366),
+                  foregroundColor: Colors.white,
+                ),
+                label: const Text('Hubungkan WhatsApp'),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _saveConfig() async {

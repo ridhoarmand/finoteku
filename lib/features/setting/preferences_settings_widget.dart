@@ -16,7 +16,7 @@ class PreferencesSettingsWidget extends ConsumerWidget {
         SettingsTileWidget(
           icon: Icons.telegram,
           title: 'Chat Bot',
-          subtitle: 'Catat transaksi via Telegram',
+          subtitle: 'Catat via WhatsApp/Telegram',
           onTap: () => context.push('/account/bot-settings'),
         ),
         SettingsTileWidget(
