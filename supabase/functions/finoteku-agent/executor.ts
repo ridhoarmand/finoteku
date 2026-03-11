@@ -49,6 +49,7 @@ export class AgentExecutor {
       const result = await tool.execute({
         ...plan.params,
         userContext,
+        platform: input.platform,
         conversationId: input.conversationId,
       });
 

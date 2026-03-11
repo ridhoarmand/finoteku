@@ -11,7 +11,6 @@ export interface PendingTransaction {
   user_id: string;
   platform: Platform;
   platform_identifier: string;
-  telegram_chat_id?: string; // Legacy, kept for compatibility
   type: 'income' | 'expense';
   amount: number;
   category_id: string;
@@ -53,21 +52,6 @@ export async function get(
 }
 
 /**
- * Ambil transaksi pending berdasarkan conversation ID (legacy compatibility)
- */
-export async function getByConversationId(
-  supabase: SupabaseClient,
-  conversationId: string,
-): Promise<PendingTransaction | null> {
-  const { data } = await supabase.from('pending_transactions_view').select('*').eq(
-    'telegram_chat_id',
-    conversationId,
-  ).gt('expires_at', new Date().toISOString()).single();
-
-  return data;
-}
-
-/**
  * Cek apakah ada transaksi pending untuk user + platform
  */
 export async function exists(
@@ -76,17 +60,6 @@ export async function exists(
   platform: Platform,
 ): Promise<boolean> {
   const pending = await get(supabase, userId, platform);
-  return !!pending;
-}
-
-/**
- * Cek apakah ada transaksi pending berdasarkan conversation ID (legacy)
- */
-export async function existsByConversationId(
-  supabase: SupabaseClient,
-  conversationId: string,
-): Promise<boolean> {
-  const pending = await getByConversationId(supabase, conversationId);
   return !!pending;
 }
 
@@ -110,7 +83,6 @@ export async function save(
         user_id: userId,
         platform,
         platform_identifier: platformIdentifier,
-        telegram_chat_id: platform === 'telegram' ? platformIdentifier : null,
         type: transaction.type,
         amount: transaction.amount,
         category_id: transaction.category_id,
@@ -138,21 +110,6 @@ export async function remove(
 ): Promise<{ success: boolean; error: Error | null }> {
   const { error } = await supabase.from('pending_bot_transactions').delete().eq('user_id', userId)
     .eq('platform', platform);
-
-  return { success: !error, error };
-}
-
-/**
- * Hapus berdasarkan conversation ID (legacy)
- */
-export async function removeByConversationId(
-  supabase: SupabaseClient,
-  conversationId: string,
-): Promise<{ success: boolean; error: Error | null }> {
-  const { error } = await supabase.from('pending_bot_transactions').delete().eq(
-    'telegram_chat_id',
-    conversationId,
-  );
 
   return { success: !error, error };
 }
