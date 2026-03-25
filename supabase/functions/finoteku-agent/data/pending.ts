@@ -11,13 +11,15 @@ export interface PendingTransaction {
   user_id: string;
   platform: Platform;
   platform_identifier: string;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'transfer';
   amount: number;
   category_id: string;
   category_name: string; // From VIEW join
   category_parent?: string; // From VIEW join
   wallet_id: string;
   wallet_name: string; // From VIEW join
+  to_wallet_id?: string;
+  to_wallet_name?: string; // From VIEW join
   notes: string;
   date: string;
   original_input?: string;
@@ -25,10 +27,11 @@ export interface PendingTransaction {
 }
 
 export interface PendingTransactionInput {
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'transfer';
   amount: number;
   category_id: string;
   wallet_id: string;
+  to_wallet_id?: string;
   notes: string;
   date: string;
   original_input?: string;
@@ -52,15 +55,22 @@ export async function get(
 }
 
 /**
- * Cek apakah ada transaksi pending untuk user + platform
+ * Cek apakah ada transaksi pending untuk user + platform (lightweight)
  */
 export async function exists(
   supabase: SupabaseClient,
   userId: string,
   platform: Platform,
 ): Promise<boolean> {
-  const pending = await get(supabase, userId, platform);
-  return !!pending;
+  const { data } = await supabase
+    .from('pending_bot_transactions')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('platform', platform)
+    .gt('expires_at', new Date().toISOString())
+    .maybeSingle();
+
+  return !!data;
 }
 
 /**
@@ -87,6 +97,7 @@ export async function save(
         amount: transaction.amount,
         category_id: transaction.category_id,
         wallet_id: transaction.wallet_id,
+        to_wallet_id: transaction.to_wallet_id,
         notes: transaction.notes,
         date: transaction.date,
         original_input: transaction.original_input,

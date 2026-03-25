@@ -25,6 +25,16 @@ export interface TransactionInput {
   wallet_id: string;
 }
 
+export interface TransferInput {
+  amount: number;
+  date: string;
+  notes: string;
+  from_wallet_id: string;
+  to_wallet_id: string;
+  expense_category_id: string;
+  income_category_id: string;
+}
+
 /**
  * Ambil transaksi berdasarkan rentang tanggal
  */
@@ -118,7 +128,9 @@ export async function getMonthlyExpense(
     userId,
   ).gte('date', startDate).lte('date', endDate);
 
-  return (data || []).filter((t: any) => t.categories?.type === 'expense').reduce(
+  // deno-lint-ignore no-explicit-any
+  return (data || []).filter((t: any) => (t.categories as any)?.type === 'expense').reduce(
+    // deno-lint-ignore no-explicit-any
     (sum: number, t: any) => sum + Math.abs(Number(t.amount)),
     0,
   );
@@ -158,4 +170,26 @@ export async function getNotesExamples(
   }
 
   return examples;
+}
+
+/**
+ * Buat transfer antar wallet menggunakan RPC
+ */
+export async function createTransfer(
+  supabase: SupabaseClient,
+  userId: string,
+  transfer: TransferInput,
+): Promise<{ data: string | null; error: Error | null }> {
+  const { data, error } = await supabase.rpc('create_wallet_transfer', {
+    p_user_id: userId,
+    p_from_wallet_id: transfer.from_wallet_id,
+    p_to_wallet_id: transfer.to_wallet_id,
+    p_amount: transfer.amount,
+    p_expense_category_id: transfer.expense_category_id,
+    p_income_category_id: transfer.income_category_id,
+    p_notes: transfer.notes,
+    p_date: transfer.date,
+  });
+
+  return { data: data as string | null, error };
 }

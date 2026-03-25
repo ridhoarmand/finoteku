@@ -70,7 +70,7 @@ export class FinanceAgent {
     tools.register(new WebSearchTool(ai));
 
     // Handler untuk konfirmasi, pembatalan, dan update transaksi
-    tools.register(new PendingHandlerTool(this.supabase));
+    tools.register(new PendingHandlerTool(this.supabase, ai));
 
     // Setup Reasoning Engine dan Executor
     const reasoning = new ReasoningEngine(ai!);

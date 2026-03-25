@@ -16,7 +16,6 @@ import {
   sendTelegramMessage,
   sendTelegramMessageWithButtons,
 } from './telegram.ts';
-import { FinanceAgent } from '../finoteku-agent/agent.ts';
 import type { AgentInput, AgentResponse } from '../finoteku-agent/types.ts';
 
 const corsHeaders = {
@@ -31,12 +30,6 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 // Inisialisasi Supabase client
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-// Inisialisasi Finance Agent
-const agent = new FinanceAgent({
-  supabase,
-  defaultProvider: 'gemini',
-});
 
 serve(async (req: Request) => {
   // Handle CORS preflight
@@ -92,7 +85,17 @@ serve(async (req: Request) => {
       await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
       await removeMessageButtons(TELEGRAM_BOT_TOKEN, chatId, callbackQuery.message.message_id);
 
-      const response = await agent.process(agentInput);
+      // Handle HTTP invoke
+      const { data: response, error: invokeError } = await supabase.functions.invoke<AgentResponse>('finoteku-agent', {
+        body: { input: agentInput },
+      });
+
+      if (invokeError || !response) {
+        console.error('Invoke Agent Error:', invokeError);
+        await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '⚠️ Maaf, agent sedang mengalami gangguan. Silakan coba beberapa saat lagi.');
+        return new Response('OK', { status: 200 });
+      }
+
       await sendAgentResponse(TELEGRAM_BOT_TOKEN, chatId, response);
 
       return new Response('OK', { status: 200 });
@@ -208,7 +211,8 @@ serve(async (req: Request) => {
 
     if (userError) {
       console.error('Error lookup user:', userError);
-      return new Response('Error lookup', { status: 500 });
+      await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '⚠️ Maaf, terjadi kesalahan saat mencari data akun Anda.');
+      return new Response('OK', { status: 200 });
     }
 
     // Handle return type difference: old was array, new RPC might return single object or array
@@ -358,8 +362,16 @@ serve(async (req: Request) => {
       return new Response('No processable input', { status: 200 });
     }
 
-    // 6. Proses dengan Agent
-    const response = await agent.process(agentInput);
+    // 6. Proses dengan Agent via HTTP Invoke
+    const { data: response, error: invokeError } = await supabase.functions.invoke<AgentResponse>('finoteku-agent', {
+      body: { input: agentInput },
+    });
+
+    if (invokeError || !response) {
+      console.error('Invoke Agent Error:', invokeError);
+      await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '⚠️ Maaf, agent sedang mengalami gangguan. Silakan coba beberapa saat lagi.');
+      return new Response('OK', { status: 200 });
+    }
 
     // 7. Kirim response ke user
     await sendAgentResponse(TELEGRAM_BOT_TOKEN, chatId, response);
@@ -367,10 +379,8 @@ serve(async (req: Request) => {
     return new Response('OK', { status: 200 });
   } catch (error) {
     console.error('Error:', error);
-    return new Response(JSON.stringify({ error: (error as Error).message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
-    });
+    // Return 200 to prevent infinite Webhook retry loops from DDOS'ing the AI
+    return new Response('OK', { status: 200 });
   }
 });
 

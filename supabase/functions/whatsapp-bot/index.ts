@@ -19,7 +19,6 @@ import {
   sendWhatsAppMessage,
   sendWhatsAppMessageWithButtons,
 } from './whatsapp.ts';
-import { FinanceAgent } from '../finoteku-agent/agent.ts';
 import type { AgentInput, AgentResponse } from '../finoteku-agent/types.ts';
 
 const corsHeaders = {
@@ -37,12 +36,6 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 // Inisialisasi Supabase client
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-// Inisialisasi Finance Agent
-const agent = new FinanceAgent({
-  supabase,
-  defaultProvider: 'gemini',
-});
 
 /**
  * Verifikasi HMAC signature dari GOWA webhook
@@ -192,7 +185,8 @@ serve(async (req: Request) => {
 
     if (userError) {
       console.error('Error lookup user:', userError);
-      return new Response('Error lookup', { status: 500 });
+      await send(phone, '⚠️ *Maaf, terjadi kesalahan saat mencari data akun Anda.*');
+      return new Response('OK', { status: 200 });
     }
 
     const linkedUser = Array.isArray(userData) ? userData[0] : userData;
@@ -272,8 +266,16 @@ serve(async (req: Request) => {
       return new Response('No processable input', { status: 200 });
     }
 
-    // 5. Proses dengan Agent
-    const response = await agent.process(agentInput);
+    // 5. Proses dengan Agent via HTTP Invoke
+    const { data: response, error: invokeError } = await supabase.functions.invoke<AgentResponse>('finoteku-agent', {
+      body: { input: agentInput },
+    });
+
+    if (invokeError || !response) {
+      console.error('Invoke Agent Error:', invokeError);
+      await send(phone, '⚠️ *Maaf, agent sedang mengalami gangguan. Silakan coba beberapa saat lagi.*');
+      return new Response('OK', { status: 200 });
+    }
 
     // 6. Kirim response ke user
     await sendAgentResponse(phone, response);
@@ -281,10 +283,8 @@ serve(async (req: Request) => {
     return new Response('OK', { status: 200 });
   } catch (error) {
     console.error('Error:', error);
-    return new Response(JSON.stringify({ error: (error as Error).message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
-    });
+    // Return 200 to prevent infinite Webhook retry loops from GOWA
+    return new Response('OK', { status: 200 });
   }
 });
 

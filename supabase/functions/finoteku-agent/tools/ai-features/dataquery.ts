@@ -112,23 +112,14 @@ export class DataQueryTool extends BaseTool {
   private async generateAnswer(question: string, data: Record<string, unknown>): Promise<string> {
     if (!this.ai) return this.formatRawData(data);
 
-    const prompt = `Kamu adalah asisten keuangan personal bernama Finoteku.
-
-User bertanya: "${question}"
-
-Data keuangan user:
-${JSON.stringify(data, null, 2)}
-
-Jawab pertanyaan user dengan:
-1. Bahasa Indonesia yang santai dan ramah
-2. Gunakan emoji yang relevan
-3. Format angka dengan format Rupiah (Rp xxx.xxx)
-4. Berikan insight singkat jika relevan
-5. Maksimal 4-5 kalimat
-
-Jika data tidak tersedia atau kosong, sampaikan dengan sopan dan sarankan user untuk menambah data.`;
-
-    const response = await this.ai.generateText(prompt);
+    const response = await this.ai.generateText(
+      `Pertanyaan: "${question}"\nData: ${JSON.stringify(data)}`,
+      {
+        systemPrompt: 'Kamu Finoteku, asisten keuangan. Jawab dalam Bahasa Indonesia santai, pakai emoji, format Rupiah. Maks 4 kalimat. Jika data kosong, sarankan user menambah data.',
+        maxTokens: 300,
+        temperature: 0.3,
+      }
+    );
     return response;
   }
 
