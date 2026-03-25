@@ -104,6 +104,7 @@ export interface UserCategory {
   name: string;
   type: 'income' | 'expense';
   parentName: string | null;
+  parent_name?: string | null; // Support DB field naming
 }
 
 /**
@@ -131,10 +132,11 @@ export interface UserContext {
  * Hasil parsing transaksi
  */
 export interface ParsedTransaction {
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'transfer';
   amount: number;
   categoryHint: string;
   walletHint: string | null;
+  toWalletHint?: string | null;
   notes: string;
   confidence: number;
   dateOffset: number; // 0 = hari ini, -1 = kemarin, +1 = besok

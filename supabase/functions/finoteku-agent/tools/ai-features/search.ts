@@ -30,17 +30,14 @@ export class WebSearchTool extends BaseTool {
     }
 
     try {
-      // Gunakan AI untuk menjawab pertanyaan umum
-      // AI provider sudah memiliki pengetahuan umum
-      const prompt = `Kamu adalah asisten keuangan personal bernama Finoteku.
-User bertanya: "${text}"
-
-Jawab dengan singkat, informatif, dan dalam bahasa Indonesia yang santai.
-Jika pertanyaan terkait keuangan, berikan tips praktis.
-Jika bukan tentang keuangan, tetap jawab tapi arahkan kembali ke topik keuangan.
-Maksimal 3-4 kalimat.`;
-
-      const response = await this.ai.generateText(prompt);
+      const response = await this.ai.generateText(
+        `User bertanya: "${text}"`,
+        {
+          systemPrompt: 'Kamu Finoteku, asisten keuangan. Jawab singkat dalam Bahasa Indonesia santai. Jika terkait keuangan, beri tips praktis. Jika bukan, jawab lalu arahkan ke keuangan. Maks 3 kalimat.',
+          maxTokens: 200,
+          temperature: 0.3,
+        }
+      );
 
       return this.success({ query: text }, `💡 ${response}`);
     } catch (error) {

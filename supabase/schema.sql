@@ -12,13 +12,42 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 
-CREATE SCHEMA IF NOT EXISTS "public";
-
-
-ALTER SCHEMA "public" OWNER TO "pg_database_owner";
-
-
 COMMENT ON SCHEMA "public" IS 'standard public schema';
+
+
+
+CREATE EXTENSION IF NOT EXISTS "pg_graphql" WITH SCHEMA "graphql";
+
+
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS "pg_stat_statements" WITH SCHEMA "extensions";
+
+
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA "extensions";
+
+
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS "supabase_vault" WITH SCHEMA "vault";
+
+
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
+
+
+
 
 
 
@@ -31,16 +60,26 @@ CREATE TYPE "public"."category_type" AS ENUM (
 ALTER TYPE "public"."category_type" OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."cleanup_expired_pending_transactions"() RETURNS "void"
+CREATE OR REPLACE FUNCTION "public"."cleanup_user_storage_files"("p_user_id" "uuid") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
 BEGIN
-  DELETE FROM public.pending_bot_transactions WHERE expires_at < NOW();
+  -- Delete avatar files from storage.objects if they exist
+  -- The storage bucket is typically 'avatars'
+  DELETE FROM storage.objects
+  WHERE bucket_id = 'avatars'
+    AND (storage.foldername(name))[1] = p_user_id::text;
+  
+  RAISE NOTICE 'Cleaned up storage files for user: %', p_user_id;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Log but don't fail if storage cleanup fails
+    RAISE WARNING 'Failed to cleanup storage for user %: %', p_user_id, SQLERRM;
 END;
 $$;
 
 
-ALTER FUNCTION "public"."cleanup_expired_pending_transactions"() OWNER TO "postgres";
+ALTER FUNCTION "public"."cleanup_user_storage_files"("p_user_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."create_wallet_transfer"("p_user_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_fee" numeric DEFAULT 0.00, "p_notes" "text" DEFAULT NULL::"text", "p_date" "date" DEFAULT CURRENT_DATE, "p_fee_category_id" "uuid" DEFAULT NULL::"uuid") RETURNS "uuid"
@@ -202,6 +241,68 @@ $$;
 
 
 ALTER FUNCTION "public"."create_wallet_transfer"("p_user_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_expense_category_id" "uuid", "p_income_category_id" "uuid", "p_fee" numeric, "p_notes" "text", "p_date" "date", "p_fee_category_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."delete_user_account"() RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+  v_user_id UUID;
+  v_delete_count INT;
+BEGIN
+  -- Get current user ID from auth context
+  v_user_id := auth.uid();
+  
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+
+  -- Log the deletion attempt
+  RAISE NOTICE 'Starting account deletion for user: %', v_user_id;
+
+  -- 1. Delete all transactions
+  DELETE FROM public.transactions WHERE user_id = v_user_id;
+  GET DIAGNOSTICS v_delete_count = ROW_COUNT;
+  RAISE NOTICE 'Deleted % transactions', v_delete_count;
+
+  -- 2. Delete all transfers
+  DELETE FROM public.transfers WHERE user_id = v_user_id;
+  GET DIAGNOSTICS v_delete_count = ROW_COUNT;
+  RAISE NOTICE 'Deleted % transfers', v_delete_count;
+
+  -- 3. Delete all categories
+  DELETE FROM public.categories WHERE user_id = v_user_id;
+  GET DIAGNOSTICS v_delete_count = ROW_COUNT;
+  RAISE NOTICE 'Deleted % categories', v_delete_count;
+
+  -- 4. Delete all wallets
+  DELETE FROM public.wallets WHERE user_id = v_user_id;
+  GET DIAGNOSTICS v_delete_count = ROW_COUNT;
+  RAISE NOTICE 'Deleted % wallets', v_delete_count;
+
+  -- 5. Delete bot_links if table exists
+  DELETE FROM public.bot_links WHERE user_id = v_user_id;
+  GET DIAGNOSTICS v_delete_count = ROW_COUNT;
+  RAISE NOTICE 'Deleted % bot links', v_delete_count;
+
+  -- 6. Delete from public.users table
+  DELETE FROM public.users WHERE id = v_user_id;
+  GET DIAGNOSTICS v_delete_count = ROW_COUNT;
+  RAISE NOTICE 'Deleted % user record', v_delete_count;
+
+  -- 7. Delete user from auth.users table (requires SECURITY DEFINER)
+  DELETE FROM auth.users WHERE id = v_user_id;
+  
+  RAISE NOTICE 'Successfully deleted user account: %', v_user_id;
+  
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE EXCEPTION 'Error deleting user account: %', SQLERRM;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."delete_user_account"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."delete_user_account_complete"() RETURNS "void"
@@ -900,11 +1001,33 @@ CREATE TABLE IF NOT EXISTS "public"."transfers" (
 ALTER TABLE "public"."transfers" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."wallets" (
+    "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "name" "text" NOT NULL,
+    "balance" numeric(15,2) DEFAULT 0.00 NOT NULL,
+    "currency" "text" DEFAULT 'IDR'::"text" NOT NULL,
+    "icon" "text",
+    "is_hidden" boolean DEFAULT false,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+
+ALTER TABLE "public"."wallets" OWNER TO "postgres";
+
+
 CREATE OR REPLACE VIEW "public"."ledger_entries" WITH ("security_invoker"='on') AS
  SELECT "t"."id" AS "entry_id",
     "t"."user_id",
     "t"."wallet_id",
+    "w"."name" AS "wallet_name",
     "t"."category_id",
+    "c"."name" AS "category_name",
+    "c"."type" AS "category_type",
+    ( SELECT "pc"."name"
+           FROM "public"."categories" "pc"
+          WHERE ("pc"."id" = "c"."parent_id")) AS "category_parent",
     ("t"."amount" * (
         CASE "c"."type"
             WHEN 'expense'::"public"."category_type" THEN '-1'::integer
@@ -915,32 +1038,43 @@ CREATE OR REPLACE VIEW "public"."ledger_entries" WITH ("security_invoker"='on') 
     "t"."notes",
     'transaction'::"text" AS "kind",
     NULL::"uuid" AS "transfer_id"
-   FROM ("public"."transactions" "t"
+   FROM (("public"."transactions" "t"
      JOIN "public"."categories" "c" ON (("c"."id" = "t"."category_id")))
+     LEFT JOIN "public"."wallets" "w" ON (("w"."id" = "t"."wallet_id")))
 UNION ALL
  SELECT "tr"."id" AS "entry_id",
     "tr"."user_id",
     "tr"."from_wallet_id" AS "wallet_id",
+    "fw"."name" AS "wallet_name",
     NULL::"uuid" AS "category_id",
+    'Transfer Keluar'::"text" AS "category_name",
+    NULL::"public"."category_type" AS "category_type",
+    NULL::"text" AS "category_parent",
     (- "tr"."amount") AS "signed_amount",
     "tr"."amount",
     "tr"."date",
     "tr"."notes",
     'transfer_out'::"text" AS "kind",
     "tr"."id" AS "transfer_id"
-   FROM "public"."transfers" "tr"
+   FROM ("public"."transfers" "tr"
+     LEFT JOIN "public"."wallets" "fw" ON (("fw"."id" = "tr"."from_wallet_id")))
 UNION ALL
  SELECT "tr"."id" AS "entry_id",
     "tr"."user_id",
     "tr"."to_wallet_id" AS "wallet_id",
+    "tw"."name" AS "wallet_name",
     NULL::"uuid" AS "category_id",
+    'Transfer Masuk'::"text" AS "category_name",
+    NULL::"public"."category_type" AS "category_type",
+    NULL::"text" AS "category_parent",
     "tr"."amount" AS "signed_amount",
     "tr"."amount",
     "tr"."date",
     "tr"."notes",
     'transfer_in'::"text" AS "kind",
     "tr"."id" AS "transfer_id"
-   FROM "public"."transfers" "tr";
+   FROM ("public"."transfers" "tr"
+     LEFT JOIN "public"."wallets" "tw" ON (("tw"."id" = "tr"."to_wallet_id")));
 
 
 ALTER VIEW "public"."ledger_entries" OWNER TO "postgres";
@@ -966,7 +1100,6 @@ ALTER TABLE "public"."notification_reminders" OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."pending_bot_transactions" (
     "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
-    "telegram_chat_id" bigint NOT NULL,
     "user_id" "uuid",
     "wallet_id" "uuid" NOT NULL,
     "category_id" "uuid" NOT NULL,
@@ -975,11 +1108,38 @@ CREATE TABLE IF NOT EXISTS "public"."pending_bot_transactions" (
     "date" "date" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"(),
     "expires_at" timestamp with time zone DEFAULT ("now"() + '00:05:00'::interval),
-    "type" "text" DEFAULT 'expense'::"text"
+    "type" "text" DEFAULT 'expense'::"text",
+    "platform" "text" DEFAULT 'telegram'::"text" NOT NULL,
+    "platform_identifier" "text",
+    "original_input" "text"
 );
 
 
 ALTER TABLE "public"."pending_bot_transactions" OWNER TO "postgres";
+
+
+CREATE OR REPLACE VIEW "public"."pending_transactions_view" WITH ("security_invoker"='on') AS
+ SELECT "p"."id",
+    "p"."user_id",
+    "p"."wallet_id",
+    "p"."category_id",
+    "p"."amount",
+    "p"."notes",
+    "p"."date",
+    "p"."created_at",
+    "p"."expires_at",
+    "p"."type",
+    "p"."platform",
+    "p"."platform_identifier",
+    "p"."original_input",
+    "w"."name" AS "wallet_name",
+    "c"."name" AS "category_name"
+   FROM (("public"."pending_bot_transactions" "p"
+     LEFT JOIN "public"."wallets" "w" ON (("p"."wallet_id" = "w"."id")))
+     LEFT JOIN "public"."categories" "c" ON (("p"."category_id" = "c"."id")));
+
+
+ALTER VIEW "public"."pending_transactions_view" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."transaction_images" (
@@ -1042,22 +1202,6 @@ COMMENT ON COLUMN "public"."users"."ai_api_key" IS 'Encrypted API key for AI pro
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."wallets" (
-    "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
-    "user_id" "uuid" NOT NULL,
-    "name" "text" NOT NULL,
-    "balance" numeric(15,2) DEFAULT 0.00 NOT NULL,
-    "currency" "text" DEFAULT 'IDR'::"text" NOT NULL,
-    "icon" "text",
-    "is_hidden" boolean DEFAULT false,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
-);
-
-
-ALTER TABLE "public"."wallets" OWNER TO "postgres";
-
-
 ALTER TABLE ONLY "public"."bot_links"
     ADD CONSTRAINT "bot_links_pkey" PRIMARY KEY ("link_token");
 
@@ -1085,6 +1229,16 @@ ALTER TABLE ONLY "public"."notification_reminders"
 
 ALTER TABLE ONLY "public"."pending_bot_transactions"
     ADD CONSTRAINT "pending_bot_transactions_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."pending_bot_transactions"
+    ADD CONSTRAINT "pending_bot_transactions_user_id_platform_key" UNIQUE ("user_id", "platform");
+
+
+
+ALTER TABLE ONLY "public"."pending_bot_transactions"
+    ADD CONSTRAINT "pending_unique_user_platform" UNIQUE ("user_id", "platform");
 
 
 
@@ -1152,10 +1306,6 @@ CREATE INDEX "idx_categories_user_id" ON "public"."categories" USING "btree" ("u
 
 
 CREATE INDEX "idx_notification_reminders_user_id" ON "public"."notification_reminders" USING "btree" ("user_id");
-
-
-
-CREATE INDEX "idx_pending_transactions_chat" ON "public"."pending_bot_transactions" USING "btree" ("telegram_chat_id");
 
 
 
@@ -1537,6 +1687,11 @@ ALTER TABLE "public"."users" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."wallets" ENABLE ROW LEVEL SECURITY;
 
 
+
+
+ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
+
+
 GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
@@ -1544,9 +1699,159 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."cleanup_expired_pending_transactions"() TO "anon";
-GRANT ALL ON FUNCTION "public"."cleanup_expired_pending_transactions"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."cleanup_expired_pending_transactions"() TO "service_role";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+GRANT ALL ON FUNCTION "public"."cleanup_user_storage_files"("p_user_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."cleanup_user_storage_files"("p_user_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cleanup_user_storage_files"("p_user_id" "uuid") TO "service_role";
 
 
 
@@ -1559,6 +1864,12 @@ GRANT ALL ON FUNCTION "public"."create_wallet_transfer"("p_user_id" "uuid", "p_f
 GRANT ALL ON FUNCTION "public"."create_wallet_transfer"("p_user_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_expense_category_id" "uuid", "p_income_category_id" "uuid", "p_fee" numeric, "p_notes" "text", "p_date" "date", "p_fee_category_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."create_wallet_transfer"("p_user_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_expense_category_id" "uuid", "p_income_category_id" "uuid", "p_fee" numeric, "p_notes" "text", "p_date" "date", "p_fee_category_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."create_wallet_transfer"("p_user_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_expense_category_id" "uuid", "p_income_category_id" "uuid", "p_fee" numeric, "p_notes" "text", "p_date" "date", "p_fee_category_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."delete_user_account"() TO "anon";
+GRANT ALL ON FUNCTION "public"."delete_user_account"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."delete_user_account"() TO "service_role";
 
 
 
@@ -1682,6 +1993,21 @@ GRANT ALL ON FUNCTION "public"."update_wallet_transfer"("p_user_id" "uuid", "p_t
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 GRANT ALL ON TABLE "public"."bot_links" TO "anon";
 GRANT ALL ON TABLE "public"."bot_links" TO "authenticated";
 GRANT ALL ON TABLE "public"."bot_links" TO "service_role";
@@ -1706,6 +2032,12 @@ GRANT ALL ON TABLE "public"."transfers" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."wallets" TO "anon";
+GRANT ALL ON TABLE "public"."wallets" TO "authenticated";
+GRANT ALL ON TABLE "public"."wallets" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."ledger_entries" TO "anon";
 GRANT ALL ON TABLE "public"."ledger_entries" TO "authenticated";
 GRANT ALL ON TABLE "public"."ledger_entries" TO "service_role";
@@ -1721,6 +2053,12 @@ GRANT ALL ON TABLE "public"."notification_reminders" TO "service_role";
 GRANT ALL ON TABLE "public"."pending_bot_transactions" TO "anon";
 GRANT ALL ON TABLE "public"."pending_bot_transactions" TO "authenticated";
 GRANT ALL ON TABLE "public"."pending_bot_transactions" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."pending_transactions_view" TO "anon";
+GRANT ALL ON TABLE "public"."pending_transactions_view" TO "authenticated";
+GRANT ALL ON TABLE "public"."pending_transactions_view" TO "service_role";
 
 
 
@@ -1742,9 +2080,9 @@ GRANT ALL ON TABLE "public"."users" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."wallets" TO "anon";
-GRANT ALL ON TABLE "public"."wallets" TO "authenticated";
-GRANT ALL ON TABLE "public"."wallets" TO "service_role";
+
+
+
 
 
 
@@ -1772,6 +2110,30 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

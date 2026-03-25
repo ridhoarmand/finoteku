@@ -1,7 +1,7 @@
 /**
  * Pending Handler Tool
  * Menangani konfirmasi, pembatalan, dan update transaksi pending
- * Multi-platform support dengan smart entity matching
+ * Optimized: generateJSON, compressed prompts, systemInstruction
  */
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { BaseTool, type ToolParams } from '../core/base.ts';
@@ -9,13 +9,38 @@ import type { ToolResult } from '../../types.ts';
 import type { UserContext } from '../../data/users.ts';
 import * as pendingData from '../../data/pending.ts';
 import * as transactionData from '../../data/transactions.ts';
+import type { AIProvider } from '../../providers/base.ts';
+
+// System prompt statis — dikirim via systemInstruction
+const UPDATE_SYSTEM_PROMPT = `You are a transaction update parser. Extract field changes from user input to update a pending transaction.
+You must return a valid JSON object with ONLY the fields that are changed.
+
+Valid keys: "amount" (number), "category" (string), "wallet" (string), "to_wallet" (string), "dateOffset" (number), "notes" (string).
+
+EXAMPLES:
+"keterangan Makanan Nasi Bakar" -> {"notes": "Makanan Nasi Bakar"}
+"BCA dan Gopay" -> {"wallet": "BCA", "to_wallet": "Gopay"}
+"update kemarin" -> {"dateOffset": -1}
+"nominalnya 50rb aja" -> {"amount": 50000}
+"Ubah kategori Makanan" -> {"category": "Makanan"}
+
+Do NOT translate keys. Do NOT return markdown formatting. ONLY return raw JSON object.`;
+
+interface UpdateParsed {
+  amount?: number;
+  category?: string;
+  wallet?: string;
+  to_wallet?: string;
+  notes?: string;
+  dateOffset?: number;
+}
 
 export class PendingHandlerTool extends BaseTool {
   name = 'pending_handler';
   description = 'Menangani konfirmasi, pembatalan, dan update transaksi pending';
   intents = ['confirm', 'cancel', 'update_pending'];
 
-  constructor(private supabase: SupabaseClient) {
+  constructor(private supabase: SupabaseClient, private ai?: AIProvider) {
     super();
   }
 
@@ -53,23 +78,41 @@ export class PendingHandlerTool extends BaseTool {
   /**
    * Konfirmasi dan simpan transaksi
    */
-  private async confirmTransaction(pending: pendingData.PendingTransaction, _userContext: UserContext): Promise<ToolResult> {
+  private async confirmTransaction(pending: pendingData.PendingTransaction, userContext: UserContext): Promise<ToolResult> {
     console.log('[PendingHandler] Confirming transaction:', {
+      type: pending.type,
       category_id: pending.category_id,
-      category_name: pending.category_name,
       wallet_id: pending.wallet_id,
-      wallet_name: pending.wallet_name,
+      to_wallet_id: pending.to_wallet_id,
       amount: pending.amount,
-      notes: pending.notes,
     });
 
-    const { error } = await transactionData.create(this.supabase, pending.user_id, {
-      amount: pending.amount,
-      date: pending.date,
-      notes: pending.notes,
-      category_id: pending.category_id,
-      wallet_id: pending.wallet_id,
-    });
+    let error: Error | null = null;
+
+    if (pending.type === 'transfer') {
+      const expenseCat = userContext.categories.find(c => c.type === 'expense' && (c.name.includes('Transfer') || c.name.includes('Lainnya')))?.id || pending.category_id;
+      const incomeCat = userContext.categories.find(c => c.type === 'income' && (c.name.includes('Transfer') || c.name.includes('Lainnya')))?.id || pending.category_id;
+
+      const result = await transactionData.createTransfer(this.supabase, pending.user_id, {
+        amount: pending.amount,
+        date: pending.date,
+        notes: pending.notes,
+        from_wallet_id: pending.wallet_id,
+        to_wallet_id: pending.to_wallet_id!,
+        expense_category_id: expenseCat,
+        income_category_id: incomeCat,
+      });
+      error = result.error;
+    } else {
+      const result = await transactionData.create(this.supabase, pending.user_id, {
+        amount: pending.amount,
+        date: pending.date,
+        notes: pending.notes,
+        category_id: pending.category_id,
+        wallet_id: pending.wallet_id,
+      });
+      error = result.error;
+    }
 
     if (error) {
       return this.error('Gagal menyimpan transaksi: ' + error.message);
@@ -90,34 +133,86 @@ export class PendingHandlerTool extends BaseTool {
   }
 
   /**
-   * Smart Update - Use AI to parse update request
-   * Mendukung: kategori, wallet, nominal, notes
-   *
-   * Contoh:
-   * - "BCA" → Deteksi sebagai wallet
-   * - "Kencan Jajan" → AI parse jadi category "Jajan"
-   * - "50k" → Deteksi sebagai nominal
+   * Smart Update - Use AI (generateJSON) to parse update request
    */
   private async updatePending(userContext: UserContext, platform: pendingData.Platform, params: ToolParams): Promise<ToolResult> {
     const text = params.text as string;
-    console.log('[PendingHandler] Update request:', text);
+    console.log('[PendingHandler] Smart update request:', text);
 
-    // Get current pending transaction
     const current = await pendingData.get(this.supabase, userContext.userId, platform);
     if (!current) {
       return this.error('Tidak ada transaksi pending');
     }
 
-    const updates: Partial<pendingData.PendingTransactionInput> = {};
+    // AI-powered update parsing (generateJSON — no manual extraction)
+    if (this.ai) {
+      console.log('[PendingHandler] Using AI for smart update');
 
-    // Smart detection: Try simple keyword matching first for wallet/amount
+      const expenseCats = userContext.categories.filter(c => c.type === 'expense').map(c => c.name);
+      const incomeCats = userContext.categories.filter(c => c.type === 'income').map(c => c.name);
+
+      // User prompt — hanya data dinamis
+      const prompt = `Current: type=${current.type}, amount=${current.amount}, category=${current.category_name}, wallet=${current.wallet_name}${current.to_wallet_name ? `, toWallet=${current.to_wallet_name}` : ''}, notes="${current.notes}"
+
+Update: "${text}"
+
+Expense Categories: ${expenseCats.join(', ')}
+Income Categories: ${incomeCats.join(', ')}
+Wallets: ${userContext.wallets.map(w => w.name).join(', ')}`;
+
+      try {
+        const parsed = await this.ai.generateJSON<UpdateParsed>(prompt, {
+          systemPrompt: UPDATE_SYSTEM_PROMPT,
+          maxTokens: 150,
+          temperature: 0.1,
+        });
+
+        const updates: Partial<pendingData.PendingTransactionInput> = {};
+        
+        if (parsed.amount) updates.amount = Number(parsed.amount);
+        if (parsed.notes) updates.notes = parsed.notes;
+        
+        if (parsed.category) {
+          let cat = userContext.categories.find(c => c.name.toLowerCase() === parsed.category!.toLowerCase() && c.type === current.type);
+          if (!cat) cat = userContext.categories.find(c => c.name.toLowerCase() === parsed.category!.toLowerCase());
+          if (cat) updates.category_id = cat.id;
+        }
+        
+        if (parsed.wallet) {
+          const w = userContext.wallets.find(w => w.name.toLowerCase() === parsed.wallet!.toLowerCase());
+          if (w) updates.wallet_id = w.id;
+        }
+
+        if (parsed.to_wallet) {
+          const w = userContext.wallets.find(w => w.name.toLowerCase() === parsed.to_wallet!.toLowerCase());
+          if (w) updates.to_wallet_id = w.id;
+        }
+
+        if (parsed.dateOffset !== undefined) {
+           const newDate = new Date(current.date);
+           newDate.setDate(newDate.getDate() + Number(parsed.dateOffset));
+           updates.date = newDate.toISOString();
+        }
+
+        if (Object.keys(updates).length > 0) {
+          console.log('[PendingHandler] Applying AI updates:', updates);
+          await pendingData.update(this.supabase, userContext.userId, platform, updates);
+          const updated = await pendingData.get(this.supabase, userContext.userId, platform);
+          return this.success({ ...updated, needsConfirmation: true }, this.formatPreview(updated!));
+        }
+      } catch (err) {
+        console.error('[PendingHandler] AI Update failed:', err);
+      }
+    }
+
+    // Fallback to keyword matching
+    const updates: Partial<pendingData.PendingTransactionInput> = {};
     const lowerText = text.toLowerCase();
 
     // Quick wallet detection
     for (const wallet of userContext.wallets) {
       if (lowerText.includes(wallet.name.toLowerCase())) {
         updates.wallet_id = wallet.id;
-        console.log(`[PendingHandler] Detected wallet: ${wallet.name}`);
         break;
       }
     }
@@ -129,62 +224,18 @@ export class PendingHandlerTool extends BaseTool {
       const suffix = amountMatch[2]?.toLowerCase();
       if (suffix === 'k' || suffix === 'rb' || suffix === 'ribu') amount *= 1000;
       if (suffix === 'jt' || suffix === 'juta') amount *= 1000000;
-
-      if (amount >= 100 && amount !== current.amount) {
-        updates.amount = amount;
-        console.log(`[PendingHandler] Detected amount: ${amount}`);
-      }
+      updates.amount = amount;
     }
 
-    // For category updates (especially complex ones like "Kencan Jajan")
-    // Try to match category names - prioritize child categories
-    let categoryDetected = false;
-
-    // First try exact match with child categories
-    for (const category of userContext.categories.filter((c) => c.parent_name)) {
-      if (lowerText.includes(category.name.toLowerCase())) {
-        updates.category_id = category.id;
-        console.log(`[PendingHandler] Detected child category: ${category.name}`);
-        categoryDetected = true;
-        break;
-      }
+    if (Object.keys(updates).length > 0) {
+      await pendingData.update(this.supabase, userContext.userId, platform, updates);
+      const updated = await pendingData.get(this.supabase, userContext.userId, platform);
+      return this.success({ ...updated, needsConfirmation: true }, this.formatPreview(updated!));
     }
 
-    // Then try parent categories if no child match
-    if (!categoryDetected) {
-      for (const category of userContext.categories.filter((c) => !c.parent_name)) {
-        if (lowerText.includes(category.name.toLowerCase())) {
-          updates.category_id = category.id;
-          console.log(`[PendingHandler] Detected parent category: ${category.name}`);
-          categoryDetected = true;
-          break;
-        }
-      }
-    }
-
-    // No updates detected
-    if (Object.keys(updates).length === 0) {
-      return this.error(
-        'Tidak dapat memahami perubahan.\n\n' + 'Contoh:\n' + '• Ketik nama wallet: "BCA", "Gopay"\n' + '• Ketik kategori: "Jajan", "Kencan Jajan"\n' + '• Ketik nominal: "50k", "100rb"'
-      );
-    }
-
-    console.log('[PendingHandler] Updates to apply:', updates);
-
-    // Apply partial update
-    const { success, error } = await pendingData.update(this.supabase, userContext.userId, platform, updates);
-
-    if (!success) {
-      return this.error('Gagal update: ' + (error?.message || 'Unknown error'));
-    }
-
-    // Fetch updated data with names from VIEW
-    const updated = await pendingData.get(this.supabase, userContext.userId, platform);
-    if (!updated) {
-      return this.error('Transaksi pending tidak ditemukan setelah update');
-    }
-
-    return this.success({ ...updated, needsConfirmation: true }, this.formatPreview(updated));
+    return this.error(
+        'Tidak dapat memahami perubahan.\n\n' + 'Contoh:\n' + '• "Kategori Makanan, keterangan Nasi Bakar"\n' + '• "BCA", "Gopay"\n' + '• "update kemarin"'
+    );
   }
 
   /**
@@ -192,8 +243,9 @@ export class PendingHandlerTool extends BaseTool {
    */
   private formatPreview(pending: pendingData.PendingTransaction): string {
     const isIncome = pending.type === 'income';
-    const emoji = isIncome ? '💰' : '💸';
-    const typeLabel = isIncome ? 'Pemasukan' : 'Pengeluaran';
+    const isTransfer = pending.type === 'transfer';
+    const emoji = isTransfer ? '🔄' : isIncome ? '💰' : '💸';
+    const typeLabel = isTransfer ? 'Transfer' : isIncome ? 'Pemasukan' : 'Pengeluaran';
 
     const amount = new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -209,20 +261,30 @@ export class PendingHandlerTool extends BaseTool {
       year: 'numeric',
     });
 
-    // Build category display with parent if available (without type prefix)
     let categoryDisplay = pending.category_name || 'Kategori';
     if (pending.category_parent) {
-      categoryDisplay = `${pending.category_parent}, ${categoryDisplay}`;
+      categoryDisplay = `${pending.category_parent} > ${categoryDisplay}`;
     }
 
-    return (
-      `${emoji} <b>${typeLabel} Diperbarui</b>\n\n` +
-      `📅 ${dateStr}\n` +
-      `💳 ${pending.wallet_name || '-'}\n` +
-      `💵 ${amount}\n` +
-      `📁 ${categoryDisplay}\n` +
-      `📝 ${pending.notes}\n\n` +
-      `<b>Simpan transaksi ini?</b>`
-    );
+    let message = `${emoji} <b>${typeLabel} Diperbarui</b>\n\n`;
+    message += `📅 ${dateStr}\n`;
+    
+    if (isTransfer) {
+      message += `📤 Dari: ${pending.wallet_name || '?'}\n`;
+      message += `📥 Ke: ${pending.to_wallet_name || '?'}\n`;
+    } else {
+      message += `💳 ${pending.wallet_name || '-'}\n`;
+    }
+
+    message += `💵 ${amount}\n`;
+    
+    if (!isTransfer) {
+      message += `📁 ${categoryDisplay}\n`;
+    }
+
+    message += `📝 ${pending.notes}\n\n`;
+    message += `<b>Simpan transaksi ini?</b>`;
+
+    return message;
   }
 }

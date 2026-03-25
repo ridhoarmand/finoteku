@@ -23,6 +23,9 @@ const TREND_KEYWORDS = ['tren', 'trend', 'naik', 'turun', 'perbandingan', 'bandi
 const TIPS_KEYWORDS = ['hemat', 'saran', 'tips', 'rekomendasi', 'boros', 'kurangi', 'saving'];
 const CONFIRM_KEYWORDS = ['ya', 'y', 'yes', 'ok', 'oke', 'simpan', 'save'];
 const CANCEL_KEYWORDS = ['tidak', 'no', 'n', 'batal', 'cancel', 'batalkan'];
+const TRANSFER_KEYWORDS = ['transfer', 'pindah', 'kirim', 'ke'];
+const INCOME_PREFIX = ['masuk', 'terima', 'dapat'];
+const EXPENSE_PREFIX = ['keluar', 'bayar', 'beli'];
 
 // Pola transaksi (angka dengan suffix)
 const TRANSACTION_PATTERNS = [/\d+\s*(k|rb|ribu|jt|juta|m)/i, /\d{2,}/];
@@ -55,6 +58,17 @@ export class ReasoningEngine {
     }
     if (CANCEL_KEYWORDS.includes(lowerText)) {
       return { intent: 'cancel', confidence: 1.0 };
+    }
+
+    // Cek awalan khusus (Prefix Detection)
+    if (TRANSFER_KEYWORDS.some(k => lowerText.startsWith(k))) {
+        return { intent: 'transaction', confidence: 0.95 };
+    }
+    if (INCOME_PREFIX.some(k => lowerText.startsWith(k))) {
+        return { intent: 'transaction', confidence: 0.95 };
+    }
+    if (EXPENSE_PREFIX.some(k => lowerText.startsWith(k))) {
+        return { intent: 'transaction', confidence: 0.95 };
     }
 
     // Cek indikator transaksi (angka dengan k/rb/jt)

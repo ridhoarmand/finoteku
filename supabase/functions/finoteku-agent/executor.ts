@@ -49,6 +49,7 @@ export class AgentExecutor {
       const result = await tool.execute({
         ...plan.params,
         userContext,
+        platform: input.platform,
         conversationId: input.conversationId,
       });
 
@@ -86,27 +87,26 @@ export class AgentExecutor {
           // Resolve IDs using UserContext - exact match only (parser already validated)
           const categoryHint = (pendingDataPayload.categoryHint || '').toLowerCase();
           const walletHint = (pendingDataPayload.walletHint || '').toLowerCase();
+          const toWalletHint = (pendingDataPayload.toWalletHint || '').toLowerCase();
 
-          // Exact match only - parser already ensured valid category
-          const category = userContext.categories.find((c) => c.name.toLowerCase() === categoryHint);
-
-          // Exact match only - parser allows Cash as fallback
-          let wallet = userContext.wallets.find((w) => w.name.toLowerCase() === walletHint);
-
-          // CRITICAL: Category MUST exist (parser should have validated this)
+          // Exact match prioritizing type match
+          let category = userContext.categories.find(
+            (c) => c.name.toLowerCase() === categoryHint && c.type === pendingDataPayload.type
+          );
           if (!category) {
-            console.error(`[Executor] Category not found: "${categoryHint}"`);
-            console.error('[Executor] This should not happen - parser validation failed!');
+            category = userContext.categories.find((c) => c.name.toLowerCase() === categoryHint);
+          }
 
-            // Format category list with parent info for clarity
+          // Wallets
+          let wallet = userContext.wallets.find((w) => w.name.toLowerCase() === walletHint);
+          const toWallet = toWalletHint ? userContext.wallets.find((w) => w.name.toLowerCase() === toWalletHint) : null;
+
+          // CRITICAL: Category MUST exist for non-transfers
+          if (!category && pendingDataPayload.type !== 'transfer') {
+            console.error(`[Executor] Category not found: "${categoryHint}"`);
             const categoryList = userContext.categories
               .filter((c) => c.type === pendingDataPayload.type)
-              .map((c) => {
-                if (c.parent_name) {
-                  return `• ${c.parent_name} > ${c.name}`;
-                }
-                return `• ${c.name}`;
-              })
+              .map((c) => c.parent_name ? `• ${c.parent_name} > ${c.name}` : `• ${c.name}`)
               .join('\n');
 
             return {
@@ -114,27 +114,20 @@ export class AgentExecutor {
               content: `❌ <b>Kategori tidak ditemukan</b>\n\nKategori "${categoryHint}" tidak ada di akun Anda.\n\nGunakan salah satu kategori berikut:\n${categoryList}`,
             };
           }
-          // Wallet is optional - use first wallet if not specified
-          if (!wallet) {
-            if (walletHint) {
-              console.warn(`[Executor] No wallet match for: "${walletHint}"`);
-            }
-            // Use first wallet as fallback - database requires valid UUID
-            wallet = userContext.wallets[0];
-          }
+
+          // Wallet fallback
+          if (!wallet) wallet = userContext.wallets[0];
 
           // Determine date
           const date = new Date();
           date.setDate(date.getDate() + (pendingDataPayload.dateOffset || 0));
 
-          // Get platform info from input (reuse from above)
-          const platformIdentifier = input.conversationId;
-
-          const saveResult = await pendingData.save(this.supabase, userContext.userId, platform, platformIdentifier, {
+          const saveResult = await pendingData.save(this.supabase, userContext.userId, platform, input.conversationId, {
             type: pendingDataPayload.type,
             amount: pendingDataPayload.amount,
-            category_id: category.id,
+            category_id: category?.id || '', // Transfers might not specify category initially
             wallet_id: wallet.id,
+            to_wallet_id: toWallet?.id,
             notes: pendingDataPayload.notes,
             date: date.toISOString(),
             original_input: input.content,
