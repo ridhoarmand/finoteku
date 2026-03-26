@@ -14,6 +14,7 @@ export type Platform = 'telegram' | 'discord' | 'whatsapp' | 'flutter' | 'api';
 export interface AgentInput {
   type: MessageType;
   content: string; // Text content atau base64 untuk media
+  caption?: string; // Caption jika tipe image/voice
   mimeType?: string; // Untuk media (image/jpeg, audio/ogg, dll)
   userId: string;
   conversationId: string;

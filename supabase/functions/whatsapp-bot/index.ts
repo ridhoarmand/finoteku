@@ -217,6 +217,7 @@ serve(async (req: Request) => {
       agentInput = {
         type: 'image',
         content: encode(fileBuffer),
+        caption: waMessage.body || '',
         mimeType: 'image/jpeg',
         userId,
         conversationId: phone,
@@ -266,19 +267,31 @@ serve(async (req: Request) => {
       return new Response('No processable input', { status: 200 });
     }
 
-    // 5. Proses dengan Agent via HTTP Invoke
-    const { data: response, error: invokeError } = await supabase.functions.invoke<AgentResponse>('finoteku-agent', {
-      body: { input: agentInput },
-    });
+    // 5. Proses dengan Agent via HTTP Invoke in BACKGROUND
+    const backgroundTask = (async () => {
+      try {
+        const { data: response, error: invokeError } = await supabase.functions.invoke<AgentResponse>('finoteku-agent', {
+          body: { input: agentInput },
+        });
 
-    if (invokeError || !response) {
-      console.error('Invoke Agent Error:', invokeError);
-      await send(phone, '⚠️ *Maaf, agent sedang mengalami gangguan. Silakan coba beberapa saat lagi.*');
-      return new Response('OK', { status: 200 });
+        if (invokeError || !response) {
+          console.error('Invoke Agent Error:', invokeError);
+          await send(phone, '⚠️ *Maaf, agent sedang mengalami gangguan.*');
+          return;
+        }
+
+        // 6. Kirim response ke user
+        await sendAgentResponse(phone, response);
+      } catch (err) {
+        console.error('Background task error:', err);
+      }
+    })();
+
+    // Execute in background to prevent webhook timeout
+    const _global = globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: Promise<void>) => void } };
+    if (_global.EdgeRuntime?.waitUntil) {
+      _global.EdgeRuntime.waitUntil(backgroundTask);
     }
-
-    // 6. Kirim response ke user
-    await sendAgentResponse(phone, response);
 
     return new Response('OK', { status: 200 });
   } catch (error) {

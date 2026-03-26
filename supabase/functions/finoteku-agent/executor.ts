@@ -225,10 +225,12 @@ export class AgentExecutor {
     // Step 2: Parse extracted text (same as text/voice input)
     // deno-lint-ignore no-explicit-any
     const text = (scanResult.data as any).text;
+    const finalContent = input.caption ? `${text}\n[Catatan Tambahan User: ${input.caption}]` : text;
+    
     const textInput: AgentInput = {
       ...input,
       type: 'text',
-      content: text,
+      content: finalContent,
     };
 
     return this.execute(textInput, userContext, hasPending);

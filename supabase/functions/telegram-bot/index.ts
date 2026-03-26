@@ -85,18 +85,30 @@ serve(async (req: Request) => {
       await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
       await removeMessageButtons(TELEGRAM_BOT_TOKEN, chatId, callbackQuery.message.message_id);
 
-      // Handle HTTP invoke
-      const { data: response, error: invokeError } = await supabase.functions.invoke<AgentResponse>('finoteku-agent', {
-        body: { input: agentInput },
-      });
+      // Handle HTTP invoke in background
+      const backgroundTask = (async () => {
+        try {
+          const { data: response, error: invokeError } = await supabase.functions.invoke<AgentResponse>('finoteku-agent', {
+            body: { input: agentInput },
+          });
 
-      if (invokeError || !response) {
-        console.error('Invoke Agent Error:', invokeError);
-        await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '⚠️ Maaf, agent sedang mengalami gangguan. Silakan coba beberapa saat lagi.');
-        return new Response('OK', { status: 200 });
+          if (invokeError || !response) {
+            console.error('Invoke Agent Error:', invokeError);
+            await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '⚠️ Maaf, agent sedang mengalami gangguan.');
+            return;
+          }
+
+          await sendAgentResponse(TELEGRAM_BOT_TOKEN, chatId, response);
+        } catch (err) {
+          console.error('Background Task Error:', err);
+        }
+      })();
+
+      // Execute in background to prevent webhook timeout
+      const _global = globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: Promise<void>) => void } };
+      if (_global.EdgeRuntime?.waitUntil) {
+        _global.EdgeRuntime.waitUntil(backgroundTask);
       }
-
-      await sendAgentResponse(TELEGRAM_BOT_TOKEN, chatId, response);
 
       return new Response('OK', { status: 200 });
     }
@@ -254,8 +266,9 @@ serve(async (req: Request) => {
       agentInput = {
         type: 'image',
         content: encode(fileBuffer),
+        caption: message.caption || '',
         mimeType: 'image/jpeg',
-        userId,
+        userId: telegramId.toString(),
         conversationId: chatId.toString(),
         platform: 'telegram',
       };
@@ -362,19 +375,31 @@ serve(async (req: Request) => {
       return new Response('No processable input', { status: 200 });
     }
 
-    // 6. Proses dengan Agent via HTTP Invoke
-    const { data: response, error: invokeError } = await supabase.functions.invoke<AgentResponse>('finoteku-agent', {
-      body: { input: agentInput },
-    });
+    // 6. Proses dengan Agent via HTTP Invoke in BACKGROUND
+    const backgroundTask = (async () => {
+      try {
+        const { data: response, error: invokeError } = await supabase.functions.invoke<AgentResponse>('finoteku-agent', {
+          body: { input: agentInput },
+        });
 
-    if (invokeError || !response) {
-      console.error('Invoke Agent Error:', invokeError);
-      await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '⚠️ Maaf, agent sedang mengalami gangguan. Silakan coba beberapa saat lagi.');
-      return new Response('OK', { status: 200 });
+        if (invokeError || !response) {
+          console.error('Invoke Agent Error:', invokeError);
+          await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '⚠️ Maaf, agent sedang mengalami gangguan.');
+          return;
+        }
+
+        // 7. Kirim response ke user
+        await sendAgentResponse(TELEGRAM_BOT_TOKEN, chatId, response);
+      } catch (err) {
+        console.error('Background task error:', err);
+      }
+    })();
+
+    // Execute in background to prevent webhook timeout
+    const _global = globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: Promise<void>) => void } };
+    if (_global.EdgeRuntime?.waitUntil) {
+      _global.EdgeRuntime.waitUntil(backgroundTask);
     }
-
-    // 7. Kirim response ke user
-    await sendAgentResponse(TELEGRAM_BOT_TOKEN, chatId, response);
 
     return new Response('OK', { status: 200 });
   } catch (error) {

@@ -32,15 +32,16 @@ interface ParsedAIResponse {
 }
 
 // System prompt statis — dikirim sebagai systemInstruction (dioptimasi oleh Gemini)
-const PARSER_SYSTEM_PROMPT = `You are a transaction parser for Indonesian finance app. Parse text into structured JSON.
+const PARSER_SYSTEM_PROMPT = `You are a transaction parser for an Indonesian finance app. Parse text into structured JSON.
 
 Rules by Step:
-1. Detect Type: "transfer" (pindah saldo, tarik tunai, kirim uang antar wallet sendiri). "income" (pemasukan, gaji, piutang, terima uang). "expense" (pengeluaran, belanja).
-2. Category: Pick EXACTLY one name from the provided category lists matching the detected type. NEVER add brackets or types like "(income)" to the name.
-3. Wallet: Pick EXACT name from list. Default "Cash". For transfers: wallet=source, toWallet=destination. (QRIS->e-wallet, Tunai->Cash).
-4. DateOffset: 0=today, -1=kemarin, 1=besok. Calculate from current date.
-5. Amount: Extract numbers (25rb=25000, 2jt=2000000).
-6. Notes: Extract ONLY the specific context or items (e.g., "Test Nyaur", "Makan Siang"). NEVER include the transaction type ("Pemasukan", "Pengeluaran") or the category name ("Piutang", "Utang") in the notes! Keep it concise in Title Case.
+1. Priority: If input contains "[Catatan Tambahan User: ...]", treat that text as the ABSOLUTE HIGHEST priority for determining the Category, Wallet, and Notes. It overrides the raw text/OCR.
+2. Detect Type: "transfer" (pindah saldo, tarik tunai). "income" (pemasukan, gaji). "expense" (pengeluaran, belanja).
+3. Category: Pick EXACTLY one name from the provided category lists matching the detected type. NEVER add brackets or types.
+4. Wallet: Pick EXACT name from list. Default "Cash". For transfers: wallet=source, toWallet=destination.
+5. DateOffset: 0=today, -1=kemarin, 1=besok.
+6. Amount: Extract numbers (25rb=25000, 2jt=2000000).
+7. Notes: Extract ONLY the specific context or items (e.g., "Makan Siang"). NEVER include the transaction type or the category name in the notes! Keep it concise in Title Case.
 
 Return JSON: {"type","amount","category","wallet","toWallet"(transfers only),"dateOffset","notes"}`;
 
