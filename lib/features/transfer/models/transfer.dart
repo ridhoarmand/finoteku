@@ -14,7 +14,7 @@ class Transfer {
     required this.fromWalletId,
     required this.toWalletId,
     required this.amount,
-    required this.fee,
+    this.fee = 0.0,
     required this.date,
     this.notes,
   });
@@ -26,7 +26,7 @@ class Transfer {
       fromWalletId: map['from_wallet_id'] as String,
       toWalletId: map['to_wallet_id'] as String,
       amount: (map['amount'] as num).toDouble(),
-      fee: (map['fee'] as num).toDouble(),
+      fee: map['fee'] != null ? (map['fee'] as num).toDouble() : 0.0,
       date: DateTime.parse(map['date'] as String),
       notes: map['notes'] as String?,
     );

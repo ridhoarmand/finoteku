@@ -13,7 +13,10 @@ class TransferService {
   final SupabaseTransferService _remote;
   TransferService(this._remote);
 
-  Future<String> transferBetweenWallets(String userId, CreateWalletTransferRequest req) async {
+  Future<String> transferBetweenWallets(
+    String userId,
+    CreateWalletTransferRequest req,
+  ) async {
     if (req.fromWalletId == req.toWalletId) {
       throw ValidationFailure('Wallet sumber dan tujuan tidak boleh sama');
     }
@@ -24,7 +27,8 @@ class TransferService {
     return id;
   }
 
-  Future<Transfer?> getById(String userId, String transferId) => _remote.getTransferById(userId, transferId);
+  Future<Transfer?> getById(String userId, String transferId) =>
+      _remote.getTransferById(userId, transferId);
 
   Future<void> delete(String userId, String transferId) async {
     await _remote.deleteTransfer(userId, transferId);
@@ -36,12 +40,12 @@ class TransferService {
     String? fromWalletId,
     String? toWalletId,
     double? amount,
-    double? fee,
     String? notes,
     DateTime? date,
-    String? feeCategoryId,
   }) async {
-    if (fromWalletId != null && toWalletId != null && fromWalletId == toWalletId) {
+    if (fromWalletId != null &&
+        toWalletId != null &&
+        fromWalletId == toWalletId) {
       throw ValidationFailure('Wallet sumber dan tujuan tidak boleh sama');
     }
     if (amount != null && amount <= 0) {
@@ -53,10 +57,8 @@ class TransferService {
       fromWalletId: fromWalletId,
       toWalletId: toWalletId,
       amount: amount,
-      fee: fee,
       notes: notes,
       date: date,
-      feeCategoryId: feeCategoryId,
     );
   }
 }

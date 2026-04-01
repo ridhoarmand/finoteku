@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../models/transaction.dart';
@@ -11,9 +10,7 @@ import '../../wallet/providers/wallet_providers.dart';
 import '../../../services/supabase_service.dart';
 import '../../../utils/currency_formatter.dart';
 import '../../../utils/category_icon_helper.dart';
-import '../../../utils/thousand_separator_formatter.dart';
 import '../../../core/localization/app_localizations.dart';
-import '../widgets/category_selector_sheet.dart';
 import '../widgets/date_section.dart';
 import '../widgets/amount_section.dart';
 import '../widgets/notes_section.dart';
@@ -49,13 +46,11 @@ class _AddEditTransactionScreenState
   final _amountController = TextEditingController();
   final _notesController = TextEditingController();
   final _amountFocusNode = FocusNode();
-  final _feeController = TextEditingController();
 
   DateTime _selectedDate = DateTime.now();
   Category? _selectedCategory;
   Wallet? _selectedWallet;
   Wallet? _toWallet; // destination wallet when transfer
-  Category? _feeCategory; // expense category for transfer fee
   bool _isTransfer = false;
   bool _isLoading = false;
 
@@ -93,18 +88,6 @@ class _AddEditTransactionScreenState
       _amountController.text = _formatWithThousandSeparator(
         amountStr.replaceAll('.', ''),
       );
-
-      final double fee = tr.fee.abs();
-      if (fee > 0) {
-        final String feeStr = fee == fee.toInt()
-            ? fee.toInt().toString()
-            : fee.toString();
-        _feeController.text = _formatWithThousandSeparator(
-          feeStr.replaceAll('.', ''),
-        );
-      } else {
-        _feeController.text = '';
-      }
 
       _notesController.text = tr.notes ?? '';
       _selectedDate = tr.date;
@@ -212,7 +195,6 @@ class _AddEditTransactionScreenState
     _amountController.dispose();
     _notesController.dispose();
     _amountFocusNode.dispose();
-    _feeController.dispose();
     super.dispose();
   }
 
@@ -298,10 +280,9 @@ class _AddEditTransactionScreenState
                         _buildCategorySection(user.id),
                       ]
                     : [
-                        // Source wallet, destination wallet and optional fee for transfer
+                        // Source wallet and destination wallet for transfer
                         _buildWalletSection(user.id),
                         _buildToWalletSection(user.id),
-                        _buildFeeSection(user.id),
                       ]),
 
                 // Notes Section
@@ -361,7 +342,6 @@ class _AddEditTransactionScreenState
 
       if (_isTransfer) {
         if (_toWallet != null) return true;
-        if (_feeController.text.isNotEmpty) return true;
       }
 
       return false;
@@ -397,10 +377,6 @@ class _AddEditTransactionScreenState
       }
       if (_selectedWallet?.id != initial.fromWalletId) return true;
       if (_toWallet?.id != initial.toWalletId) return true;
-
-      final currentFeeText = _feeController.text.trim().replaceAll('.', '');
-      final currentFee = double.tryParse(currentFeeText) ?? 0.0;
-      if ((currentFee - initial.fee.abs()).abs() > 0.01) return true;
 
       return false;
     }
@@ -450,8 +426,6 @@ class _AddEditTransactionScreenState
                   _selectedCategory = null; // hide category in transfer mode
                 } else {
                   _toWallet = null;
-                  _feeCategory = null;
-                  _feeController.clear();
                 }
               });
             },
@@ -465,47 +439,6 @@ class _AddEditTransactionScreenState
     openSheet: _selectToWallet,
     ref: ref,
   );
-
-  Widget _buildFeeSection(String userId) {
-    final categoriesAsync = ref.watch(categoriesProvider(userId));
-    final cats = categoriesAsync.value ?? [];
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(10), // Reduced from 12 to 10
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              ref.tr(context, 'fee_title'),
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 4), // Reduced from 6 to 4
-            TextFormField(
-              controller: _feeController,
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                ThousandSeparatorFormatter(),
-              ],
-              decoration: InputDecoration(
-                hintText: ref.tr(context, 'fee_hint'),
-              ),
-            ),
-            const SizedBox(height: 4), // Reduced from 6 to 4
-            ListTile(
-              leading: const Icon(Icons.receipt_long),
-              title: Text(
-                _feeCategory?.name ?? ref.tr(context, 'fee_category_title'),
-              ),
-              subtitle: Text(ref.tr(context, 'fee_category_subtitle')),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-              onTap: () => _selectFeeCategory(cats),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Future<void> _selectDate() async {
     _unfocus();
@@ -578,28 +511,6 @@ class _AddEditTransactionScreenState
             refreshWalletProviders(ref);
           }
         });
-  }
-
-  void _selectFeeCategory(List<Category> categories) {
-    _unfocus();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => CategorySelectorSheet(
-        categories: categories,
-        onCategorySelected: (category) {
-          setState(() {
-            _feeCategory = category;
-          });
-          Navigator.pop(context);
-          final user = ref.read(currentUserProvider).value;
-          if (user != null) {
-            ref.invalidate(categoriesProvider(user.id));
-          }
-        },
-        rootContext: this.context,
-      ),
-    );
   }
 
   Future<void> _saveTransaction() async {
@@ -699,13 +610,9 @@ class _AddEditTransactionScreenState
           );
           return;
         }
-        final feeText = _feeController.text.trim().replaceAll('.', '');
-        final fee = feeText.isEmpty ? 0.0 : double.tryParse(feeText) ?? 0.0;
-
-        // Validasi saldo wallet sumber untuk transfer + fee
+        // Validasi saldo wallet sumber untuk transfer
         final currentBalance = _selectedWallet!.balance;
-        final totalDeduction = finalAmount + fee.abs();
-        final newBalance = currentBalance - totalDeduction;
+        final newBalance = currentBalance - finalAmount;
 
         if (newBalance < 0) {
           if (mounted) {
@@ -723,42 +630,25 @@ class _AddEditTransactionScreenState
         final userId = ref.read(currentUserProvider).value!.id;
         final transferSvc = ref.read(transferServiceProvider);
         if (widget.initialTransfer != null) {
-          // Update existing transfer (no fee category change supported in update)
+          // Update existing transfer
           await transferSvc.update(
             userId,
             widget.initialTransfer!.id,
             fromWalletId: _selectedWallet!.id,
             toWalletId: _toWallet!.id,
             amount: finalAmount,
-            fee: fee.abs(),
             notes: notes.isEmpty ? null : notes,
             date: _selectedDate,
-            // If previously no fee and user adds fee now, pass category
-            feeCategoryId: (widget.initialTransfer!.fee == 0 && fee > 0)
-                ? _feeCategory?.id
-                : null,
           );
         } else {
-          if (fee > 0 &&
-              (_feeCategory == null ||
-                  _feeCategory!.type != CategoryType.expense)) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(ref.tr(context, 'fee_category_required_error')),
-              ),
-            );
-            return;
-          }
           await transferSvc.transferBetweenWallets(
             userId,
             CreateWalletTransferRequest(
               fromWalletId: _selectedWallet!.id,
               toWalletId: _toWallet!.id,
               amount: finalAmount,
-              fee: fee.abs(),
               notes: notes.isEmpty ? null : notes,
               date: _selectedDate,
-              feeCategoryId: _feeCategory?.id,
             ),
           );
         }

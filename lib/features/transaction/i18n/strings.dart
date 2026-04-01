@@ -63,12 +63,6 @@ final StrMap transactionStringsEn = {
   // Notes section
   'notes_title': 'Notes (Optional)',
   'notes_hint': 'Add transaction details...',
-  // Transfer fee section
-  'fee_title': 'Admin Fee (optional)',
-  'fee_hint': '0.00',
-  'fee_category_title': 'Fee Category (Expense)',
-  'fee_category_subtitle': 'Required if fee > 0',
-  'fee_category_required_error': 'Fee category (Expense) required if fee > 0',
   // Wallet section
   'select_wallet_title': 'Select Wallet',
   'select_destination_wallet': 'To Wallet',
@@ -81,7 +75,7 @@ final StrMap transactionStringsEn = {
   'insufficient_balance_error':
       'Insufficient balance in wallet. Your balance would go negative.',
   'insufficient_balance_for_transfer':
-      'Insufficient balance in source wallet for transfer and fee.',
+      'Insufficient balance in source wallet for transfer.',
   // Discard changes dialog
   'discard_changes_title': 'Discard changes?',
   'discard_changes_content':
@@ -153,13 +147,6 @@ final StrMap transactionStringsId = {
   // Notes section
   'notes_title': 'Catatan (Opsional)',
   'notes_hint': 'Tambahkan detail transaksi...',
-  // Transfer fee section
-  'fee_title': 'Biaya Admin (opsional)',
-  'fee_hint': '0.00',
-  'fee_category_title': 'Kategori Biaya (Expense)',
-  'fee_category_subtitle': 'Diperlukan jika biaya > 0',
-  'fee_category_required_error':
-      'Kategori biaya (Expense) diperlukan jika biaya > 0',
   // Wallet section
   'select_wallet_title': 'Pilih Dompet',
   'select_destination_wallet': 'Ke Dompet',
@@ -170,8 +157,7 @@ final StrMap transactionStringsId = {
   'create_new_wallet': 'Buat dompet baru',
   'no_wallets_yet': 'Belum ada dompet. Buat satu untuk melanjutkan.',
   'insufficient_balance_error': 'Saldo tidak cukup. Saldo tidak boleh minus.',
-  'insufficient_balance_for_transfer':
-      'Saldo tidak cukup untuk transfer dan biaya admin.',
+  'insufficient_balance_for_transfer': 'Saldo tidak cukup untuk transfer.',
   // Discard changes dialog
   'discard_changes_title': 'Buang perubahan?',
   'discard_changes_content':

@@ -187,13 +187,6 @@ class TransferDetailScreen extends ConsumerWidget {
                         CurrencyFormatter.format(transfer.amount, 'IDR'),
                         Icons.currency_exchange,
                       ),
-                      const Divider(),
-
-                      _buildDetailRow(
-                        ref.tr(context, 'fee'),
-                        CurrencyFormatter.format(transfer.fee, 'IDR'),
-                        Icons.receipt_long,
-                      ),
 
                       if ((transfer.notes ?? '').trim().isNotEmpty) ...[
                         const Divider(),
