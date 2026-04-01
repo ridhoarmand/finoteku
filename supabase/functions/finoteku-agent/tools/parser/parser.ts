@@ -6,6 +6,7 @@
 import { BaseTool, type ToolParams } from '../core/base.ts';
 import type { ToolResult } from '../../types.ts';
 import type { UserContext } from '../../data/users.ts';
+import { resolveCashWallet, resolveWalletByHint } from '../../data/wallets.ts';
 import type { AIProvider } from '../../providers/base.ts';
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -24,7 +25,7 @@ interface TransactionData {
 interface ParsedAIResponse {
   type: 'income' | 'expense' | 'transfer';
   amount: number;
-  category: string;
+  category?: string;
   wallet: string;
   toWallet?: string;
   dateOffset: number;
@@ -37,11 +38,12 @@ const PARSER_SYSTEM_PROMPT = `You are a transaction parser for an Indonesian fin
 Rules by Step:
 1. Priority: If input contains "[Catatan Tambahan User: ...]", treat that text as the ABSOLUTE HIGHEST priority for determining the Category, Wallet, and Notes. It overrides the raw text/OCR.
 2. Detect Type: "transfer" (pindah saldo, tarik tunai). "income" (pemasukan, gaji). "expense" (pengeluaran, belanja).
-3. Category: Pick EXACTLY one name from the provided category lists matching the detected type. NEVER add brackets or types.
-4. Wallet: Pick EXACT name from list. Default "Cash". For transfers: wallet=source, toWallet=destination.
-5. DateOffset: 0=today, -1=kemarin, 1=besok.
-6. Amount: Extract numbers (25rb=25000, 2jt=2000000).
-7. Notes: Extract ONLY the specific context or items (e.g., "Makan Siang"). NEVER include the transaction type or the category name in the notes! Keep it concise in Title Case.
+3. Special transfer rule: "tarik tunai bca" means transfer FROM BCA TO Cash unless destination is explicitly provided.
+4. Category: Pick EXACTLY one name from the provided category lists matching the detected type. For transfer, category can be "Transfer" as placeholder.
+5. Wallet: Pick EXACT name from list. Default "Cash". For transfers: wallet=source, toWallet=destination.
+6. DateOffset: 0=today, -1=kemarin, 1=besok.
+7. Amount: Extract numbers (25rb=25000, 2jt=2000000).
+8. Notes: Extract ONLY the specific context or items (e.g., "Makan Siang"). NEVER include the transaction type or the category name in the notes! Keep it concise in Title Case.
 
 Return JSON: {"type","amount","category","wallet","toWallet"(transfers only),"dateOffset","notes"}`;
 
@@ -50,7 +52,10 @@ export class TransactionParserTool extends BaseTool {
   description = 'Parse transaction data using AI';
   intents = ['enrich_transaction_data', 'transaction'];
 
-  constructor(private supabase: SupabaseClient, private ai?: AIProvider) {
+  constructor(
+    private supabase: SupabaseClient,
+    private ai?: AIProvider,
+  ) {
     super();
   }
 
@@ -80,14 +85,14 @@ export class TransactionParserTool extends BaseTool {
     const dateStr = new Date().toISOString().split('T')[0];
 
     // Pisahkan kategori berdasarkan tipe agar AI lebih mengerti konteks
-    const expenseCats = userContext.categories.filter(c => c.type === 'expense');
-    const incomeCats = userContext.categories.filter(c => c.type === 'income');
+    const expenseCats = userContext.categories.filter((c) => c.type === 'expense');
+    const incomeCats = userContext.categories.filter((c) => c.type === 'income');
 
     const lowerText = text.toLowerCase();
-    const isLikelyIncome = ['masuk', 'terima', 'dapat', 'pemasukan'].some(k => lowerText.startsWith(k) || lowerText.includes(k));
-    const isLikelyTransfer = ['transfer', 'pindah', 'kirim', 'mutasi', 'tarik tunai'].some(k => lowerText.startsWith(k) || lowerText.includes(k));
-    const isLikelyExpense = ['keluar', 'bayar', 'pengeluaran', 'beli'].some(k => lowerText.startsWith(k) || lowerText.includes(k));
-    
+    const isLikelyIncome = ['masuk', 'terima', 'dapat', 'pemasukan'].some((k) => lowerText.startsWith(k) || lowerText.includes(k));
+    const isLikelyTransfer = ['transfer', 'pindah', 'kirim', 'mutasi', 'tarik tunai', 'tarik', 'cabut dana'].some((k) => lowerText.startsWith(k) || lowerText.includes(k));
+    const isLikelyExpense = ['keluar', 'bayar', 'pengeluaran', 'beli'].some((k) => lowerText.startsWith(k) || lowerText.includes(k));
+
     let typeHint = 'unknown';
     if (isLikelyTransfer) typeHint = 'transfer';
     else if (isLikelyIncome) typeHint = 'income';
@@ -99,13 +104,13 @@ Input: "${text}"
 Type Hint: ${typeHint} (prioritize this type if set)
 
 Expense Categories:
-${expenseCats.map(c => `- ${c.name}${c.parent_name ? ` [${c.parent_name}]` : ''}`).join('\n')}
+${expenseCats.map((c) => `- ${c.name}${c.parent_name ? ` [${c.parent_name}]` : ''}`).join('\n')}
 
 Income Categories:
-${incomeCats.map(c => `- ${c.name}${c.parent_name ? ` [${c.parent_name}]` : ''}`).join('\n')}
+${incomeCats.map((c) => `- ${c.name}${c.parent_name ? ` [${c.parent_name}]` : ''}`).join('\n')}
 
 Wallets:
-${userContext.wallets.map(w => `- ${w.name}`).join('\n')}`;
+${userContext.wallets.map((w) => `- ${w.name}`).join('\n')}`;
 
     try {
       const parsed = await this.ai!.generateJSON<ParsedAIResponse>(prompt, {
@@ -116,35 +121,42 @@ ${userContext.wallets.map(w => `- ${w.name}`).join('\n')}`;
 
       console.log('[TransactionParser] AI parsed:', parsed);
 
-      if (!parsed.amount || !parsed.category || !parsed.wallet || parsed.dateOffset === undefined) {
+      if (!parsed.amount || !parsed.wallet || parsed.dateOffset === undefined) {
         throw new Error('AI response missing required fields');
       }
 
-      // STRICT validation: category must exist in user's list, prioritizing exact type match
-      let category = userContext.categories.find(c => c.name.toLowerCase() === parsed.category.toLowerCase() && c.type === parsed.type);
-      if (!category) {
-        // Fallback to name-only match if type mismatched
-        category = userContext.categories.find(c => c.name.toLowerCase() === parsed.category.toLowerCase());
+      const isTransfer = parsed.type === 'transfer';
+
+      // STRICT validation for non-transfer categories
+      let category = null;
+      if (!isTransfer) {
+        category = userContext.categories.find((c) => c.name.toLowerCase() === parsed.category?.toLowerCase() && c.type === parsed.type);
+        if (!category) {
+          // Fallback to name-only match if type mismatched
+          category = userContext.categories.find((c) => c.name.toLowerCase() === parsed.category?.toLowerCase());
+        }
+
+        if (!category) {
+          console.error('[TransactionParser] Category not found:', parsed.category);
+          return this.error(`❌ Kategori "${parsed.category}" tidak ditemukan.\n\n` + `Gunakan salah satu:\n${userContext.categories.map((c) => `• ${c.name}`).join('\n')}`);
+        }
       }
 
-      if (!category) {
-        console.error('[TransactionParser] Category not found:', parsed.category);
-        return this.error(`❌ Kategori "${parsed.category}" tidak ditemukan.\n\n` + `Gunakan salah satu:\n${userContext.categories.map(c => `• ${c.name}`).join('\n')}`);
-      }
+      // Wallet validation with normalization
+      const wallet = resolveWalletByHint(userContext.wallets, parsed.wallet);
+      const toWallet = isTransfer ? resolveWalletByHint(userContext.wallets, parsed.toWallet) || resolveCashWallet(userContext.wallets) : null;
 
-      // Wallet validation with Cash fallback
-      const wallet = userContext.wallets.find(w => w.name.toLowerCase() === parsed.wallet.toLowerCase());
-      if (!wallet && parsed.wallet.toLowerCase() !== 'cash') {
-        console.warn('[TransactionParser] Wallet not found, defaulting to Cash:', parsed.wallet);
+      if (!wallet) {
+        return this.error(`❌ Dompet "${parsed.wallet}" tidak ditemukan.\n\n` + `Dompet tersedia:\n${userContext.wallets.map((w) => `• ${w.name}`).join('\n')}`);
       }
 
       const data: TransactionData = {
         original: text,
-        type: parsed.type || (category.type as 'income' | 'expense') || 'expense',
+        type: parsed.type || (category?.type as 'income' | 'expense') || 'expense',
         amount: Number(parsed.amount),
-        categoryHint: category.name,
-        walletHint: wallet ? wallet.name : 'Cash',
-        toWalletHint: parsed.toWallet || undefined,
+        categoryHint: isTransfer ? 'Transfer' : category!.name,
+        walletHint: wallet.name,
+        toWalletHint: toWallet?.name || undefined,
         notes: parsed.notes || 'Transaksi',
         dateOffset: Number(parsed.dateOffset),
         _aiParsed: true,
@@ -178,12 +190,10 @@ ${userContext.wallets.map(w => `- ${w.name}`).join('\n')}`;
       year: 'numeric',
     });
 
-    const wallet = userContext.wallets.find(w => w.name.toLowerCase() === data.walletHint.toLowerCase());
-    const toWallet = data.toWalletHint 
-      ? userContext.wallets.find(w => w.name.toLowerCase() === data.toWalletHint!.toLowerCase())
-      : null;
+    const wallet = userContext.wallets.find((w) => w.name.toLowerCase() === data.walletHint.toLowerCase());
+    const toWallet = data.toWalletHint ? userContext.wallets.find((w) => w.name.toLowerCase() === data.toWalletHint!.toLowerCase()) : null;
 
-    const category = userContext.categories.find(c => c.name.toLowerCase() === data.categoryHint.toLowerCase());
+    const category = userContext.categories.find((c) => c.name.toLowerCase() === data.categoryHint.toLowerCase());
     let categoryDisplay = category?.name || data.categoryHint;
     if (category?.parent_name) {
       categoryDisplay = `${category.parent_name} > ${category.name}`;
@@ -192,7 +202,7 @@ ${userContext.wallets.map(w => `- ${w.name}`).join('\n')}`;
     const typeLabel = isTransfer ? 'Transfer' : isIncome ? 'Pemasukan' : 'Pengeluaran';
     let message = `${emoji} <b>${typeLabel}</b>\n\n`;
     message += `📅 ${dateStr}\n`;
-    
+
     if (isTransfer) {
       message += `📤 Dari: ${wallet?.name || data.walletHint}\n`;
       message += `📥 Ke: ${toWallet?.name || data.toWalletHint || '?'}\n`;
@@ -201,11 +211,11 @@ ${userContext.wallets.map(w => `- ${w.name}`).join('\n')}`;
     }
 
     message += `💵 Rp ${data.amount.toLocaleString('id-ID')}\n`;
-    
+
     if (!isTransfer) {
       message += `📁 ${categoryDisplay}\n`;
     }
-    
+
     message += `📝 ${data.notes}\n`;
 
     if (data._aiParsed) {

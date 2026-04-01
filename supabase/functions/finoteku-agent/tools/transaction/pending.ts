@@ -9,6 +9,7 @@ import type { ToolResult } from '../../types.ts';
 import type { UserContext } from '../../data/users.ts';
 import * as pendingData from '../../data/pending.ts';
 import * as transactionData from '../../data/transactions.ts';
+import { resolveWalletByHint } from '../../data/wallets.ts';
 import type { AIProvider } from '../../providers/base.ts';
 
 // System prompt statis — dikirim via systemInstruction
@@ -40,7 +41,10 @@ export class PendingHandlerTool extends BaseTool {
   description = 'Menangani konfirmasi, pembatalan, dan update transaksi pending';
   intents = ['confirm', 'cancel', 'update_pending'];
 
-  constructor(private supabase: SupabaseClient, private ai?: AIProvider) {
+  constructor(
+    private supabase: SupabaseClient,
+    private ai?: AIProvider,
+  ) {
     super();
   }
 
@@ -90,8 +94,8 @@ export class PendingHandlerTool extends BaseTool {
     let error: Error | null = null;
 
     if (pending.type === 'transfer') {
-      const expenseCat = userContext.categories.find(c => c.type === 'expense' && (c.name.includes('Transfer') || c.name.includes('Lainnya')))?.id || pending.category_id;
-      const incomeCat = userContext.categories.find(c => c.type === 'income' && (c.name.includes('Transfer') || c.name.includes('Lainnya')))?.id || pending.category_id;
+      const expenseCat = userContext.categories.find((c) => c.type === 'expense' && (c.name.includes('Transfer') || c.name.includes('Lainnya')))?.id || pending.category_id;
+      const incomeCat = userContext.categories.find((c) => c.type === 'income' && (c.name.includes('Transfer') || c.name.includes('Lainnya')))?.id || pending.category_id;
 
       const result = await transactionData.createTransfer(this.supabase, pending.user_id, {
         amount: pending.amount,
@@ -148,8 +152,8 @@ export class PendingHandlerTool extends BaseTool {
     if (this.ai) {
       console.log('[PendingHandler] Using AI for smart update');
 
-      const expenseCats = userContext.categories.filter(c => c.type === 'expense').map(c => c.name);
-      const incomeCats = userContext.categories.filter(c => c.type === 'income').map(c => c.name);
+      const expenseCats = userContext.categories.filter((c) => c.type === 'expense').map((c) => c.name);
+      const incomeCats = userContext.categories.filter((c) => c.type === 'income').map((c) => c.name);
 
       // User prompt — hanya data dinamis
       const prompt = `Current: type=${current.type}, amount=${current.amount}, category=${current.category_name}, wallet=${current.wallet_name}${current.to_wallet_name ? `, toWallet=${current.to_wallet_name}` : ''}, notes="${current.notes}"
@@ -158,7 +162,7 @@ Update: "${text}"
 
 Expense Categories: ${expenseCats.join(', ')}
 Income Categories: ${incomeCats.join(', ')}
-Wallets: ${userContext.wallets.map(w => w.name).join(', ')}`;
+Wallets: ${userContext.wallets.map((w) => w.name).join(', ')}`;
 
       try {
         const parsed = await this.ai.generateJSON<UpdateParsed>(prompt, {
@@ -168,30 +172,30 @@ Wallets: ${userContext.wallets.map(w => w.name).join(', ')}`;
         });
 
         const updates: Partial<pendingData.PendingTransactionInput> = {};
-        
+
         if (parsed.amount) updates.amount = Number(parsed.amount);
         if (parsed.notes) updates.notes = parsed.notes;
-        
+
         if (parsed.category) {
-          let cat = userContext.categories.find(c => c.name.toLowerCase() === parsed.category!.toLowerCase() && c.type === current.type);
-          if (!cat) cat = userContext.categories.find(c => c.name.toLowerCase() === parsed.category!.toLowerCase());
+          let cat = userContext.categories.find((c) => c.name.toLowerCase() === parsed.category!.toLowerCase() && c.type === current.type);
+          if (!cat) cat = userContext.categories.find((c) => c.name.toLowerCase() === parsed.category!.toLowerCase());
           if (cat) updates.category_id = cat.id;
         }
-        
+
         if (parsed.wallet) {
-          const w = userContext.wallets.find(w => w.name.toLowerCase() === parsed.wallet!.toLowerCase());
+          const w = resolveWalletByHint(userContext.wallets, parsed.wallet);
           if (w) updates.wallet_id = w.id;
         }
 
         if (parsed.to_wallet) {
-          const w = userContext.wallets.find(w => w.name.toLowerCase() === parsed.to_wallet!.toLowerCase());
+          const w = resolveWalletByHint(userContext.wallets, parsed.to_wallet);
           if (w) updates.to_wallet_id = w.id;
         }
 
         if (parsed.dateOffset !== undefined) {
-           const newDate = new Date(current.date);
-           newDate.setDate(newDate.getDate() + Number(parsed.dateOffset));
-           updates.date = newDate.toISOString();
+          const newDate = new Date(current.date);
+          newDate.setDate(newDate.getDate() + Number(parsed.dateOffset));
+          updates.date = newDate.toISOString();
         }
 
         if (Object.keys(updates).length > 0) {
@@ -233,9 +237,7 @@ Wallets: ${userContext.wallets.map(w => w.name).join(', ')}`;
       return this.success({ ...updated, needsConfirmation: true }, this.formatPreview(updated!));
     }
 
-    return this.error(
-        'Tidak dapat memahami perubahan.\n\n' + 'Contoh:\n' + '• "Kategori Makanan, keterangan Nasi Bakar"\n' + '• "BCA", "Gopay"\n' + '• "update kemarin"'
-    );
+    return this.error('Tidak dapat memahami perubahan.\n\n' + 'Contoh:\n' + '• "Kategori Makanan, keterangan Nasi Bakar"\n' + '• "BCA", "Gopay"\n' + '• "update kemarin"');
   }
 
   /**
@@ -268,7 +270,7 @@ Wallets: ${userContext.wallets.map(w => w.name).join(', ')}`;
 
     let message = `${emoji} <b>${typeLabel} Diperbarui</b>\n\n`;
     message += `📅 ${dateStr}\n`;
-    
+
     if (isTransfer) {
       message += `📤 Dari: ${pending.wallet_name || '?'}\n`;
       message += `📥 Ke: ${pending.to_wallet_name || '?'}\n`;
@@ -277,7 +279,7 @@ Wallets: ${userContext.wallets.map(w => w.name).join(', ')}`;
     }
 
     message += `💵 ${amount}\n`;
-    
+
     if (!isTransfer) {
       message += `📁 ${categoryDisplay}\n`;
     }

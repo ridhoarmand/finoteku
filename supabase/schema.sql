@@ -82,14 +82,15 @@ $$;
 ALTER FUNCTION "public"."cleanup_user_storage_files"("p_user_id" "uuid") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."create_wallet_transfer"("p_user_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_fee" numeric DEFAULT 0.00, "p_notes" "text" DEFAULT NULL::"text", "p_date" "date" DEFAULT CURRENT_DATE, "p_fee_category_id" "uuid" DEFAULT NULL::"uuid") RETURNS "uuid"
+CREATE OR REPLACE FUNCTION "public"."create_wallet_transfer"("p_user_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_expense_category_id" "uuid" DEFAULT NULL::"uuid", "p_income_category_id" "uuid" DEFAULT NULL::"uuid", "p_notes" "text" DEFAULT NULL::"text", "p_date" "date" DEFAULT CURRENT_DATE) RETURNS "uuid"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
 DECLARE
   v_transfer_id UUID;
   v_from_owner UUID;
   v_to_owner UUID;
-  v_fee_type category_type;
+  v_expense_type category_type;
+  v_income_type category_type;
   v_from_balance DECIMAL(15, 2);
 BEGIN
   -- Validasi dasar
@@ -99,9 +100,6 @@ BEGIN
   IF p_amount IS NULL OR p_amount <= 0 THEN
     RAISE EXCEPTION 'Amount must be greater than 0';
   END IF;
-  IF p_fee IS NULL THEN
-    p_fee := 0.00;
-  END IF;
 
   -- Cek kepemilikan wallet
   SELECT user_id INTO v_from_owner FROM public.wallets WHERE id = p_from_wallet_id;
@@ -113,39 +111,50 @@ BEGIN
     RAISE EXCEPTION 'Permission denied: wallets do not belong to user';
   END IF;
 
-  -- Validasi kategori biaya (jika ada)
-  IF p_fee > 0 AND p_fee_category_id IS NOT NULL THEN
-    SELECT type INTO v_fee_type FROM public.categories WHERE id = p_fee_category_id AND user_id = p_user_id;
-    IF v_fee_type IS DISTINCT FROM 'expense' THEN
-      RAISE EXCEPTION 'Fee category must be expense';
+  -- Validasi tipe kategori (opsional untuk kompatibilitas caller)
+  IF p_expense_category_id IS NOT NULL THEN
+    SELECT type INTO v_expense_type FROM public.categories WHERE id = p_expense_category_id AND user_id = p_user_id;
+    IF v_expense_type IS DISTINCT FROM 'expense' THEN
+      RAISE EXCEPTION 'Expense category invalid for transfer';
     END IF;
   END IF;
-
-  -- Cek saldo cukup (opsional hard-stop): sumber harus >= amount + fee
+  IF p_income_category_id IS NOT NULL THEN
+    SELECT type INTO v_income_type FROM public.categories WHERE id = p_income_category_id AND user_id = p_user_id;
+    IF v_income_type IS DISTINCT FROM 'income' THEN
+      RAISE EXCEPTION 'Income category invalid for transfer';
+    END IF;
+  END IF;
+  -- Cek saldo cukup: sumber harus >= amount
   SELECT balance INTO v_from_balance FROM public.wallets WHERE id = p_from_wallet_id AND user_id = p_user_id;
   IF v_from_balance IS NULL THEN
     RAISE EXCEPTION 'Source wallet not found';
   END IF;
-  IF v_from_balance < (p_amount + COALESCE(p_fee, 0)) THEN
+  IF v_from_balance < p_amount THEN
     RAISE EXCEPTION 'Insufficient funds in source wallet';
   END IF;
 
   -- Buat record transfer
   INSERT INTO public.transfers (
-    user_id, from_wallet_id, to_wallet_id, amount, fee, notes, date
+    user_id, from_wallet_id, to_wallet_id, amount, notes, date
   ) VALUES (
-    p_user_id, p_from_wallet_id, p_to_wallet_id, p_amount, p_fee, p_notes, p_date
+    p_user_id, p_from_wallet_id, p_to_wallet_id, p_amount, p_notes, p_date
   ) RETURNING id INTO v_transfer_id;
 
-  -- Biaya admin (opsional) di wallet sumber sebagai transaksi Expense
-  IF p_fee > 0 THEN
-    IF p_fee_category_id IS NULL THEN
-      RAISE EXCEPTION 'Fee category is required when fee > 0';
-    END IF;
+  -- Transaksi expense di wallet sumber (opsional, untuk alur agent)
+  IF p_expense_category_id IS NOT NULL THEN
     INSERT INTO public.transactions (
       user_id, wallet_id, category_id, amount, notes, date
     ) VALUES (
-      p_user_id, p_from_wallet_id, p_fee_category_id, p_fee, 'Transfer Fee' || CASE WHEN p_notes IS NOT NULL THEN ' - ' || p_notes ELSE '' END || ' [transfer:' || v_transfer_id || ']', p_date
+      p_user_id, p_from_wallet_id, p_expense_category_id, p_amount, COALESCE(p_notes, 'Transfer Out') || ' [transfer:' || v_transfer_id || ']', p_date
+    );
+  END IF;
+
+  -- Transaksi income di wallet tujuan (opsional, untuk alur agent)
+  IF p_income_category_id IS NOT NULL THEN
+    INSERT INTO public.transactions (
+      user_id, wallet_id, category_id, amount, notes, date
+    ) VALUES (
+      p_user_id, p_to_wallet_id, p_income_category_id, p_amount, COALESCE(p_notes, 'Transfer In') || ' [transfer:' || v_transfer_id || ']', p_date
     );
   END IF;
 
@@ -154,93 +163,7 @@ END;
 $$;
 
 
-ALTER FUNCTION "public"."create_wallet_transfer"("p_user_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_fee" numeric, "p_notes" "text", "p_date" "date", "p_fee_category_id" "uuid") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."create_wallet_transfer"("p_user_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_expense_category_id" "uuid", "p_income_category_id" "uuid", "p_fee" numeric DEFAULT 0.00, "p_notes" "text" DEFAULT NULL::"text", "p_date" "date" DEFAULT CURRENT_DATE, "p_fee_category_id" "uuid" DEFAULT NULL::"uuid") RETURNS "uuid"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    AS $$
-DECLARE
-  v_transfer_id UUID;
-  v_from_owner UUID;
-  v_to_owner UUID;
-  v_expense_type category_type;
-  v_income_type category_type;
-  v_fee_type category_type;
-BEGIN
-  -- Validasi dasar
-  IF p_from_wallet_id = p_to_wallet_id THEN
-    RAISE EXCEPTION 'Source and destination wallet must be different';
-  END IF;
-  IF p_amount IS NULL OR p_amount <= 0 THEN
-    RAISE EXCEPTION 'Amount must be greater than 0';
-  END IF;
-  IF p_fee IS NULL THEN
-    p_fee := 0.00;
-  END IF;
-
-  -- Cek kepemilikan wallet
-  SELECT user_id INTO v_from_owner FROM public.wallets WHERE id = p_from_wallet_id;
-  SELECT user_id INTO v_to_owner FROM public.wallets WHERE id = p_to_wallet_id;
-  IF v_from_owner IS NULL OR v_to_owner IS NULL THEN
-    RAISE EXCEPTION 'Wallet not found';
-  END IF;
-  IF v_from_owner != p_user_id OR v_to_owner != p_user_id THEN
-    RAISE EXCEPTION 'Permission denied: wallets do not belong to user';
-  END IF;
-
-  -- Validasi tipe kategori
-  SELECT type INTO v_expense_type FROM public.categories WHERE id = p_expense_category_id AND user_id = p_user_id;
-  SELECT type INTO v_income_type FROM public.categories WHERE id = p_income_category_id AND user_id = p_user_id;
-  IF v_expense_type IS DISTINCT FROM 'expense' THEN
-    RAISE EXCEPTION 'Expense category invalid for transfer';
-  END IF;
-  IF v_income_type IS DISTINCT FROM 'income' THEN
-    RAISE EXCEPTION 'Income category invalid for transfer';
-  END IF;
-  IF p_fee > 0 AND p_fee_category_id IS NOT NULL THEN
-    SELECT type INTO v_fee_type FROM public.categories WHERE id = p_fee_category_id AND user_id = p_user_id;
-    IF v_fee_type IS DISTINCT FROM 'expense' THEN
-      RAISE EXCEPTION 'Fee category must be expense';
-    END IF;
-  END IF;
-
-  -- Buat record transfer
-  INSERT INTO public.transfers (
-    user_id, from_wallet_id, to_wallet_id, amount, fee, notes, date
-  ) VALUES (
-    p_user_id, p_from_wallet_id, p_to_wallet_id, p_amount, p_fee, p_notes, p_date
-  ) RETURNING id INTO v_transfer_id;
-
-  -- Transaksi expense di wallet sumber (keluar)
-  INSERT INTO public.transactions (
-    user_id, wallet_id, category_id, amount, notes, date
-  ) VALUES (
-    p_user_id, p_from_wallet_id, p_expense_category_id, p_amount, COALESCE(p_notes, 'Transfer Out') || ' [transfer:' || v_transfer_id || ']', p_date
-  );
-
-  -- Transaksi income di wallet tujuan (masuk)
-  INSERT INTO public.transactions (
-    user_id, wallet_id, category_id, amount, notes, date
-  ) VALUES (
-    p_user_id, p_to_wallet_id, p_income_category_id, p_amount, COALESCE(p_notes, 'Transfer In') || ' [transfer:' || v_transfer_id || ']', p_date
-  );
-
-  -- Biaya admin (opsional) di wallet sumber
-  IF p_fee > 0 THEN
-    INSERT INTO public.transactions (
-      user_id, wallet_id, category_id, amount, notes, date
-    ) VALUES (
-      p_user_id, p_from_wallet_id, COALESCE(p_fee_category_id, p_expense_category_id), p_fee, 'Transfer Fee' || CASE WHEN p_notes IS NOT NULL THEN ' - ' || p_notes ELSE '' END || ' [transfer:' || v_transfer_id || ']', p_date
-    );
-  END IF;
-
-  RETURN v_transfer_id;
-END;
-$$;
-
-
-ALTER FUNCTION "public"."create_wallet_transfer"("p_user_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_expense_category_id" "uuid", "p_income_category_id" "uuid", "p_fee" numeric, "p_notes" "text", "p_date" "date", "p_fee_category_id" "uuid") OWNER TO "postgres";
+ALTER FUNCTION "public"."create_wallet_transfer"("p_user_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_expense_category_id" "uuid", "p_income_category_id" "uuid", "p_notes" "text", "p_date" "date") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."delete_user_account"() RETURNS "void"
@@ -469,51 +392,46 @@ CREATE OR REPLACE FUNCTION "public"."handle_transfer"() RETURNS "trigger"
     AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
-        -- Kurangi saldo wallet sumber
-        UPDATE public.wallets 
-        SET balance = balance - (NEW.amount + NEW.fee)
+        UPDATE public.wallets
+        SET balance = balance - NEW.amount
         WHERE id = NEW.from_wallet_id;
-        
-        -- Tambah saldo wallet tujuan
-        UPDATE public.wallets 
+
+        UPDATE public.wallets
         SET balance = balance + NEW.amount
         WHERE id = NEW.to_wallet_id;
-        
+
         RETURN NEW;
     END IF;
 
     IF TG_OP = 'UPDATE' THEN
-        -- Revert nilai lama
-        UPDATE public.wallets 
-        SET balance = balance + (OLD.amount + OLD.fee)
+        UPDATE public.wallets
+        SET balance = balance + OLD.amount
         WHERE id = OLD.from_wallet_id;
-        
-        UPDATE public.wallets 
+
+        UPDATE public.wallets
         SET balance = balance - OLD.amount
         WHERE id = OLD.to_wallet_id;
-        
-        -- Terapkan nilai baru
-        UPDATE public.wallets 
-        SET balance = balance - (NEW.amount + NEW.fee)
+
+        UPDATE public.wallets
+        SET balance = balance - NEW.amount
         WHERE id = NEW.from_wallet_id;
-        
-        UPDATE public.wallets 
+
+        UPDATE public.wallets
         SET balance = balance + NEW.amount
         WHERE id = NEW.to_wallet_id;
-        
+
         RETURN NEW;
     END IF;
 
     IF TG_OP = 'DELETE' THEN
-        -- Revert transfer
-        UPDATE public.wallets 
-        SET balance = balance + (OLD.amount + OLD.fee)
+        UPDATE public.wallets
+        SET balance = balance + OLD.amount
         WHERE id = OLD.from_wallet_id;
-        
-        UPDATE public.wallets 
+
+        UPDATE public.wallets
         SET balance = balance - OLD.amount
         WHERE id = OLD.to_wallet_id;
-        
+
         RETURN OLD;
     END IF;
 
@@ -825,7 +743,7 @@ $$;
 ALTER FUNCTION "public"."update_wallet_balance"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."update_wallet_transfer"("p_user_id" "uuid", "p_transfer_id" "uuid", "p_from_wallet_id" "uuid" DEFAULT NULL::"uuid", "p_to_wallet_id" "uuid" DEFAULT NULL::"uuid", "p_amount" numeric DEFAULT NULL::numeric, "p_fee" numeric DEFAULT NULL::numeric, "p_notes" "text" DEFAULT NULL::"text", "p_date" "date" DEFAULT NULL::"date", "p_fee_category_id" "uuid" DEFAULT NULL::"uuid") RETURNS "uuid"
+CREATE OR REPLACE FUNCTION "public"."update_wallet_transfer"("p_user_id" "uuid", "p_transfer_id" "uuid", "p_from_wallet_id" "uuid" DEFAULT NULL::"uuid", "p_to_wallet_id" "uuid" DEFAULT NULL::"uuid", "p_amount" numeric DEFAULT NULL::numeric, "p_notes" "text" DEFAULT NULL::"text", "p_date" "date" DEFAULT NULL::"date") RETURNS "uuid"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
 DECLARE
@@ -833,11 +751,8 @@ DECLARE
   v_new_from UUID;
   v_new_to UUID;
   v_new_amount DECIMAL(15, 2);
-  v_new_fee DECIMAL(15, 2);
   v_new_notes TEXT;
   v_new_date DATE;
-  v_fee_tx RECORD;
-  v_fee_type category_type;
 BEGIN
   SELECT * INTO v_old FROM public.transfers WHERE id = p_transfer_id AND user_id = p_user_id;
   IF NOT FOUND THEN
@@ -847,7 +762,6 @@ BEGIN
   v_new_from := COALESCE(p_from_wallet_id, v_old.from_wallet_id);
   v_new_to := COALESCE(p_to_wallet_id, v_old.to_wallet_id);
   v_new_amount := COALESCE(p_amount, v_old.amount);
-  v_new_fee := COALESCE(p_fee, v_old.fee);
   v_new_notes := COALESCE(p_notes, v_old.notes);
   v_new_date := COALESCE(p_date, v_old.date);
 
@@ -857,54 +771,16 @@ BEGIN
   IF v_new_amount IS NULL OR v_new_amount <= 0 THEN
     RAISE EXCEPTION 'Amount must be greater than 0';
   END IF;
-  IF v_new_fee IS NULL THEN v_new_fee := 0.00; END IF;
 
   -- Update transfer row (triggers will handle balance movements for amount/from/to changes)
   UPDATE public.transfers
     SET from_wallet_id = v_new_from,
         to_wallet_id = v_new_to,
         amount = v_new_amount,
-        fee = v_new_fee,
         notes = v_new_notes,
         date = v_new_date,
         updated_at = TIMEZONE('utc' :: text, NOW())
   WHERE id = p_transfer_id AND user_id = p_user_id;
-
-  -- Fee transaction handling remains the same as before
-  -- Handle fee expense transaction linked by marker [transfer:<id>] in notes
-  SELECT t.* INTO v_fee_tx
-  FROM public.transactions t
-  WHERE t.user_id = p_user_id
-    AND t.notes LIKE ('%' || '[transfer:' || p_transfer_id || ']')
-  ORDER BY t.created_at DESC
-  LIMIT 1;
-
-  IF v_old.fee > 0 AND v_new_fee > 0 THEN
-    -- Update existing fee transaction (amount/date/wallet/notes)
-    UPDATE public.transactions
-      SET amount = v_new_fee,
-          wallet_id = v_new_from,
-          notes = ('Transfer Fee' || CASE WHEN v_new_notes IS NOT NULL THEN ' - ' || v_new_notes ELSE '' END || ' [transfer:' || p_transfer_id || ']'),
-          date = v_new_date,
-          updated_at = TIMEZONE('utc' :: text, NOW())
-    WHERE id = v_fee_tx.id AND user_id = p_user_id;
-  ELSIF v_old.fee > 0 AND v_new_fee = 0 THEN
-    -- Remove fee transaction
-    DELETE FROM public.transactions WHERE id = v_fee_tx.id AND user_id = p_user_id;
-  ELSIF v_old.fee = 0 AND v_new_fee > 0 THEN
-    -- Need fee category to create new expense
-    IF p_fee_category_id IS NULL THEN
-      RAISE EXCEPTION 'Fee category is required when adding a new fee';
-    END IF;
-    SELECT type INTO v_fee_type FROM public.categories WHERE id = p_fee_category_id AND user_id = p_user_id;
-    IF v_fee_type IS DISTINCT FROM 'expense' THEN
-      RAISE EXCEPTION 'Fee category must be expense';
-    END IF;
-    INSERT INTO public.transactions (user_id, wallet_id, category_id, amount, notes, date)
-    VALUES (p_user_id, v_new_from, p_fee_category_id, v_new_fee,
-            'Transfer Fee' || CASE WHEN v_new_notes IS NOT NULL THEN ' - ' || v_new_notes ELSE '' END || ' [transfer:' || p_transfer_id || ']',
-            v_new_date);
-  END IF;
 
   -- The improved trigger handles balance updates correctly, no manual recalculation needed
   RETURN p_transfer_id;
@@ -912,7 +788,7 @@ END;
 $$;
 
 
-ALTER FUNCTION "public"."update_wallet_transfer"("p_user_id" "uuid", "p_transfer_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_fee" numeric, "p_notes" "text", "p_date" "date", "p_fee_category_id" "uuid") OWNER TO "postgres";
+ALTER FUNCTION "public"."update_wallet_transfer"("p_user_id" "uuid", "p_transfer_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_notes" "text", "p_date" "date") OWNER TO "postgres";
 
 SET default_tablespace = '';
 
@@ -990,7 +866,6 @@ CREATE TABLE IF NOT EXISTS "public"."transfers" (
     "from_wallet_id" "uuid" NOT NULL,
     "to_wallet_id" "uuid" NOT NULL,
     "amount" numeric(15,2) NOT NULL,
-    "fee" numeric(15,2) DEFAULT 0.00,
     "notes" "text",
     "date" "date" DEFAULT (("now"() AT TIME ZONE 'Asia/Jakarta'::"text"))::"date" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
@@ -1855,15 +1730,9 @@ GRANT ALL ON FUNCTION "public"."cleanup_user_storage_files"("p_user_id" "uuid") 
 
 
 
-GRANT ALL ON FUNCTION "public"."create_wallet_transfer"("p_user_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_fee" numeric, "p_notes" "text", "p_date" "date", "p_fee_category_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."create_wallet_transfer"("p_user_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_fee" numeric, "p_notes" "text", "p_date" "date", "p_fee_category_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."create_wallet_transfer"("p_user_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_fee" numeric, "p_notes" "text", "p_date" "date", "p_fee_category_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."create_wallet_transfer"("p_user_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_expense_category_id" "uuid", "p_income_category_id" "uuid", "p_fee" numeric, "p_notes" "text", "p_date" "date", "p_fee_category_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."create_wallet_transfer"("p_user_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_expense_category_id" "uuid", "p_income_category_id" "uuid", "p_fee" numeric, "p_notes" "text", "p_date" "date", "p_fee_category_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."create_wallet_transfer"("p_user_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_expense_category_id" "uuid", "p_income_category_id" "uuid", "p_fee" numeric, "p_notes" "text", "p_date" "date", "p_fee_category_id" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "public"."create_wallet_transfer"("p_user_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_expense_category_id" "uuid", "p_income_category_id" "uuid", "p_notes" "text", "p_date" "date") TO "anon";
+GRANT ALL ON FUNCTION "public"."create_wallet_transfer"("p_user_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_expense_category_id" "uuid", "p_income_category_id" "uuid", "p_notes" "text", "p_date" "date") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."create_wallet_transfer"("p_user_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_expense_category_id" "uuid", "p_income_category_id" "uuid", "p_notes" "text", "p_date" "date") TO "service_role";
 
 
 
@@ -1987,9 +1856,9 @@ GRANT ALL ON FUNCTION "public"."update_wallet_balance"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."update_wallet_transfer"("p_user_id" "uuid", "p_transfer_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_fee" numeric, "p_notes" "text", "p_date" "date", "p_fee_category_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."update_wallet_transfer"("p_user_id" "uuid", "p_transfer_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_fee" numeric, "p_notes" "text", "p_date" "date", "p_fee_category_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."update_wallet_transfer"("p_user_id" "uuid", "p_transfer_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_fee" numeric, "p_notes" "text", "p_date" "date", "p_fee_category_id" "uuid") TO "service_role";
+GRANT ALL ON FUNCTION "public"."update_wallet_transfer"("p_user_id" "uuid", "p_transfer_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_notes" "text", "p_date" "date") TO "anon";
+GRANT ALL ON FUNCTION "public"."update_wallet_transfer"("p_user_id" "uuid", "p_transfer_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_notes" "text", "p_date" "date") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_wallet_transfer"("p_user_id" "uuid", "p_transfer_id" "uuid", "p_from_wallet_id" "uuid", "p_to_wallet_id" "uuid", "p_amount" numeric, "p_notes" "text", "p_date" "date") TO "service_role";
 
 
 

@@ -6,11 +6,16 @@ import { ReasoningEngine } from './reasoning.ts';
 import { ToolRegistry } from './tools/core/index.ts';
 import type { AgentInput, AgentResponse } from './types.ts';
 import type { UserContext } from './data/users.ts';
+import { resolveCashWallet, resolveWalletByHint } from './data/wallets.ts';
 import * as pendingData from './data/pending.ts';
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 export class AgentExecutor {
-  constructor(private reasoning: ReasoningEngine, private tools: ToolRegistry, private supabase: SupabaseClient) {}
+  constructor(
+    private reasoning: ReasoningEngine,
+    private tools: ToolRegistry,
+    private supabase: SupabaseClient,
+  ) {}
 
   /**
    * Eksekusi utama agent
@@ -90,23 +95,21 @@ export class AgentExecutor {
           const toWalletHint = (pendingDataPayload.toWalletHint || '').toLowerCase();
 
           // Exact match prioritizing type match
-          let category = userContext.categories.find(
-            (c) => c.name.toLowerCase() === categoryHint && c.type === pendingDataPayload.type
-          );
+          let category = userContext.categories.find((c) => c.name.toLowerCase() === categoryHint && c.type === pendingDataPayload.type);
           if (!category) {
             category = userContext.categories.find((c) => c.name.toLowerCase() === categoryHint);
           }
 
           // Wallets
-          let wallet = userContext.wallets.find((w) => w.name.toLowerCase() === walletHint);
-          const toWallet = toWalletHint ? userContext.wallets.find((w) => w.name.toLowerCase() === toWalletHint) : null;
+          let wallet = resolveWalletByHint(userContext.wallets, walletHint);
+          let toWallet = toWalletHint ? resolveWalletByHint(userContext.wallets, toWalletHint) : null;
 
           // CRITICAL: Category MUST exist for non-transfers
           if (!category && pendingDataPayload.type !== 'transfer') {
             console.error(`[Executor] Category not found: "${categoryHint}"`);
             const categoryList = userContext.categories
               .filter((c) => c.type === pendingDataPayload.type)
-              .map((c) => c.parent_name ? `• ${c.parent_name} > ${c.name}` : `• ${c.name}`)
+              .map((c) => (c.parent_name ? `• ${c.parent_name} > ${c.name}` : `• ${c.name}`))
               .join('\n');
 
             return {
@@ -116,7 +119,26 @@ export class AgentExecutor {
           }
 
           // Wallet fallback
-          if (!wallet) wallet = userContext.wallets[0];
+          if (!wallet) {
+            if (pendingDataPayload.type === 'transfer') {
+              return {
+                type: 'error',
+                content: `❌ Dompet sumber "${pendingDataPayload.walletHint || '-'}" tidak ditemukan.\n\nDompet tersedia:\n${userContext.wallets.map((w) => `• ${w.name}`).join('\n')}`,
+              };
+            }
+            wallet = userContext.wallets[0];
+          }
+
+          if (pendingDataPayload.type === 'transfer' && !toWallet) {
+            toWallet = resolveCashWallet(userContext.wallets);
+          }
+
+          if (pendingDataPayload.type === 'transfer' && !toWallet) {
+            return {
+              type: 'error',
+              content: '❌ Dompet tujuan transfer tidak ditemukan. Tambahkan wallet Cash/Tunai terlebih dahulu.',
+            };
+          }
 
           // Determine date
           const date = new Date();
@@ -226,7 +248,7 @@ export class AgentExecutor {
     // deno-lint-ignore no-explicit-any
     const text = (scanResult.data as any).text;
     const finalContent = input.caption ? `${text}\n[Catatan Tambahan User: ${input.caption}]` : text;
-    
+
     const textInput: AgentInput = {
       ...input,
       type: 'text',

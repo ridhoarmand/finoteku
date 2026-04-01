@@ -10,17 +10,53 @@ export interface WalletRecord {
   balance: number;
 }
 
+const WALLET_SYNONYMS: Record<string, string> = {
+  tunai: 'cash',
+  uang_tunai: 'cash',
+  kas: 'cash',
+  bca: 'bca',
+  'bank bca': 'bca',
+  'bca mobile': 'bca',
+  mandiri: 'mandiri',
+  bri: 'bri',
+  bni: 'bni',
+};
+
+export function normalizeWalletHint(name: string): string {
+  const normalized = name.toLowerCase().trim().replace(/\s+/g, ' ');
+  return WALLET_SYNONYMS[normalized] || normalized;
+}
+
+export function resolveWalletByHint(wallets: WalletRecord[], hint?: string): WalletRecord | null {
+  if (!hint) return null;
+
+  const normalizedHint = normalizeWalletHint(hint);
+
+  const exact = wallets.find((w) => normalizeWalletHint(w.name) === normalizedHint);
+  if (exact) return exact;
+
+  const partial = wallets.find((w) => {
+    const normalizedWallet = normalizeWalletHint(w.name);
+    return normalizedWallet.includes(normalizedHint) || normalizedHint.includes(normalizedWallet);
+  });
+
+  return partial || null;
+}
+
+export function resolveCashWallet(wallets: WalletRecord[]): WalletRecord | null {
+  const priorities = ['cash', 'tunai', 'kas'];
+  for (const hint of priorities) {
+    const found = resolveWalletByHint(wallets, hint);
+    if (found) return found;
+  }
+  return wallets[0] || null;
+}
+
 /**
  * Ambil semua wallet dengan saldo
  */
-export async function getBalances(
-  supabase: SupabaseClient,
-  userId: string,
-): Promise<{ data: WalletRecord[] | null; error: Error | null }> {
-  const { data, error } = await supabase.from('wallets').select('id, name, balance').eq(
-    'user_id',
-    userId,
-  );
+export async function getBalances(supabase: SupabaseClient, userId: string): Promise<{ data: WalletRecord[] | null; error: Error | null }> {
+  const { data, error } = await supabase.from('wallets').select('id, name, balance').eq('user_id', userId);
 
   if (error) return { data: null, error };
 
@@ -37,14 +73,8 @@ export async function getBalances(
 /**
  * Ambil wallet berdasarkan ID
  */
-export async function getById(
-  supabase: SupabaseClient,
-  walletId: string,
-): Promise<{ data: WalletRecord | null; error: Error | null }> {
-  const { data, error } = await supabase.from('wallets').select('id, name, balance').eq(
-    'id',
-    walletId,
-  ).single();
+export async function getById(supabase: SupabaseClient, walletId: string): Promise<{ data: WalletRecord | null; error: Error | null }> {
+  const { data, error } = await supabase.from('wallets').select('id, name, balance').eq('id', walletId).single();
 
   return { data, error };
 }
@@ -52,24 +82,9 @@ export async function getById(
 /**
  * Cari wallet berdasarkan nama (fuzzy match)
  */
-export async function findByName(
-  supabase: SupabaseClient,
-  userId: string,
-  name: string,
-): Promise<WalletRecord | null> {
+export async function findByName(supabase: SupabaseClient, userId: string, name: string): Promise<WalletRecord | null> {
   const { data } = await getBalances(supabase, userId);
   if (!data) return null;
 
-  const lowerName = name.toLowerCase();
-
-  // Exact match
-  const exact = data.find((w) => w.name.toLowerCase() === lowerName);
-  if (exact) return exact;
-
-  // Contains match
-  const contains = data.find((w) =>
-    w.name.toLowerCase().includes(lowerName) || lowerName.includes(w.name.toLowerCase())
-  );
-
-  return contains || null;
+  return resolveWalletByHint(data, name);
 }
