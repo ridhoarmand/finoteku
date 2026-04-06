@@ -27,6 +27,7 @@ migrate_working_dir/
 docs/
 
 supabase/.temp/
+installer_output/
 
 # Flutter/Dart/Pub related
 **/doc/api/

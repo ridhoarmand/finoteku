@@ -86,12 +86,13 @@ dev_dependencies:
   freezed: ^3.0.6
   flutter_launcher_icons: ^0.14.4
 
-flutter_icons:
+flutter_launcher_icons:
+  image_path: "assets/icon_transparent.png"
   android: true
-  ios: true
-  image_path: "assets/icon_apps.png"
-  adaptive_icon_background: "#ffffff"
-  adaptive_icon_foreground: "assets/icon_apps.png"
+  windows:
+    generate: true
+    image_path: "assets/icon_apps.png" # Use the square icon for Windows
+    icon_size: 48
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

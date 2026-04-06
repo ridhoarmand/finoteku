@@ -11,7 +11,7 @@ fi
 
 # Clean previous builds
 echo "🧹 Cleaning previous builds..."
-flutter clean
+#flutter clean
 
 # Get dependencies
 echo "📦 Getting dependencies..."
