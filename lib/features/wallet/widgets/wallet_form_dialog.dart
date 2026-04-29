@@ -342,7 +342,7 @@ class _ThousandSeparatorFormatter extends TextInputFormatter {
       return oldValue;
     }
 
-    if (number == null || number == 0) {
+    if (number == null) {
       return const TextEditingValue(
         text: '',
         selection: TextSelection.collapsed(offset: 0),

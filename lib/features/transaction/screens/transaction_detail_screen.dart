@@ -282,12 +282,52 @@ class TransactionDetailScreen extends ConsumerWidget {
                           .when(
                             data: (category) => Column(
                               children: [
-                                _buildDetailRow(
-                                  ref.tr(context, 'category_label'),
-                                  category?.name ??
-                                      ref.tr(context, 'uncategorized'),
-                                  _getCategoryIcon(category?.iconCodePoint),
-                                ),
+                                if (category == null)
+                                  _buildDetailRow(
+                                    ref.tr(context, 'category_label'),
+                                    ref.tr(context, 'uncategorized'),
+                                    Icons.category,
+                                  )
+                                else if (category.parentId == null)
+                                  _buildDetailRow(
+                                    ref.tr(context, 'category_label'),
+                                    category.name,
+                                    _getCategoryIcon(category.iconCodePoint),
+                                  )
+                                else
+                                  ref
+                                      .watch(
+                                        categoryProvider((
+                                          categoryId: category.parentId!,
+                                          userId: userId,
+                                        )),
+                                      )
+                                      .when(
+                                        data: (parentCategory) => _buildDetailRow(
+                                          ref.tr(context, 'category_label'),
+                                          parentCategory != null
+                                              ? '${parentCategory.name} > ${category.name}'
+                                              : category.name,
+                                          _getCategoryIcon(
+                                            category.iconCodePoint,
+                                          ),
+                                        ),
+                                        loading: () => _buildDetailRow(
+                                          ref.tr(context, 'category_label'),
+                                          category.name,
+                                          _getCategoryIcon(
+                                            category.iconCodePoint,
+                                          ),
+                                        ),
+                                        error: (error, stack) =>
+                                            _buildDetailRow(
+                                              ref.tr(context, 'category_label'),
+                                              category.name,
+                                              _getCategoryIcon(
+                                                category.iconCodePoint,
+                                              ),
+                                            ),
+                                      ),
                                 const Divider(),
                               ],
                             ),

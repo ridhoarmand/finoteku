@@ -8,6 +8,11 @@ class ThousandSeparatorFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
+    // Preserve platform selection behavior when user only moves the cursor.
+    if (oldValue.text == newValue.text) {
+      return newValue;
+    }
+
     // If the new value is empty, return it as is
     if (newValue.text.isEmpty) {
       return newValue;
@@ -27,6 +32,11 @@ class ThousandSeparatorFormatter extends TextInputFormatter {
     // Format with thousand separators
     final String formatted = _formatWithThousandSeparator(digitsOnly);
 
+    // If formatter doesn't change text, keep original selection/composing state.
+    if (formatted == newValue.text) {
+      return newValue;
+    }
+
     // Calculate the new cursor position
     final int cursorOffset = _calculateCursorOffset(
       oldValue.text,
@@ -35,9 +45,11 @@ class ThousandSeparatorFormatter extends TextInputFormatter {
       newValue.selection.baseOffset,
     );
 
+    final clampedOffset = cursorOffset.clamp(0, formatted.length);
+
     return TextEditingValue(
       text: formatted,
-      selection: TextSelection.collapsed(offset: cursorOffset),
+      selection: TextSelection.collapsed(offset: clampedOffset),
     );
   }
 
@@ -64,6 +76,13 @@ class ThousandSeparatorFormatter extends TextInputFormatter {
     String formattedText,
     int originalOffset,
   ) {
+    // Extract digit-only versions to determine what changed
+    final String oldDigits = oldText.replaceAll(RegExp(r'[^\d]'), '');
+    final String newDigits = newText.replaceAll(RegExp(r'[^\d]'), '');
+
+    // Detect if this is a deletion (text got shorter) or insertion (text got longer)
+    final bool isDeletion = oldDigits.length > newDigits.length;
+
     // If cursor is at the end, keep it at the end
     if (originalOffset >= newText.length) {
       return formattedText.length;
@@ -75,17 +94,25 @@ class ThousandSeparatorFormatter extends TextInputFormatter {
         .replaceAll(RegExp(r'[^\d]'), '')
         .length;
 
+    // Special handling for deletion at the start
+    if (isDeletion && digitsBefore == 0) {
+      // Keep cursor at the very beginning
+      return 0;
+    }
+
     // Find position in formatted text that has the same number of digits before it
     int digitsCount = 0;
     for (int i = 0; i < formattedText.length; i++) {
       if (formattedText[i].contains(RegExp(r'\d'))) {
         digitsCount++;
-      }
-      if (digitsCount == digitsBefore) {
-        return i + 1;
+        // After counting the target number of digits, position after this digit
+        if (digitsCount == digitsBefore) {
+          return i + 1;
+        }
       }
     }
 
-    return formattedText.length;
+    // Fallback: return position based on digits
+    return digitsBefore == 0 ? 0 : formattedText.length;
   }
 }

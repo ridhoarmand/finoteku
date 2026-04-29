@@ -4,7 +4,9 @@ import '../../../core/localization/app_localizations.dart';
 
 class NotesSection extends ConsumerWidget {
   final TextEditingController controller;
-  const NotesSection({super.key, required this.controller});
+  final VoidCallback? onTapOutside;
+
+  const NotesSection({super.key, required this.controller, this.onTapOutside});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => Card(
@@ -20,6 +22,7 @@ class NotesSection extends ConsumerWidget {
           const SizedBox(height: 4),
           TextFormField(
             controller: controller,
+            onTapOutside: (_) => onTapOutside?.call(),
             decoration: InputDecoration(
               border: InputBorder.none,
               hintText: ref.tr(context, 'notes_hint'),

@@ -255,68 +255,56 @@ class _AddEditTransactionScreenState
                       : ref.tr(context, 'add_transaction_title')),
           ),
         ),
-        body: GestureDetector(
-          onTap: () {
-            // Dismiss keyboard when tapping outside
-            FocusScope.of(context).unfocus();
-          },
-          child: Form(
-            key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.all(2), // Reduced from 6 to 4
-              children: [
-                // Date Section
-                _buildDateSection(),
-                // Amount Section
-                _buildAmountSection(),
-                // Transfer Toggle
-                _buildTransferToggle(),
+        body: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(2), // Reduced from 6 to 4
+            children: [
+              // Date Section
+              _buildDateSection(),
+              // Amount Section
+              _buildAmountSection(),
+              // Transfer Toggle
+              _buildTransferToggle(),
 
-                ...(!_isTransfer
-                    ? [
-                        // Wallet Selection
-                        _buildWalletSection(user.id),
-                        // Category Selection
-                        _buildCategorySection(user.id),
-                      ]
-                    : [
-                        // Source wallet and destination wallet for transfer
-                        _buildWalletSection(user.id),
-                        _buildToWalletSection(user.id),
-                      ]),
+              ...(!_isTransfer
+                  ? [
+                      // Wallet Selection
+                      _buildWalletSection(user.id),
+                      // Category Selection
+                      _buildCategorySection(user.id),
+                    ]
+                  : [
+                      // Source wallet and destination wallet for transfer
+                      _buildWalletSection(user.id),
+                      _buildToWalletSection(user.id),
+                    ]),
 
-                // Notes Section
-                _buildNotesSection(),
-                // Save Button
-                FilledButton(
-                  onPressed: _isLoading ? null : _saveTransaction,
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
+              // Notes Section
+              _buildNotesSection(),
+              // Save Button
+              FilledButton(
+                onPressed: _isLoading ? null : _saveTransaction,
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
                           ),
-                        )
-                      : Text(
-                          widget.initialTransfer != null
-                              ? ref.tr(context, 'update_transfer_button')
-                              : (widget.initialTransaction != null
-                                    ? ref.tr(
-                                        context,
-                                        'update_transaction_button',
-                                      )
-                                    : ref.tr(
-                                        context,
-                                        'add_transaction_button',
-                                      )),
                         ),
-                ),
-              ],
-            ),
+                      )
+                    : Text(
+                        widget.initialTransfer != null
+                            ? ref.tr(context, 'update_transfer_button')
+                            : (widget.initialTransaction != null
+                                  ? ref.tr(context, 'update_transaction_button')
+                                  : ref.tr(context, 'add_transaction_button')),
+                      ),
+              ),
+            ],
           ),
         ),
       ),
@@ -410,7 +398,8 @@ class _AddEditTransactionScreenState
     ref: ref,
   );
 
-  Widget _buildNotesSection() => NotesSection(controller: _notesController);
+  Widget _buildNotesSection() =>
+      NotesSection(controller: _notesController, onTapOutside: _unfocus);
 
   Widget _buildTransferToggle() => Card(
     child: SwitchListTile(
@@ -795,26 +784,83 @@ class _CategorySection extends ConsumerWidget {
     return Card(
       child: Column(
         children: [
-          ListTile(
-            leading: selected != null
-                ? Icon(
-                    CategoryIconHelper.getIconFromCodePoint(
-                      selected!.iconCodePoint,
+          if (selected == null)
+            ListTile(
+              leading: const Icon(Icons.category),
+              title: Text(ref.tr(context, 'select_category_title')),
+              subtitle: Text(ref.tr(context, 'choose_transaction_category')),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () => openSheet(cats),
+            )
+          else if (selected!.parentId == null)
+            ListTile(
+              leading: Icon(
+                CategoryIconHelper.getIconFromCodePoint(
+                  selected!.iconCodePoint,
+                ),
+                color: selected!.color != null ? Color(selected!.color!) : null,
+              ),
+              title: Text(selected!.name),
+              subtitle: Text(selected!.type.name.toUpperCase()),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () => openSheet(cats),
+            )
+          else
+            ref
+                .watch(
+                  categoryProvider((
+                    categoryId: selected!.parentId!,
+                    userId: userId,
+                  )),
+                )
+                .when(
+                  data: (parentCategory) => ListTile(
+                    leading: Icon(
+                      CategoryIconHelper.getIconFromCodePoint(
+                        selected!.iconCodePoint,
+                      ),
+                      color: selected!.color != null
+                          ? Color(selected!.color!)
+                          : null,
                     ),
-                    color: selected!.color != null
-                        ? Color(selected!.color!)
-                        : null,
-                  )
-                : const Icon(Icons.category),
-            title: Text(
-              selected?.name ?? ref.tr(context, 'select_category_title'),
-            ),
-            subtitle: selected != null
-                ? Text(selected!.type.name.toUpperCase())
-                : Text(ref.tr(context, 'choose_transaction_category')),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () => openSheet(cats),
-          ),
+                    title: Text(
+                      parentCategory != null
+                          ? '${parentCategory.name} > ${selected!.name}'
+                          : selected!.name,
+                    ),
+                    subtitle: Text(selected!.type.name.toUpperCase()),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () => openSheet(cats),
+                  ),
+                  loading: () => ListTile(
+                    leading: Icon(
+                      CategoryIconHelper.getIconFromCodePoint(
+                        selected!.iconCodePoint,
+                      ),
+                      color: selected!.color != null
+                          ? Color(selected!.color!)
+                          : null,
+                    ),
+                    title: Text(selected!.name),
+                    subtitle: Text(selected!.type.name.toUpperCase()),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () => openSheet(cats),
+                  ),
+                  error: (error, stack) => ListTile(
+                    leading: Icon(
+                      CategoryIconHelper.getIconFromCodePoint(
+                        selected!.iconCodePoint,
+                      ),
+                      color: selected!.color != null
+                          ? Color(selected!.color!)
+                          : null,
+                    ),
+                    title: Text(selected!.name),
+                    subtitle: Text(selected!.type.name.toUpperCase()),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () => openSheet(cats),
+                  ),
+                ),
           if ((selected == null) && (cats.isEmpty)) const SizedBox.shrink(),
         ],
       ),
