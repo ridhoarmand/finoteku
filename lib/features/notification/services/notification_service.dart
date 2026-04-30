@@ -89,7 +89,7 @@ class NotificationService {
       );
 
       await _notifications.initialize(
-        initSettings,
+        settings: initSettings,
         onDidReceiveNotificationResponse: (NotificationResponse response) {
           debugPrint(
             '🔔 Notification clicked with payload: ${response.payload}',
@@ -278,7 +278,7 @@ class NotificationService {
         await _saveNotifications();
 
         // Cancel old notification and schedule new one
-        await _notifications.cancel(notification.notificationId);
+        await _notifications.cancel(id: notification.notificationId);
         if (notification.isEnabled) {
           await _scheduleDailyNotification(notification);
         }
@@ -291,7 +291,7 @@ class NotificationService {
   static Future<void> deleteNotification(String id) async {
     try {
       final notification = _notificationsList.firstWhere((n) => n.id == id);
-      await _notifications.cancel(notification.notificationId);
+      await _notifications.cancel(id: notification.notificationId);
 
       _notificationsList.removeWhere((n) => n.id == id);
       await _saveNotifications();
@@ -360,11 +360,11 @@ class NotificationService {
       );
 
       await _notifications.zonedSchedule(
-        notification.notificationId,
-        notification.title,
-        notification.body,
-        scheduledTime,
-        details,
+        id: notification.notificationId,
+        title: notification.title,
+        body: notification.body,
+        scheduledDate: scheduledTime,
+        notificationDetails: details,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         matchDateTimeComponents: DateTimeComponents.time,
       );
@@ -405,10 +405,10 @@ class NotificationService {
       );
 
       await _notifications.show(
-        0,
-        'Test Notification',
-        'Coba klik notifikasi ini untuk input transaksi!',
-        details,
+        id: 0,
+        title: 'Test Notification',
+        body: 'Coba klik notifikasi ini untuk input transaksi!',
+        notificationDetails: details,
         payload: 'transaction_add',
       );
       debugPrint('✅ Test notification sent');
@@ -466,14 +466,12 @@ class NotificationService {
       // Try exact scheduling first
       try {
         await _notifications.zonedSchedule(
-          998,
-          'Test Scheduled',
-          'Notifikasi terjadwal berhasil! (10 detik)',
-          scheduledTime,
-          details,
+          id: 998,
+          title: 'Test Scheduled',
+          body: 'Notifikasi terjadwal berhasil! (10 detik)',
+          scheduledDate: scheduledTime,
+          notificationDetails: details,
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          // Removed uiLocalNotificationDateInterpretation due to compilation error
-          // The plugin version resolved may treat this as optional or implicit
           payload: 'transaction_add',
         );
         debugPrint('✅ Scheduled with EXACT mode');
@@ -483,11 +481,11 @@ class NotificationService {
 
         // Fallback to inexact
         await _notifications.zonedSchedule(
-          998,
-          'Test Scheduled (Inexact)',
-          'Klik untuk input transaksi!',
-          scheduledTime,
-          details,
+          id: 998,
+          title: 'Test Scheduled (Inexact)',
+          body: 'Klik untuk input transaksi!',
+          scheduledDate: scheduledTime,
+          notificationDetails: details,
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
           payload: 'transaction_add',
         );

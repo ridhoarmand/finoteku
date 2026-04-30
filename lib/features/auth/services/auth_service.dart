@@ -148,8 +148,8 @@ class AuthService {
       final response = await _supabase.auth.updateUser(
         UserAttributes(
           data: {
-            if (fullName != null) 'full_name': fullName,
-            if (avatarUrl != null) 'avatar_url': avatarUrl,
+            'full_name': ?fullName,
+            'avatar_url': ?avatarUrl,
           },
         ),
       );

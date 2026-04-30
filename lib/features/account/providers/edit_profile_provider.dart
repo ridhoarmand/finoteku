@@ -218,7 +218,7 @@ class EditProfileNotifier extends Notifier<EditProfileState> {
           data: {
             'full_name': fullName.trim(),
             'phone': phone.trim(),
-            if (avatarUrl != null) 'avatar_url': avatarUrl,
+            'avatar_url': ?avatarUrl,
           },
         ),
       );

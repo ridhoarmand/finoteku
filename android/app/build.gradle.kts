@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "id.ridhoarmand.finoteku"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion =  "27.0.12077973"
+    ndkVersion =  "28.2.13676358"
 
     compileOptions {
     // Upgrade to Java 17 (required by newer Android Gradle Plugin & recommended by Flutter 3.22+)
