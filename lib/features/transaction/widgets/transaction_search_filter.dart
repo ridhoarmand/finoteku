@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/category.dart';
+import '../../../utils/category_icon_helper.dart';
+import '../../category/screens/category_selection_screen.dart';
 
 class TransactionSearchFilter extends ConsumerWidget {
   final TextEditingController searchController;
@@ -10,6 +12,7 @@ class TransactionSearchFilter extends ConsumerWidget {
   final bool includeChildren;
   final DateTime? startDate;
   final DateTime? endDate;
+  final String userId;
   final AsyncValue<List<Category>> categoriesAsync;
   final Function(String) onSearchChanged;
   final Function() onToggleFilters;
@@ -29,6 +32,7 @@ class TransactionSearchFilter extends ConsumerWidget {
     required this.includeChildren,
     required this.startDate,
     required this.endDate,
+    required this.userId,
     required this.categoriesAsync,
     required this.onSearchChanged,
     required this.onToggleFilters,
@@ -62,7 +66,7 @@ class TransactionSearchFilter extends ConsumerWidget {
           // Filter content (collapsible)
           if (showFilters) ...[
             const SizedBox(height: 8),
-            _buildFilterContent(theme),
+            _buildFilterContent(context, theme),
           ],
         ],
       ),
@@ -125,8 +129,7 @@ class TransactionSearchFilter extends ConsumerWidget {
   }
 
   Widget _buildFilterToggle(ThemeData theme) {
-    final hasActiveFilters =
-        selectedCategoryId != null || startDate != null || endDate != null;
+    final hasActiveFilters = selectedCategoryId != null;
 
     return SizedBox(
       height: 42,
@@ -167,9 +170,9 @@ class TransactionSearchFilter extends ConsumerWidget {
     );
   }
 
-  Widget _buildFilterContent(ThemeData theme) {
+  Widget _buildFilterContent(BuildContext context, ThemeData theme) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
@@ -193,50 +196,44 @@ class TransactionSearchFilter extends ConsumerWidget {
                 Text(
                   'Filter Transaksi',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: theme.colorScheme.onSurface,
                   ),
                 ),
                 const Spacer(),
-                TextButton(
+                OutlinedButton.icon(
                   onPressed: onResetFilters,
-                  child: Text(
-                    'Reset Semua',
-                    style: TextStyle(
-                      color: theme.colorScheme.primary,
-                      fontSize: 12,
-                    ),
+                  icon: const Icon(Icons.restart_alt, size: 13),
+                  label: const Text('Reset'),
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    minimumSize: const Size(0, 32),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-
-            // Date Range Filter
-            Builder(
-              builder: (context) => _buildDateRangeFilter(context, theme),
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
 
             // Category Filter
-            _buildCategoryFilter(theme),
-            const SizedBox(height: 16),
+            _buildCategoryFilter(context, theme),
+            const SizedBox(height: 10),
+
+            // Date Range Filter
+            _buildDateRangeFilter(context, theme),
+            const SizedBox(height: 10),
 
             // Close Button
-            Center(
-              child: TextButton.icon(
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
                 onPressed: onToggleFilters,
-                icon: const Icon(Icons.close, size: 16),
+                icon: const Icon(Icons.close, size: 15),
                 label: const Text('Tutup Filter'),
-                style: TextButton.styleFrom(
-                  foregroundColor: theme.colorScheme.onSurface.withValues(
-                    alpha: 0.7,
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(36),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
                 ),
               ),
             ),
@@ -246,108 +243,25 @@ class TransactionSearchFilter extends ConsumerWidget {
     );
   }
 
-  Widget _buildDateRangeFilter(BuildContext context, ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Rentang Tanggal:',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            // Start Date
-            Expanded(
-              child: _buildDatePicker(
-                context: context,
-                label: 'Dari Tanggal',
-                date: startDate,
-                onDateSelected: onStartDateChanged,
-                theme: theme,
-              ),
-            ),
-            const SizedBox(width: 8),
-            // End Date
-            Expanded(
-              child: _buildDatePicker(
-                context: context,
-                label: 'Sampai Tanggal',
-                date: endDate,
-                onDateSelected: onEndDateChanged,
-                theme: theme,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDatePicker({
-    required BuildContext context,
-    required String label,
-    required DateTime? date,
-    required Function(DateTime?) onDateSelected,
-    required ThemeData theme,
-  }) {
-    return InkWell(
-      onTap: () async {
-        final picked = await showDatePicker(
-          context: context,
-          initialDate: date ?? DateTime.now(),
-          firstDate: DateTime(2020),
-          lastDate: DateTime.now(),
-        );
-        onDateSelected(picked);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: theme.colorScheme.outline.withValues(alpha: 0.3),
-          ),
-          borderRadius: BorderRadius.circular(8),
-          color: theme.colorScheme.surface,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              date != null
-                  ? '${date.day}/${date.month}/${date.year}'
-                  : 'Pilih tanggal',
-              style: TextStyle(
-                fontSize: 12,
-                color: date != null
-                    ? theme.colorScheme.onSurface
-                    : theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                fontWeight: date != null ? FontWeight.w500 : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryFilter(ThemeData theme) {
+  Widget _buildCategoryFilter(BuildContext context, ThemeData theme) {
     return categoriesAsync.when(
       data: (categories) {
         if (categories.isEmpty) return const SizedBox.shrink();
+        final categoryMap = {
+          for (final category in categories) category.id: category,
+        };
+        final selectedCategory = selectedCategoryId == null
+            ? null
+            : categoryMap[selectedCategoryId!];
+        final selectedLabel = selectedCategory == null
+            ? 'Semua Kategori'
+            : _buildCategoryPath(selectedCategory, categoryMap);
+
+        final selectedIcon = selectedCategory != null
+            ? CategoryIconHelper.getIconFromCodePoint(
+                selectedCategory.iconCodePoint,
+              )
+            : Icons.category;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -355,111 +269,69 @@ class TransactionSearchFilter extends ConsumerWidget {
             Text(
               'Kategori:',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final pickedCategory = await Navigator.of(context)
+                      .push<Category>(
+                        MaterialPageRoute(
+                          builder: (context) => CategorySelectionScreen(
+                            userId: userId,
+                            title: 'Pilih Kategori Filter',
+                            selectedCategory: selectedCategory,
+                          ),
+                        ),
+                      );
+
+                  if (pickedCategory != null) {
+                    onCategoryChanged(pickedCategory.id);
+                  }
+                },
+                icon: Icon(selectedIcon, size: 15),
+                label: Text(
+                  selectedLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11),
+                ),
+                style: OutlinedButton.styleFrom(
+                  alignment: Alignment.centerLeft,
+                  minimumSize: const Size.fromHeight(36),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
             Row(
               children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: theme.colorScheme.outline.withValues(alpha: 0.3),
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                      color: theme.colorScheme.surface,
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String?>(
-                        value: selectedCategoryId,
-                        hint: Text(
-                          'Pilih Kategori',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.6,
-                            ),
-                          ),
-                        ),
-                        isExpanded: true,
-                        icon: Icon(
-                          Icons.arrow_drop_down,
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.6,
-                          ),
-                        ),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.colorScheme.onSurface,
-                        ),
-                        dropdownColor: theme.colorScheme.surface,
-                        items: [
-                          // All categories option
-                          DropdownMenuItem<String?>(
-                            value: null,
-                            child: Text(
-                              'Semua Kategori',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: theme.colorScheme.onSurface,
-                              ),
-                            ),
-                          ),
-                          // Category options
-                          ...categories.map(
-                            (category) => DropdownMenuItem<String?>(
-                              value: category.id,
-                              child: Text(
-                                category.name,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: theme.colorScheme.onSurface,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                        onChanged: onCategoryChanged,
-                      ),
-                    ),
+                OutlinedButton.icon(
+                  onPressed: selectedCategoryId != null
+                      ? () => onCategoryChanged(null)
+                      : null,
+                  icon: const Icon(Icons.clear, size: 14),
+                  label: const Text('Semua Kategori'),
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    minimumSize: const Size(0, 32),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                   ),
                 ),
-                const SizedBox(width: 8),
-                // Include Children Checkbox
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: Checkbox(
-                        value: includeChildren,
-                        onChanged: selectedCategoryId != null
-                            ? (value) => onIncludeChildrenChanged(value ?? true)
-                            : null,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Sub',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: selectedCategoryId != null
-                            ? theme.colorScheme.onSurface
-                            : theme.colorScheme.onSurface.withValues(
-                                alpha: 0.4,
-                              ),
-                      ),
-                    ),
-                  ],
+                const Spacer(),
+                FilterChip(
+                  label: const Text('Subkategori'),
+                  selected: includeChildren,
+                  onSelected: selectedCategoryId != null
+                      ? onIncludeChildrenChanged
+                      : null,
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
               ],
             ),
@@ -469,5 +341,107 @@ class TransactionSearchFilter extends ConsumerWidget {
       loading: () => const SizedBox.shrink(),
       error: (_, stackTrace) => const SizedBox.shrink(),
     );
+  }
+
+  String _buildCategoryPath(
+    Category category,
+    Map<String, Category> categoryMap,
+  ) {
+    final parts = <String>[category.name];
+    var current = category;
+
+    while (current.parentId != null) {
+      final parent = categoryMap[current.parentId!];
+      if (parent == null) break;
+      parts.add(parent.name);
+      current = parent;
+    }
+
+    return parts.reversed.join(' > ');
+  }
+
+  Widget _buildDateRangeFilter(BuildContext context, ThemeData theme) {
+    final startDateLabel = startDate != null
+        ? _formatDate(startDate!)
+        : 'Mulai';
+    final endDateLabel = endDate != null ? _formatDate(endDate!) : 'Hingga';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Tanggal:',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: startDate ?? DateTime.now(),
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime.now(),
+                  );
+                  if (picked != null) {
+                    onStartDateChanged(picked);
+                  }
+                },
+                icon: const Icon(Icons.calendar_today, size: 14),
+                label: Text(
+                  startDateLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11),
+                ),
+                style: OutlinedButton.styleFrom(
+                  alignment: Alignment.centerLeft,
+                  minimumSize: const Size.fromHeight(36),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: endDate ?? DateTime.now(),
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime.now(),
+                  );
+                  if (picked != null) {
+                    onEndDateChanged(picked);
+                  }
+                },
+                icon: const Icon(Icons.calendar_today, size: 14),
+                label: Text(
+                  endDateLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11),
+                ),
+                style: OutlinedButton.styleFrom(
+                  alignment: Alignment.centerLeft,
+                  minimumSize: const Size.fromHeight(36),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 }

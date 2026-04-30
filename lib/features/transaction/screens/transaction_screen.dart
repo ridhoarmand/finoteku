@@ -25,10 +25,10 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
   String? _selectedCategoryId; // null means "All Categories"
   bool _includeChildren =
       true; // default include children when category selected
-  DateTime? _startDate;
-  DateTime? _endDate;
   String _searchQuery = '';
   bool _showFilters = false;
+  DateTime? _startDate;
+  DateTime? _endDate;
   bool _isLoadingMore = false;
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -134,6 +134,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
               includeChildren: _includeChildren,
               startDate: _startDate,
               endDate: _endDate,
+              userId: user.id,
               categoriesAsync: categoriesAsync,
               onSearchChanged: (value) => setState(() => _searchQuery = value),
               onToggleFilters: () =>
@@ -246,13 +247,10 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     // Filter by category first if selected
     if (_selectedCategoryId != null) {
       if (_includeChildren) {
-        // Include child categories
-        final childCategoryIds = categories
-            .where((c) => c.parentId == _selectedCategoryId)
-            .map((c) => c.id)
-            .toSet();
-        // Include both parent and all children
-        final allowedIds = {_selectedCategoryId!, ...childCategoryIds};
+        final allowedIds = {
+          _selectedCategoryId!,
+          ..._getDescendantCategoryIds(categories, _selectedCategoryId!),
+        };
         filtered = filtered
             .where(
               (e) => e.categoryId != null && allowedIds.contains(e.categoryId),
@@ -266,31 +264,13 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
       }
     }
 
-    // Filter by date range if selected
-    if (_startDate != null && _endDate != null) {
-      filtered = filtered.where((e) {
-        final entryDate = e.date;
-        // Memastikan date comparison menggunakan hari penuh
-        final startDateMidnight = DateTime(
-          _startDate!.year,
-          _startDate!.month,
-          _startDate!.day,
-        );
-        final endDateMidnight = DateTime(
-          _endDate!.year,
-          _endDate!.month,
-          _endDate!.day,
-          23,
-          59,
-          59,
-          999,
-        );
-
-        return entryDate.isAfter(
-              startDateMidnight.subtract(const Duration(seconds: 1)),
-            ) &&
-            entryDate.isBefore(endDateMidnight.add(const Duration(seconds: 1)));
-      }).toList();
+    // Filter by date range if provided
+    if (_startDate != null) {
+      filtered = filtered.where((e) => e.date.isAfter(_startDate!)).toList();
+    }
+    if (_endDate != null) {
+      final endOfDay = _endDate!.add(const Duration(days: 1));
+      filtered = filtered.where((e) => e.date.isBefore(endOfDay)).toList();
     }
 
     // Then filter by search query
@@ -314,7 +294,9 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
 
       // Pencarian dalam nama kategori
       final category = e.categoryId != null ? categoryMap[e.categoryId] : null;
-      final categoryName = category?.name.toLowerCase() ?? '';
+      final categoryName = category == null
+          ? ''
+          : _buildCategoryPath(category, categoryMap).toLowerCase();
 
       // Pencarian dalam nama wallet
       final wallet = walletMap[e.walletId];
@@ -326,6 +308,42 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
           categoryName.contains(q) ||
           walletName.contains(q);
     }).toList();
+  }
+
+  Set<String> _getDescendantCategoryIds(
+    List<Category> categories,
+    String parentId,
+  ) {
+    final descendants = <String>{};
+
+    void collect(String currentParentId) {
+      for (final category in categories) {
+        if (category.parentId == currentParentId &&
+            descendants.add(category.id)) {
+          collect(category.id);
+        }
+      }
+    }
+
+    collect(parentId);
+    return descendants;
+  }
+
+  String _buildCategoryPath(
+    Category category,
+    Map<String, Category> categoryMap,
+  ) {
+    final parts = <String>[category.name];
+    var current = category;
+
+    while (current.parentId != null) {
+      final parent = categoryMap[current.parentId!];
+      if (parent == null) break;
+      parts.add(parent.name);
+      current = parent;
+    }
+
+    return parts.reversed.join(' > ');
   }
 
   Widget _buildErrorState(Object error, String userId, ThemeData theme) {
