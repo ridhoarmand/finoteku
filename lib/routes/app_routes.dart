@@ -91,6 +91,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         '/onboarding',
         '/language-selection',
         '/reset-password',
+        '/wallets/manage',
       ];
       final isPublicRoute = publicRoutes.contains(location);
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/category.dart';
 import '../../../utils/category_icon_helper.dart';
+import '../../../utils/monday_first_date_picker.dart';
 import '../../category/screens/category_selection_screen.dart';
 
 class TransactionSearchFilter extends ConsumerWidget {
@@ -383,7 +384,7 @@ class TransactionSearchFilter extends ConsumerWidget {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () async {
-                  final picked = await showDatePicker(
+                  final picked = await showMondayFirstDatePicker(
                     context: context,
                     initialDate: startDate ?? DateTime.now(),
                     firstDate: DateTime(2020),
@@ -411,7 +412,7 @@ class TransactionSearchFilter extends ConsumerWidget {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () async {
-                  final picked = await showDatePicker(
+                  final picked = await showMondayFirstDatePicker(
                     context: context,
                     initialDate: endDate ?? DateTime.now(),
                     firstDate: DateTime(2020),

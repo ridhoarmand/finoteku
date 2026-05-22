@@ -10,6 +10,7 @@ import '../../wallet/providers/wallet_providers.dart';
 import '../../../services/supabase_service.dart';
 import '../../../utils/currency_formatter.dart';
 import '../../../utils/category_icon_helper.dart';
+import '../../../utils/monday_first_date_picker.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../widgets/date_section.dart';
 import '../widgets/amount_section.dart';
@@ -431,7 +432,7 @@ class _AddEditTransactionScreenState
 
   Future<void> _selectDate() async {
     _unfocus();
-    final date = await showDatePicker(
+    final date = await showMondayFirstDatePicker(
       context: context,
       initialDate: _selectedDate,
       firstDate: DateTime(2020),

@@ -10,8 +10,13 @@ class WalletIconHelper {
     'assets/banks/bri.svg',
     'assets/banks/bsi.svg',
     'assets/banks/btn.svg',
+    'assets/banks/cimb.svg',
+    'assets/banks/jago.svg',
     'assets/banks/mandiri.svg',
-    'assets/banks/sea.svg',
+    'assets/banks/maybank.svg',
+    'assets/banks/neo.svg',
+    'assets/banks/seabank.svg',
+    'assets/banks/superbank.svg',
   ];
 
   // Available e-wallet icons
