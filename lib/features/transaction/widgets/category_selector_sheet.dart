@@ -25,6 +25,8 @@ class CategorySelectorSheet extends StatefulWidget {
 class _CategorySelectorSheetState extends State<CategorySelectorSheet>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -35,18 +37,41 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet>
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  List<Category> _filterCategories(List<Category> categories, String query) {
+    if (query.isEmpty) {
+      return categories;
+    }
+
+    final matchingCategories = categories
+        .where((cat) => cat.name.toLowerCase().contains(query))
+        .toList();
+
+    final Set<String> visibleIds = {};
+    for (final cat in matchingCategories) {
+      visibleIds.add(cat.id);
+      if (cat.parentId != null) {
+        visibleIds.add(cat.parentId!);
+      }
+    }
+
+    return categories.where((cat) => visibleIds.contains(cat.id)).toList();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final expenseCategories = widget.categories
-        .where((cat) => cat.type == CategoryType.expense)
-        .toList();
-    final incomeCategories = widget.categories
-        .where((cat) => cat.type == CategoryType.income)
-        .toList();
+    final expenseCategories = _filterCategories(
+      widget.categories.where((cat) => cat.type == CategoryType.expense).toList(),
+      _searchQuery,
+    );
+    final incomeCategories = _filterCategories(
+      widget.categories.where((cat) => cat.type == CategoryType.income).toList(),
+      _searchQuery,
+    );
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.8, // 80% of screen height
@@ -94,6 +119,40 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet>
                   text: ref.tr(context, 'income'),
                 ),
               ],
+            ),
+          ),
+
+          // Search Field
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Consumer(
+              builder: (context, ref, _) => TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: ref.tr(context, 'search_category'),
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {
+                              _searchQuery = '';
+                            });
+                          },
+                        )
+                      : null,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value.trim().toLowerCase();
+                  });
+                },
+              ),
             ),
           ),
 

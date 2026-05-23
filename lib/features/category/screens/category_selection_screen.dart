@@ -107,7 +107,7 @@ class _CategorySelectionScreenState
   }
 }
 
-class CategoryListTab extends ConsumerWidget {
+class CategoryListTab extends ConsumerStatefulWidget {
   final String userId;
   final CategoryType categoryType;
   final Category? selectedCategory;
@@ -122,13 +122,87 @@ class CategoryListTab extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CategoryListTab> createState() => _CategoryListTabState();
+}
+
+class _CategoryListTabState extends ConsumerState<CategoryListTab> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<Category> _filterCategories(List<Category> categories, String query) {
+    if (query.isEmpty) {
+      return categories;
+    }
+
+    final matchingCategories = categories
+        .where((cat) => cat.name.toLowerCase().contains(query))
+        .toList();
+
+    final Set<String> visibleIds = {};
+    for (final cat in matchingCategories) {
+      visibleIds.add(cat.id);
+      if (cat.parentId != null) {
+        visibleIds.add(cat.parentId!);
+      }
+    }
+
+    return categories.where((cat) => visibleIds.contains(cat.id)).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(
-      categoriesByTypeProvider((userId: userId, type: categoryType)),
+      categoriesByTypeProvider((userId: widget.userId, type: widget.categoryType)),
     );
 
     return categoriesAsync.when(
-      data: (categories) => _buildCategoryList(context, ref, categories),
+      data: (categories) {
+        final filteredCategories = _filterCategories(categories, _searchQuery);
+
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: ref.tr(context, 'search_category'),
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {
+                              _searchQuery = '';
+                            });
+                          },
+                        )
+                      : null,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value.trim().toLowerCase();
+                  });
+                },
+              ),
+            ),
+            Expanded(
+              child: _buildCategoryList(context, ref, filteredCategories),
+            ),
+          ],
+        );
+      },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stackTrace) => _buildErrorState(context, ref, error),
     );
@@ -214,7 +288,7 @@ class CategoryListTab extends ConsumerWidget {
     bool isLastChild = false,
   }) {
     final theme = Theme.of(context);
-    final isSelected = selectedCategory?.id == category.id;
+    final isSelected = widget.selectedCategory?.id == category.id;
 
     // Get icon from category model or use default
     IconData icon = CategoryIconHelper.getIconFromCodePoint(
@@ -222,7 +296,7 @@ class CategoryListTab extends ConsumerWidget {
     );
 
     // Use standardized color by type
-    final Color color = categoryType == CategoryType.expense
+    final Color color = widget.categoryType == CategoryType.expense
         ? Colors.red
         : Colors.green;
 
@@ -314,7 +388,7 @@ class CategoryListTab extends ConsumerWidget {
                 size: 20,
               )
             : null,
-        onTap: () => onCategorySelected(category),
+        onTap: () => widget.onCategorySelected(category),
       ),
     );
   }
@@ -325,7 +399,7 @@ class CategoryListTab extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            categoryType == CategoryType.expense
+            widget.categoryType == CategoryType.expense
                 ? Icons.trending_down
                 : Icons.trending_up,
             size: 64,
@@ -370,8 +444,8 @@ class CategoryListTab extends ConsumerWidget {
                 ElevatedButton(
                   onPressed: () => ref.refresh(
                     categoriesByTypeProvider((
-                      userId: userId,
-                      type: categoryType,
+                      userId: widget.userId,
+                      type: widget.categoryType,
                     )),
                   ),
                   child: Text(ref.tr(context, 'retry')),
