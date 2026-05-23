@@ -215,7 +215,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
           return CategoryListTile(
             category: category,
             index: index, // Pass index untuk warna yang sama dengan chart
-            // onTap: () => _showCategoryTransactions(category, reportState), // Disabled temporarily
+            onTap: () => _handleCategoryTap(category, reportState),
           );
         } else {
           // Others category
@@ -251,7 +251,131 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     );
   }
 
-  // ignore: unused_element
+  void _handleCategoryTap(CategoryReportItem category, ReportState state) async {
+    if (category.hasChildren) {
+      await _showSubcategoryDetail(category, state);
+    } else {
+      _showCategoryTransactions(category, state);
+    }
+  }
+
+  Future<void> _showSubcategoryDetail(
+    CategoryReportItem parentCategory,
+    ReportState state,
+  ) async {
+    final theme = Theme.of(context);
+    final children = parentCategory.children ?? [];
+
+    final selectedCategory = await showModalBottomSheet<CategoryReportItem>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Handle
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.outline.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Subkategori ${parentCategory.name}',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(height: 1),
+
+            // Subcategory list
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // Parent category option (Semua)
+                  CategoryListTile(
+                    category: CategoryReportItem(
+                      id: parentCategory.id,
+                      name: 'Semua ${parentCategory.name}',
+                      icon: parentCategory.icon,
+                      color: parentCategory.color,
+                      amount: parentCategory.amount,
+                      percentage: parentCategory.percentage,
+                      transactionCount: parentCategory.transactionCount,
+                    ),
+                    index: 9,
+                    onTap: () {
+                      Navigator.pop(context, parentCategory);
+                    },
+                  ),
+
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Row(
+                      children: [
+                        Text(
+                          'Rincian Subkategori',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        Expanded(child: Divider(indent: 8)),
+                      ],
+                    ),
+                  ),
+
+                  ...children.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final child = entry.value;
+                    return CategoryListTile(
+                      category: child,
+                      index: index % 10,
+                      onTap: () {
+                        Navigator.pop(context, child);
+                      },
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (selectedCategory != null && mounted) {
+      await Future.delayed(Duration.zero);
+      _showCategoryTransactions(selectedCategory, state);
+    }
+  }
+
   Future<void> _showCategoryTransactions(
     CategoryReportItem category,
     ReportState state,
@@ -259,11 +383,17 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     final currentUserId = ref.read(currentUserIdProvider);
     if (currentUserId == null) return;
 
-    // Show loading
+    final startTime = DateTime.now();
+
+    // Show loading dialog safely
+    BuildContext? dialogContext;
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => const Center(child: CircularProgressIndicator()),
+      builder: (ctx) {
+        dialogContext = ctx;
+        return const Center(child: CircularProgressIndicator());
+      },
     );
 
     try {
@@ -276,7 +406,25 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
           );
 
       if (!mounted) return;
-      Navigator.of(context).pop(); // Close loading
+
+      // Ensure the dialog has been open for at least 150ms to avoid transition conflicts
+      final elapsed = DateTime.now().difference(startTime).inMilliseconds;
+      if (elapsed < 150) {
+        await Future.delayed(Duration(milliseconds: 150 - elapsed));
+      }
+
+      if (!mounted) return;
+
+      if (dialogContext != null && dialogContext!.mounted) {
+        Navigator.of(dialogContext!).pop();
+      } else {
+        Navigator.of(context).pop();
+      }
+
+      // Wait a brief moment for the dialog's closing transition to settle
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      if (!mounted) return;
 
       // Show sheet
       await showModalBottomSheet(
@@ -305,7 +453,14 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      Navigator.of(context).pop(); // Close loading on error
+
+      // Ensure dialog is closed on error
+      if (dialogContext != null && dialogContext!.mounted) {
+        Navigator.of(dialogContext!).pop();
+      } else {
+        Navigator.of(context).pop();
+      }
+
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Gagal memuat transaksi: $e')));
@@ -374,6 +529,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                   return CategoryListTile(
                     category: category,
                     index: (index + 6) % 10, // Continue color pattern
+                    onTap: () => _handleCategoryTap(category, state),
                   );
                 },
               ),

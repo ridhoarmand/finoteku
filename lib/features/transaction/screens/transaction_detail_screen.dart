@@ -12,13 +12,20 @@ import 'add_edit_transaction_screen.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../models/category.dart';
 
-class TransactionDetailScreen extends ConsumerWidget {
+class TransactionDetailScreen extends ConsumerStatefulWidget {
   final String transactionId;
 
   const TransactionDetailScreen({super.key, required this.transactionId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TransactionDetailScreen> createState() => _TransactionDetailScreenState();
+}
+
+class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScreen> {
+  bool _hasChanges = false;
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider).value;
 
     if (user == null) {
@@ -27,9 +34,25 @@ class TransactionDetailScreen extends ConsumerWidget {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(title: Text(ref.tr(context, 'transaction_details_title'))),
-      body: _buildTransactionBody(context, ref, user.id),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (context.mounted) {
+          Navigator.of(context).pop(_hasChanges);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(ref.tr(context, 'transaction_details_title')),
+          leading: BackButton(
+            onPressed: () {
+              Navigator.of(context).pop(_hasChanges);
+            },
+          ),
+        ),
+        body: _buildTransactionBody(context, ref, user.id),
+      ),
     );
   }
 
@@ -39,7 +62,7 @@ class TransactionDetailScreen extends ConsumerWidget {
     String userId,
   ) {
     final txAsync = ref.watch(
-      transactionProvider((transactionId: transactionId, userId: userId)),
+      transactionProvider((transactionId: widget.transactionId, userId: userId)),
     );
     return txAsync.when(
       data: (tx) {
@@ -53,7 +76,7 @@ class TransactionDetailScreen extends ConsumerWidget {
         context,
         ref,
         () => ref.invalidate(
-          transactionProvider((transactionId: transactionId, userId: userId)),
+          transactionProvider((transactionId: widget.transactionId, userId: userId)),
         ),
       ),
     );
@@ -510,6 +533,9 @@ class TransactionDetailScreen extends ConsumerWidget {
 
     // If transaction was updated, refresh the data
     if (result == true && context.mounted) {
+      setState(() {
+        _hasChanges = true;
+      });
       // Invalidate providers to ensure fresh data
       ref.invalidate(transactionProvider);
       ref.invalidate(filteredTransactionsProvider);
@@ -575,7 +601,7 @@ class TransactionDetailScreen extends ConsumerWidget {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.of(context).pop(); // Go back to previous screen
+        Navigator.of(context).pop(true); // Go back to previous screen
       }
     } catch (e) {
       if (context.mounted) {

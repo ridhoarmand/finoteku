@@ -40,10 +40,6 @@ class CategoryListTile extends StatelessWidget {
       margin: const EdgeInsets.only(
         bottom: 4.0,
       ), // Jarak antar item lebih kecil
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12.0,
-        vertical: 8.0, // Padding vertikal lebih kecil
-      ),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(8),
@@ -51,89 +47,107 @@ class CategoryListTile extends StatelessWidget {
           color: theme.colorScheme.outline.withValues(alpha: 0.1),
         ),
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Column(
-          children: [
-            // Header row
-            Row(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12.0,
+              vertical: 8.0, // Padding vertikal lebih kecil
+            ),
+            child: Column(
               children: [
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: category.color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Icon(category.icon, color: category.color, size: 20),
-                ),
-
-                const SizedBox(width: 10),
-
-                // Category name dengan jumlah transaksi di bawahnya
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        category.name,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          fontSize: 14,
-                          color: theme.colorScheme.onSurface,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                // Header row
+                Row(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: category.color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
                       ),
-                      Text(
-                        '${category.transactionCount} transaksi',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.6,
+                      child: Icon(category.icon, color: category.color, size: 20),
+                    ),
+
+                    const SizedBox(width: 10),
+
+                    // Category name dengan jumlah transaksi di bawahnya
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            category.name,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
+                          Text(
+                            '${category.transactionCount} transaksi',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.6,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Full amount (tidak diringkas)
+                    Text(
+                      CurrencyFormatter.format(category.amount, 'IDR'),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    if (onTap != null) ...[
+                      const SizedBox(width: 6),
+                      Icon(
+                        Icons.chevron_right,
+                        size: 16,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                       ),
                     ],
-                  ),
+                  ],
                 ),
-
-                // Full amount (tidak diringkas)
-                Text(
-                  CurrencyFormatter.format(category.amount, 'IDR'),
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-              ],
-            ),
-            // Progress bar sebagai subtitle
-            Row(
-              children: [
-                Expanded(
-                  child: LinearProgressIndicator(
-                    value: category.percentage / 100,
-                    backgroundColor: theme.colorScheme.outline.withValues(
-                      alpha: 0.2,
+                const SizedBox(height: 8),
+                // Progress bar sebagai subtitle
+                Row(
+                  children: [
+                    Expanded(
+                      child: LinearProgressIndicator(
+                        value: category.percentage / 100,
+                        backgroundColor: theme.colorScheme.outline.withValues(
+                          alpha: 0.2,
+                        ),
+                        valueColor: AlwaysStoppedAnimation<Color>(displayColor),
+                        minHeight: 3,
+                      ),
                     ),
-                    valueColor: AlwaysStoppedAnimation<Color>(displayColor),
-                    minHeight: 3,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '${category.percentage.toStringAsFixed(1)}%',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${category.percentage.toStringAsFixed(1)}%',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
