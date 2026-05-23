@@ -977,7 +977,7 @@ CREATE TABLE IF NOT EXISTS "public"."pending_bot_transactions" (
     "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
     "user_id" "uuid",
     "wallet_id" "uuid" NOT NULL,
-    "category_id" "uuid" NOT NULL,
+    "category_id" "uuid",
     "amount" numeric NOT NULL,
     "notes" "text",
     "date" "date" NOT NULL,
@@ -986,7 +986,8 @@ CREATE TABLE IF NOT EXISTS "public"."pending_bot_transactions" (
     "type" "text" DEFAULT 'expense'::"text",
     "platform" "text" DEFAULT 'telegram'::"text" NOT NULL,
     "platform_identifier" "text",
-    "original_input" "text"
+    "original_input" "text",
+    "to_wallet_id" "uuid" REFERENCES "public"."wallets"("id")
 );
 
 
@@ -1007,11 +1008,16 @@ CREATE OR REPLACE VIEW "public"."pending_transactions_view" WITH ("security_invo
     "p"."platform",
     "p"."platform_identifier",
     "p"."original_input",
+    "p"."to_wallet_id",
     "w"."name" AS "wallet_name",
-    "c"."name" AS "category_name"
-   FROM (("public"."pending_bot_transactions" "p"
+    "c"."name" AS "category_name",
+    "c2"."name" AS "category_parent",
+    "tw"."name" AS "to_wallet_name"
+   FROM (((("public"."pending_bot_transactions" "p"
      LEFT JOIN "public"."wallets" "w" ON (("p"."wallet_id" = "w"."id")))
-     LEFT JOIN "public"."categories" "c" ON (("p"."category_id" = "c"."id")));
+     LEFT JOIN "public"."categories" "c" ON (("p"."category_id" = "c"."id")))
+     LEFT JOIN "public"."categories" "c2" ON (("c"."parent_id" = "c2"."id")))
+     LEFT JOIN "public"."wallets" "tw" ON (("p"."to_wallet_id" = "tw"."id")));
 
 
 ALTER VIEW "public"."pending_transactions_view" OWNER TO "postgres";

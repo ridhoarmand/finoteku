@@ -270,7 +270,9 @@ serve(async (req: Request) => {
     // 5. Proses dengan Agent via HTTP Invoke in BACKGROUND
     const backgroundTask = (async () => {
       try {
-        const { data: response, error: invokeError } = await supabase.functions.invoke<AgentResponse>('finoteku-agent', {
+        const { data: response, error: invokeError } = await supabase.functions.invoke<
+          AgentResponse
+        >('finoteku-agent', {
           body: { input: agentInput },
         });
 
@@ -288,7 +290,9 @@ serve(async (req: Request) => {
     })();
 
     // Execute in background to prevent webhook timeout
-    const _global = globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: Promise<void>) => void } };
+    const _global = globalThis as unknown as {
+      EdgeRuntime?: { waitUntil: (p: Promise<void>) => void };
+    };
     if (_global.EdgeRuntime?.waitUntil) {
       _global.EdgeRuntime.waitUntil(backgroundTask);
     }
@@ -352,7 +356,14 @@ async function sendAgentResponse(
       id: action.action,
     }));
 
-    await sendWhatsAppMessageWithButtons(GOWA_URL, phone, waContent, buttons, GOWA_DEVICE_ID, GOWA_BASIC_AUTH);
+    await sendWhatsAppMessageWithButtons(
+      GOWA_URL,
+      phone,
+      waContent,
+      buttons,
+      GOWA_DEVICE_ID,
+      GOWA_BASIC_AUTH,
+    );
   } else {
     await send(phone, waContent);
   }

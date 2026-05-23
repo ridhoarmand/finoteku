@@ -6,7 +6,8 @@
 
 import type { AIProvider, GenerateOptions } from './base.ts';
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent';
+const GEMINI_API_URL =
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent';
 
 export class GeminiProvider implements AIProvider {
   readonly name = 'gemini';
@@ -23,14 +24,20 @@ export class GeminiProvider implements AIProvider {
   private logTokenUsage(data: any, caller: string): void {
     if (data?.usageMetadata) {
       const { promptTokenCount, candidatesTokenCount, totalTokenCount } = data.usageMetadata;
-      console.log(`[Gemini ${caller}] Token - Prompt: ${promptTokenCount}, Response: ${candidatesTokenCount}, Total: ${totalTokenCount}`);
+      console.log(
+        `[Gemini ${caller}] Token - Prompt: ${promptTokenCount}, Response: ${candidatesTokenCount}, Total: ${totalTokenCount}`,
+      );
     }
   }
 
   /**
    * Build request body dengan systemInstruction terpisah untuk efisiensi token
    */
-  private buildRequestBody(prompt: string, options?: GenerateOptions, extraConfig?: Record<string, unknown>) {
+  private buildRequestBody(
+    prompt: string,
+    options?: GenerateOptions,
+    extraConfig?: Record<string, unknown>,
+  ) {
     // deno-lint-ignore no-explicit-any
     const body: Record<string, any> = {
       contents: [{ parts: [{ text: prompt }] }],
@@ -172,7 +179,8 @@ export class GeminiProvider implements AIProvider {
         system_instruction: {
           parts: [
             {
-              text: 'Transkripsi audio ke teks Bahasa Indonesia. Output HANYA teks hasil transkripsi. Angka nominal uang tulis dalam format angka (contoh: "lima puluh ribu" → "50000").',
+              text:
+                'Transkripsi audio ke teks Bahasa Indonesia. Output HANYA teks hasil transkripsi. Angka nominal uang tulis dalam format angka (contoh: "lima puluh ribu" → "50000").',
             },
           ],
         },

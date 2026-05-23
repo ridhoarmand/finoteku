@@ -88,13 +88,19 @@ serve(async (req: Request) => {
       // Handle HTTP invoke in background
       const backgroundTask = (async () => {
         try {
-          const { data: response, error: invokeError } = await supabase.functions.invoke<AgentResponse>('finoteku-agent', {
+          const { data: response, error: invokeError } = await supabase.functions.invoke<
+            AgentResponse
+          >('finoteku-agent', {
             body: { input: agentInput },
           });
 
           if (invokeError || !response) {
             console.error('Invoke Agent Error:', invokeError);
-            await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '⚠️ Maaf, agent sedang mengalami gangguan.');
+            await sendTelegramMessage(
+              TELEGRAM_BOT_TOKEN,
+              chatId,
+              '⚠️ Maaf, agent sedang mengalami gangguan.',
+            );
             return;
           }
 
@@ -105,7 +111,9 @@ serve(async (req: Request) => {
       })();
 
       // Execute in background to prevent webhook timeout
-      const _global = globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: Promise<void>) => void } };
+      const _global = globalThis as unknown as {
+        EdgeRuntime?: { waitUntil: (p: Promise<void>) => void };
+      };
       if (_global.EdgeRuntime?.waitUntil) {
         _global.EdgeRuntime.waitUntil(backgroundTask);
       }
@@ -223,7 +231,11 @@ serve(async (req: Request) => {
 
     if (userError) {
       console.error('Error lookup user:', userError);
-      await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '⚠️ Maaf, terjadi kesalahan saat mencari data akun Anda.');
+      await sendTelegramMessage(
+        TELEGRAM_BOT_TOKEN,
+        chatId,
+        '⚠️ Maaf, terjadi kesalahan saat mencari data akun Anda.',
+      );
       return new Response('OK', { status: 200 });
     }
 
@@ -378,13 +390,19 @@ serve(async (req: Request) => {
     // 6. Proses dengan Agent via HTTP Invoke in BACKGROUND
     const backgroundTask = (async () => {
       try {
-        const { data: response, error: invokeError } = await supabase.functions.invoke<AgentResponse>('finoteku-agent', {
+        const { data: response, error: invokeError } = await supabase.functions.invoke<
+          AgentResponse
+        >('finoteku-agent', {
           body: { input: agentInput },
         });
 
         if (invokeError || !response) {
           console.error('Invoke Agent Error:', invokeError);
-          await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '⚠️ Maaf, agent sedang mengalami gangguan.');
+          await sendTelegramMessage(
+            TELEGRAM_BOT_TOKEN,
+            chatId,
+            '⚠️ Maaf, agent sedang mengalami gangguan.',
+          );
           return;
         }
 
@@ -396,7 +414,9 @@ serve(async (req: Request) => {
     })();
 
     // Execute in background to prevent webhook timeout
-    const _global = globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: Promise<void>) => void } };
+    const _global = globalThis as unknown as {
+      EdgeRuntime?: { waitUntil: (p: Promise<void>) => void };
+    };
     if (_global.EdgeRuntime?.waitUntil) {
       _global.EdgeRuntime.waitUntil(backgroundTask);
     }

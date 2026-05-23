@@ -13,7 +13,8 @@ import { resolveWalletByHint } from '../../data/wallets.ts';
 import type { AIProvider } from '../../providers/base.ts';
 
 // System prompt statis — dikirim via systemInstruction
-const UPDATE_SYSTEM_PROMPT = `You are a transaction update parser. Extract field changes from user input to update a pending transaction.
+const UPDATE_SYSTEM_PROMPT =
+  `You are a transaction update parser. Extract field changes from user input to update a pending transaction.
 You must return a valid JSON object with ONLY the fields that are changed.
 
 Valid keys: "amount" (number), "category" (string), "wallet" (string), "to_wallet" (string), "dateOffset" (number), "notes" (string).
@@ -82,7 +83,10 @@ export class PendingHandlerTool extends BaseTool {
   /**
    * Konfirmasi dan simpan transaksi
    */
-  private async confirmTransaction(pending: pendingData.PendingTransaction, userContext: UserContext): Promise<ToolResult> {
+  private async confirmTransaction(
+    pending: pendingData.PendingTransaction,
+    userContext: UserContext,
+  ): Promise<ToolResult> {
     console.log('[PendingHandler] Confirming transaction:', {
       type: pending.type,
       category_id: pending.category_id,
@@ -94,17 +98,14 @@ export class PendingHandlerTool extends BaseTool {
     let error: Error | null = null;
 
     if (pending.type === 'transfer') {
-      const expenseCat = userContext.categories.find((c) => c.type === 'expense' && (c.name.includes('Transfer') || c.name.includes('Lainnya')))?.id || pending.category_id;
-      const incomeCat = userContext.categories.find((c) => c.type === 'income' && (c.name.includes('Transfer') || c.name.includes('Lainnya')))?.id || pending.category_id;
-
       const result = await transactionData.createTransfer(this.supabase, pending.user_id, {
         amount: pending.amount,
         date: pending.date,
         notes: pending.notes,
         from_wallet_id: pending.wallet_id,
         to_wallet_id: pending.to_wallet_id!,
-        expense_category_id: expenseCat,
-        income_category_id: incomeCat,
+        expense_category_id: null,
+        income_category_id: null,
       });
       error = result.error;
     } else {
@@ -131,7 +132,10 @@ export class PendingHandlerTool extends BaseTool {
   /**
    * Batalkan transaksi pending
    */
-  private async cancelTransaction(userId: string, platform: pendingData.Platform): Promise<ToolResult> {
+  private async cancelTransaction(
+    userId: string,
+    platform: pendingData.Platform,
+  ): Promise<ToolResult> {
     await pendingData.remove(this.supabase, userId, platform);
     return this.success({}, '❌ Transaksi dibatalkan.');
   }
@@ -139,7 +143,11 @@ export class PendingHandlerTool extends BaseTool {
   /**
    * Smart Update - Use AI (generateJSON) to parse update request
    */
-  private async updatePending(userContext: UserContext, platform: pendingData.Platform, params: ToolParams): Promise<ToolResult> {
+  private async updatePending(
+    userContext: UserContext,
+    platform: pendingData.Platform,
+    params: ToolParams,
+  ): Promise<ToolResult> {
     const text = params.text as string;
     console.log('[PendingHandler] Smart update request:', text);
 
@@ -152,11 +160,18 @@ export class PendingHandlerTool extends BaseTool {
     if (this.ai) {
       console.log('[PendingHandler] Using AI for smart update');
 
-      const expenseCats = userContext.categories.filter((c) => c.type === 'expense').map((c) => c.name);
-      const incomeCats = userContext.categories.filter((c) => c.type === 'income').map((c) => c.name);
+      const expenseCats = userContext.categories.filter((c) => c.type === 'expense').map((c) =>
+        c.name
+      );
+      const incomeCats = userContext.categories.filter((c) => c.type === 'income').map((c) =>
+        c.name
+      );
 
       // User prompt — hanya data dinamis
-      const prompt = `Current: type=${current.type}, amount=${current.amount}, category=${current.category_name}, wallet=${current.wallet_name}${current.to_wallet_name ? `, toWallet=${current.to_wallet_name}` : ''}, notes="${current.notes}"
+      const prompt =
+        `Current: type=${current.type}, amount=${current.amount}, category=${current.category_name}, wallet=${current.wallet_name}${
+          current.to_wallet_name ? `, toWallet=${current.to_wallet_name}` : ''
+        }, notes="${current.notes}"
 
 Update: "${text}"
 
@@ -177,8 +192,14 @@ Wallets: ${userContext.wallets.map((w) => w.name).join(', ')}`;
         if (parsed.notes) updates.notes = parsed.notes;
 
         if (parsed.category) {
-          let cat = userContext.categories.find((c) => c.name.toLowerCase() === parsed.category!.toLowerCase() && c.type === current.type);
-          if (!cat) cat = userContext.categories.find((c) => c.name.toLowerCase() === parsed.category!.toLowerCase());
+          let cat = userContext.categories.find((c) =>
+            c.name.toLowerCase() === parsed.category!.toLowerCase() && c.type === current.type
+          );
+          if (!cat) {
+            cat = userContext.categories.find((c) =>
+              c.name.toLowerCase() === parsed.category!.toLowerCase()
+            );
+          }
           if (cat) updates.category_id = cat.id;
         }
 
@@ -202,7 +223,10 @@ Wallets: ${userContext.wallets.map((w) => w.name).join(', ')}`;
           console.log('[PendingHandler] Applying AI updates:', updates);
           await pendingData.update(this.supabase, userContext.userId, platform, updates);
           const updated = await pendingData.get(this.supabase, userContext.userId, platform);
-          return this.success({ ...updated, needsConfirmation: true }, this.formatPreview(updated!));
+          return this.success(
+            { ...updated, needsConfirmation: true },
+            this.formatPreview(updated!),
+          );
         }
       } catch (err) {
         console.error('[PendingHandler] AI Update failed:', err);
@@ -237,7 +261,11 @@ Wallets: ${userContext.wallets.map((w) => w.name).join(', ')}`;
       return this.success({ ...updated, needsConfirmation: true }, this.formatPreview(updated!));
     }
 
-    return this.error('Tidak dapat memahami perubahan.\n\n' + 'Contoh:\n' + '• "Kategori Makanan, keterangan Nasi Bakar"\n' + '• "BCA", "Gopay"\n' + '• "update kemarin"');
+    return this.error(
+      'Tidak dapat memahami perubahan.\n\n' + 'Contoh:\n' +
+        '• "Kategori Makanan, keterangan Nasi Bakar"\n' + '• "BCA", "Gopay"\n' +
+        '• "update kemarin"',
+    );
   }
 
   /**

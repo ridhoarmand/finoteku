@@ -31,8 +31,8 @@ export interface TransferInput {
   notes: string;
   from_wallet_id: string;
   to_wallet_id: string;
-  expense_category_id: string;
-  income_category_id: string;
+  expense_category_id: string | null;
+  income_category_id: string | null;
 }
 
 /**
