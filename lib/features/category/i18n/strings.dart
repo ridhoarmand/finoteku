@@ -4,6 +4,7 @@
 const Map<String, String> categoryStringsEn = {
   'manage_categories': 'Manage Categories',
   'manage_categories_sub': 'Organize your transaction categories',
+  'search_category': 'Search category...',
   // Category form fields & actions
   'select_icon': 'Select Icon',
   'parent_category': 'Parent Category',
@@ -61,6 +62,7 @@ const Map<String, String> categoryStringsEn = {
 const Map<String, String> categoryStringsId = {
   'manage_categories': 'Kelola Kategori',
   'manage_categories_sub': 'Atur kategori transaksi Anda',
+  'search_category': 'Cari kategori...',
   // Category form fields & actions
   'select_icon': 'Pilih Ikon',
   'parent_category': 'Kategori Induk',

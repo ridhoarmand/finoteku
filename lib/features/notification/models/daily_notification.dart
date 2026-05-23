@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
+import 'package:finoteku/core/utils/uuid_util.dart';
 
 class DailyNotification {
   final String id;
@@ -21,7 +21,7 @@ class DailyNotification {
   // Factory untuk membuat notifikasi default
   factory DailyNotification.defaultReminder() {
     return DailyNotification(
-      id: const Uuid().v4(),
+      id: generateUuidV4(),
       title: 'Pengingat Harian',
       body: 'Jangan lupa catat pengeluaran kamu ya! 💰',
       time: const TimeOfDay(hour: 19, minute: 0),

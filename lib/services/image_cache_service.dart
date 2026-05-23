@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Provider untuk ImageCacheService
@@ -67,13 +66,18 @@ class ImageCacheService {
         print('📥 Downloading image: $imageUrl');
       }
 
-      final response = await http.get(Uri.parse(imageUrl));
-      if (response.statusCode != 200) {
+      final client = HttpClient();
+      final request = await client.getUrl(Uri.parse(imageUrl));
+      final response = await request.close();
+
+      if (response.statusCode != HttpStatus.ok) {
         if (kDebugMode) {
           print('❌ Failed to download image: ${response.statusCode}');
         }
         return null;
       }
+
+      final bytes = await consolidateHttpClientResponseBytes(response);
 
       // Get cache directory
       final cacheDir = await _getCacheDirectory();
@@ -84,7 +88,7 @@ class ImageCacheService {
       final cacheFile = File('${cacheDir.path}/$fileName');
       
       // Write image data to file
-      await cacheFile.writeAsBytes(response.bodyBytes);
+      await cacheFile.writeAsBytes(bytes);
 
       // Save cache info to preferences
       final prefs = await SharedPreferences.getInstance();

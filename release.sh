@@ -9,6 +9,13 @@ if [[ "$1" == "--no-tree-shake-icons" ]]; then
     echo "🌲 Building WITHOUT icon tree-shaking..."
 fi
 
+# Check if .env file exists (required for compile-time environment variables)
+if [ ! -f .env ]; then
+    echo "❌ Error: .env file not found!"
+    echo "💡 Copy .env.example to .env and fill in your credentials first."
+    exit 1
+fi
+
 # Clean previous builds
 echo "🧹 Cleaning previous builds..."
 #flutter clean
@@ -20,9 +27,9 @@ flutter pub get
 # Build release APK with size optimization
 echo "🔨 Building optimized release APK..."
 if [ "$NO_TREE_SHAKE" = true ]; then
-    flutter build apk --release --no-tree-shake-icons --shrink --split-per-abi --obfuscate --split-debug-info=build/debug-info
+    flutter build apk --release --no-tree-shake-icons --shrink --split-per-abi --obfuscate --split-debug-info=build/debug-info --dart-define-from-file=.env
 else
-    flutter build apk --release --tree-shake-icons --shrink --split-per-abi --obfuscate --split-debug-info=build/debug-info
+    flutter build apk --release --tree-shake-icons --shrink --split-per-abi --obfuscate --split-debug-info=build/debug-info --dart-define-from-file=.env
 fi
 
 # Check if build was successful

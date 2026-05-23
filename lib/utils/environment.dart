@@ -1,47 +1,42 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Environment configuration loader for Finoteku
-/// Handles loading configuration from .env file
+/// Handles loading configuration from compile-time variables
 class Environment {
-  /// Initialize environment variables from .env file
+  /// Initialize environment variables (no-op since using compile-time definitions)
   static Future<void> initialize() async {
-    try {
-      await dotenv.load(fileName: ".env");
-      if (kDebugMode) {
-        debugPrint('✅ Environment variables loaded from .env');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('⚠️ Could not load .env file: $e');
-        debugPrint('📝 Using default values for development');
-      }
-      // In release mode, silently continue with fallback values
+    if (kDebugMode) {
+      debugPrint('✅ Compile-time environment variables loaded');
     }
   }
 
   // Supabase Configuration
-  static String get supabaseUrl {
-    return dotenv.env['SUPABASE_URL'] ?? 'https://your-project-id.supabase.co';
-  }
+  static const String supabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: 'https://your-project-id.supabase.co',
+  );
 
-  static String get supabaseAnonKey {
-    return dotenv.env['SUPABASE_ANON_KEY'] ?? 'your-anon-key-here';
-  }
+  static const String supabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue: 'your-anon-key-here',
+  );
 
   /// Validate that required environment variables are set
   static bool validateConfig() {
-    final requiredVars = ['SUPABASE_URL', 'SUPABASE_ANON_KEY'];
-
     bool isValid = true;
-    for (final varName in requiredVars) {
-      final value = dotenv.env[varName];
-      if (value == null || value.isEmpty || value.contains('your-')) {
-        if (kDebugMode) {
-          debugPrint('❌ Missing or invalid environment variable: $varName');
-        }
-        isValid = false;
+
+    if (supabaseUrl == 'https://your-project-id.supabase.co' || supabaseUrl.isEmpty) {
+      if (kDebugMode) {
+        debugPrint('❌ Missing or invalid environment variable: SUPABASE_URL');
       }
+      isValid = false;
+    }
+
+    if (supabaseAnonKey == 'your-anon-key-here' || supabaseAnonKey.isEmpty) {
+      if (kDebugMode) {
+        debugPrint('❌ Missing or invalid environment variable: SUPABASE_ANON_KEY');
+      }
+      isValid = false;
     }
 
     // Check URL format

@@ -51,8 +51,8 @@ flutter pub get
 # Copy .env.example to .env dan isi dengan credentials Supabase Anda
 cp .env.example .env
 
-# 4. Run the app
-flutter run
+# 4. Run the app (menggunakan compile-time environment variables)
+flutter run --dart-define-from-file=.env
 ```
 
 ### Supabase Setup
