@@ -11,12 +11,14 @@ export interface UserContext {
   categories: categoryData.CategoryRecord[];
   wallets: walletData.WalletRecord[];
   parserMode: 'server_key' | 'user_key';
+  aiProvider: string;
   aiApiKey: string | null;
 }
 
 export interface BotLink {
   user_id: string;
   parser_mode: string;
+  ai_provider: string;
   ai_api_key: string | null;
 }
 
@@ -28,10 +30,10 @@ export async function getContext(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<UserContext | null> {
-  const [categoriesResult, walletsResult, botLinkResult] = await Promise.all([
+  const [categoriesResult, walletsResult, userResult] = await Promise.all([
     categoryData.getAll(supabase, userId),
     walletData.getBalances(supabase, userId),
-    supabase.from('bot_links').select('parser_mode, ai_api_key').eq('user_id', userId).single(),
+    supabase.from('users').select('parser_mode, ai_provider, ai_api_key').eq('id', userId).single(),
   ]);
 
   if (!categoriesResult.data && !walletsResult.data) {
@@ -42,8 +44,9 @@ export async function getContext(
     userId,
     categories: categoriesResult.data || [],
     wallets: walletsResult.data || [],
-    parserMode: (botLinkResult.data?.parser_mode as UserContext['parserMode']) || 'regex',
-    aiApiKey: botLinkResult.data?.ai_api_key || null,
+    parserMode: (userResult.data?.parser_mode as UserContext['parserMode']) || 'regex',
+    aiProvider: userResult.data?.ai_provider || 'none',
+    aiApiKey: userResult.data?.ai_api_key || null,
   };
 }
 

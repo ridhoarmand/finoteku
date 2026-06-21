@@ -1,14 +1,9 @@
-/**
- * Finance Agent
- * Orchestrator utama yang menghubungkan semua komponen
- * Mengelola AI providers, tools, dan data layer
- */
-
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { ReasoningEngine } from './reasoning.ts';
 import { AgentExecutor } from './executor.ts';
 import { AIProviderRegistry } from './providers/base.ts';
 import { GeminiProvider } from './providers/gemini.ts';
+import { DynamicAIProvider } from './providers/dynamic.ts';
 import { ToolRegistry } from './tools/core/index.ts';
 
 // Parser Tools
@@ -34,6 +29,7 @@ export class FinanceAgent {
   private executor: AgentExecutor;
   private supabase: SupabaseClient;
   private providers: AIProviderRegistry;
+  private ai: DynamicAIProvider;
 
   constructor(config: AgentConfig) {
     this.supabase = config.supabase as SupabaseClient;
@@ -46,17 +42,20 @@ export class FinanceAgent {
     }
 
     // Ambil default AI provider
-    const ai = geminiKey ? this.providers.get('gemini') : undefined;
+    const defaultGemini = geminiKey ? this.providers.get('gemini') : undefined;
+
+    // Setup Dynamic AI Provider
+    this.ai = new DynamicAIProvider(defaultGemini!);
 
     // Inisialisasi Tools
     const tools = new ToolRegistry();
 
     // Transaction Parser Tool (AI-first)
-    tools.register(new TransactionParserTool(this.supabase, ai));
+    tools.register(new TransactionParserTool(this.supabase, this.ai));
 
     // Input processing
-    tools.register(new ImageScannerTool(ai!));
-    tools.register(new SpeechToTextTool(ai!));
+    tools.register(new ImageScannerTool(this.ai));
+    tools.register(new SpeechToTextTool(this.ai));
 
     // Query tools - untuk menjawab pertanyaan keuangan
     tools.register(new BalanceTool(this.supabase));
@@ -66,14 +65,14 @@ export class FinanceAgent {
     tools.register(new HistoryTool(this.supabase));
 
     // Smart Q&A tools - untuk pertanyaan flexibel dengan AI
-    tools.register(new DataQueryTool(this.supabase, ai));
-    tools.register(new WebSearchTool(ai));
+    tools.register(new DataQueryTool(this.supabase, this.ai));
+    tools.register(new WebSearchTool(this.ai));
 
     // Handler untuk konfirmasi, pembatalan, dan update transaksi
-    tools.register(new PendingHandlerTool(this.supabase, ai));
+    tools.register(new PendingHandlerTool(this.supabase, this.ai));
 
     // Setup Reasoning Engine dan Executor
-    const reasoning = new ReasoningEngine(ai!);
+    const reasoning = new ReasoningEngine(this.ai);
     this.executor = new AgentExecutor(reasoning, tools, this.supabase);
   }
 
@@ -95,6 +94,9 @@ export class FinanceAgent {
         content: '⚠️ Akun belum terhubung. Silakan hubungkan melalui aplikasi.',
       };
     }
+
+    // Atur context user di dynamic provider sebelum eksekusi
+    this.ai.setUserContext(userContext);
 
     // Cek apakah ada transaksi pending yang menunggu konfirmasi
     const platform = (input.platform as pendingData.Platform) || 'telegram';

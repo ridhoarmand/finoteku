@@ -280,7 +280,7 @@ serve(async (req: Request) => {
         content: encode(fileBuffer),
         caption: message.caption || '',
         mimeType: 'image/jpeg',
-        userId: telegramId.toString(),
+        userId,
         conversationId: chatId.toString(),
         platform: 'telegram',
       };
