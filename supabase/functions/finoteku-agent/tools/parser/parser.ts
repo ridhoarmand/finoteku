@@ -27,6 +27,7 @@ interface ParsedAIResponse {
   type: 'income' | 'expense' | 'transfer';
   amount: number;
   category?: string;
+  parentCategory?: string;
   wallet: string;
   toWallet?: string;
   dateOffset: number;
@@ -121,10 +122,10 @@ Input: "${text}"
 Type Hint: ${typeHint} (prioritize this type if set)
 
 Expense Categories:
-${expenseCats.map((c) => `- ${c.name}`).join('\n')}
+${expenseCats.map((c) => `- ${c.parent_name ? `${c.parent_name} > ${c.name}` : c.name}`).join('\n')}
 
 Income Categories:
-${incomeCats.map((c) => `- ${c.name}`).join('\n')}
+${incomeCats.map((c) => `- ${c.parent_name ? `${c.parent_name} > ${c.name}` : c.name}`).join('\n')}
 
 Wallets:
 ${userContext.wallets.map((w) => `- ${w.name}`).join('\n')}`;
@@ -143,7 +144,7 @@ ${userContext.wallets.map((w) => `- ${w.name}`).join('\n')}`;
       });
     }
 
-    systemPrompt += `\n\nCRITICAL FOR CATEGORY: Return ONLY the exact Category name itself (e.g. "Jajan/Camilan" or "Makanan"). Do NOT append parent category name or brackets in the "category" field.`;
+    systemPrompt += `\n\nCRITICAL FOR CATEGORY: Return "category" (the child category name, e.g. "Jajan") and optionally "parentCategory" (the parent category name if specified, e.g. "Kencan" or "Makan & Minum").`;
     systemPrompt += `\n\nCRITICAL: You MUST respond ONLY with the raw JSON object. Do NOT include any reasoning, explanation, or extra text before or after the JSON.`;
 
     try {
@@ -166,7 +167,7 @@ ${userContext.wallets.map((w) => `- ${w.name}`).join('\n')}`;
       // SMART category validation for non-transfer transactions
       let category: CategoryRecord | null = null;
       if (!isTransfer) {
-        category = resolveCategoryByHint(userContext.categories, parsed.category, parsed.type);
+        category = resolveCategoryByHint(userContext.categories, parsed.category, parsed.type, parsed.parentCategory);
 
         if (!category) {
           console.error('[TransactionParser] Category not found:', parsed.category);
@@ -281,33 +282,64 @@ ${userContext.wallets.map((w) => `- ${w.name}`).join('\n')}`;
 
 /**
  * Smart Category Resolver
- * Cleans parent category brackets, strips whitespace, and handles alias/part matching
+ * Cleans parent category brackets, strips whitespace, and handles hierarchy & alias/part matching
  */
-function resolveCategoryByHint(
+export function resolveCategoryByHint(
   categories: CategoryRecord[],
   rawCategoryHint?: string,
   targetType?: string,
+  rawParentHint?: string,
 ): CategoryRecord | null {
   if (!rawCategoryHint) return null;
 
-  // Clean raw hint: "Jajan/Camilan [Makan & Minum]" -> "Jajan/Camilan"
-  const cleanHint = rawCategoryHint.replace(/\s*\[.*\]/g, '').trim().toLowerCase();
+  let cleanName = rawCategoryHint;
+  let detectedParent = rawParentHint;
 
-  // 1. Exact name + type match
+  // Handle combined "Parent > Child" or "Child [Parent]" strings
+  if (rawCategoryHint.includes('>')) {
+    const parts = rawCategoryHint.split('>');
+    detectedParent = parts[0].trim();
+    cleanName = parts[1].trim();
+  } else if (rawCategoryHint.includes('[')) {
+    const match = rawCategoryHint.match(/^(.*?)\s*\[(.*?)\]$/);
+    if (match) {
+      cleanName = match[1].trim();
+      detectedParent = match[2].replace(/^Parent:\s*/i, '').trim();
+    }
+  }
+
+  cleanName = cleanName.trim().toLowerCase();
+  const cleanParent = detectedParent ? detectedParent.trim().toLowerCase() : null;
+
+  // 1. Exact match on BOTH category name AND parent name
+  if (cleanParent) {
+    const parentMatch = categories.find((c: CategoryRecord) => {
+      const cName = c.name.toLowerCase();
+      const nameMatch =
+        cName === cleanName ||
+        cName.split('/').map((p: string) => p.trim()).includes(cleanName);
+      const pMatch = c.parent_name && c.parent_name.toLowerCase() === cleanParent;
+      const typeMatch = targetType ? c.type === targetType : true;
+      return nameMatch && pMatch && typeMatch;
+    });
+    if (parentMatch) return parentMatch;
+  }
+
+  // 2. Exact name + type match
   let match = categories.find(
-    (c: CategoryRecord) => c.name.toLowerCase() === cleanHint && (targetType ? c.type === targetType : true),
+    (c: CategoryRecord) => c.name.toLowerCase() === cleanName && (targetType ? c.type === targetType : true),
   );
   if (match) return match;
 
-  // 2. Exact name match ignoring type
-  match = categories.find((c: CategoryRecord) => c.name.toLowerCase() === cleanHint);
+  // 3. Exact name match ignoring type
+  match = categories.find((c: CategoryRecord) => c.name.toLowerCase() === cleanName);
   if (match) return match;
 
-  // 3. Substring / slash-part match (e.g. "Jajan" matches "Jajan/Camilan")
+  // 4. Substring / slash-part match (e.g. "Jajan" matches "Jajan/Camilan")
   match = categories.find((c: CategoryRecord) => {
     const cName = c.name.toLowerCase();
     const parts = cName.split('/').map((p: string) => p.trim());
-    return parts.some((p: string) => cleanHint.includes(p) || p.includes(cleanHint));
+    return parts.some((p: string) => cleanName.includes(p) || p.includes(cleanName));
   });
 
   return match || null;

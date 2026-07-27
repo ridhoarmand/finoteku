@@ -12,25 +12,28 @@ import * as transactionData from '../../data/transactions.ts';
 import { resolveWalletByHint } from '../../data/wallets.ts';
 import type { AIProvider } from '../../providers/base.ts';
 
+import { resolveCategoryByHint } from '../parser/parser.ts';
+
 // System prompt statis — dikirim via systemInstruction
 const UPDATE_SYSTEM_PROMPT =
   `You are a transaction update parser. Extract field changes from user input to update a pending transaction.
 You must return a valid JSON object with ONLY the fields that are changed.
 
-Valid keys: "amount" (number), "category" (string), "wallet" (string), "to_wallet" (string), "dateOffset" (number), "notes" (string).
+Valid keys: "amount" (number), "category" (string), "parentCategory" (string), "wallet" (string), "to_wallet" (string), "dateOffset" (number), "notes" (string).
 
 EXAMPLES:
 "keterangan Makanan Nasi Bakar" -> {"notes": "Makanan Nasi Bakar"}
 "BCA dan Gopay" -> {"wallet": "BCA", "to_wallet": "Gopay"}
 "update kemarin" -> {"dateOffset": -1}
 "nominalnya 50rb aja" -> {"amount": 50000}
-"Ubah kategori Makanan" -> {"category": "Makanan"}
+"Ubah kategori Kencan Jajan" -> {"category": "Jajan", "parentCategory": "Kencan"}
 
 Do NOT translate keys. Do NOT return markdown formatting. ONLY return raw JSON object.`;
 
 interface UpdateParsed {
   amount?: number;
   category?: string;
+  parentCategory?: string;
   wallet?: string;
   to_wallet?: string;
   notes?: string;
@@ -161,10 +164,10 @@ export class PendingHandlerTool extends BaseTool {
       console.log('[PendingHandler] Using AI for smart update');
 
       const expenseCats = userContext.categories.filter((c) => c.type === 'expense').map((c) =>
-        c.name
+        c.parent_name ? `${c.parent_name} > ${c.name}` : c.name
       );
       const incomeCats = userContext.categories.filter((c) => c.type === 'income').map((c) =>
-        c.name
+        c.parent_name ? `${c.parent_name} > ${c.name}` : c.name
       );
 
       // User prompt — hanya data dinamis
@@ -192,14 +195,12 @@ Wallets: ${userContext.wallets.map((w) => w.name).join(', ')}`;
         if (parsed.notes) updates.notes = parsed.notes;
 
         if (parsed.category) {
-          let cat = userContext.categories.find((c) =>
-            c.name.toLowerCase() === parsed.category!.toLowerCase() && c.type === current.type
+          const cat = resolveCategoryByHint(
+            userContext.categories,
+            parsed.category,
+            current.type,
+            parsed.parentCategory,
           );
-          if (!cat) {
-            cat = userContext.categories.find((c) =>
-              c.name.toLowerCase() === parsed.category!.toLowerCase()
-            );
-          }
           if (cat) updates.category_id = cat.id;
         }
 
