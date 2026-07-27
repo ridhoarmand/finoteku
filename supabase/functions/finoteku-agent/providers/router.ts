@@ -147,25 +147,7 @@ export class RouterAIProvider implements AIProvider {
       throw new Error('Tidak ada respons JSON dari 9Router provider');
     }
 
-    const firstBrace = content.indexOf('{');
-    const lastBrace = content.lastIndexOf('}');
-    let jsonString = content;
-
-    if (firstBrace !== -1 && lastBrace > firstBrace) {
-      jsonString = content.substring(firstBrace, lastBrace + 1);
-    } else if (firstBrace !== -1) {
-      jsonString = content.substring(firstBrace).replace(/```json\n?|\n?```/g, '').trim();
-      if ((jsonString.match(/"/g) || []).length % 2 !== 0) {
-        jsonString += '"';
-      }
-      if (!jsonString.endsWith('}')) {
-        jsonString += '}';
-      }
-    } else {
-      jsonString = content.replace(/```json\n?|\n?```/g, '').trim();
-    }
-
-    return JSON.parse(jsonString) as T;
+    return cleanAndFixJson<T>(content);
   }
 
   /**
@@ -237,5 +219,59 @@ export class RouterAIProvider implements AIProvider {
     return this.generateText(
       'Transkripsikan pesan suara pengguna untuk pencatatan transaksi.'
     );
+  }
+}
+
+/**
+ * Robust JSON Sanitizer & Auto-Repairer
+ * Fixes common JSON anomalies outputted by LLMs:
+ * 1. Strips markdown fences (```json ... ```)
+ * 2. Extracts substring between first '{' and last '}'
+ * 3. Removes trailing commas before closing braces/brackets
+ * 4. Fixes single quotes to double quotes for keys/strings if needed
+ * 5. Removes single-line or multi-line JS comments
+ * 6. Auto-closes unclosed quotes/braces if truncated
+ */
+export function cleanAndFixJson<T>(content: string): T {
+  let jsonString = content;
+
+  // Extract JSON object if CoT or preamble surrounds it
+  const firstBrace = jsonString.indexOf('{');
+  const lastBrace = jsonString.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    jsonString = jsonString.substring(firstBrace, lastBrace + 1);
+  } else if (firstBrace !== -1) {
+    jsonString = jsonString.substring(firstBrace);
+  }
+
+  // Strip markdown code fences
+  jsonString = jsonString.replace(/```json\s*|\s*```/gi, '').trim();
+
+  // Strip JavaScript comments (// ... and /* ... */)
+  jsonString = jsonString.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
+
+  // Remove trailing commas before } or ]
+  jsonString = jsonString.replace(/,\s*([}\]])/g, '$1');
+
+  // Auto-close unclosed quote if truncated
+  const quoteCount = (jsonString.match(/"/g) || []).length;
+  if (quoteCount % 2 !== 0) {
+    jsonString += '"';
+  }
+
+  // Auto-close unclosed brace if truncated
+  if (!jsonString.trim().endsWith('}')) {
+    jsonString += '}';
+  }
+
+  try {
+    return JSON.parse(jsonString) as T;
+  } catch (_e) {
+    // Fallback: try replacing unquoted keys or single quotes
+    let repaired = jsonString
+      .replace(/'/g, '"')
+      .replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":')
+      .replace(/,\s*([}\]])/g, '$1');
+    return JSON.parse(repaired) as T;
   }
 }

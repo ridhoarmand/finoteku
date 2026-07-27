@@ -5,6 +5,7 @@
  */
 
 import type { AIProvider, GenerateOptions } from './base.ts';
+import { cleanAndFixJson } from './router.ts';
 
 const GEMINI_API_URL =
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent';
@@ -115,8 +116,7 @@ export class GeminiProvider implements AIProvider {
     }
 
     const rawText = data.candidates[0].content.parts[0].text;
-    const jsonStr = rawText.replace(/```json\n?|\n?```/g, '').trim();
-    return JSON.parse(jsonStr) as T;
+    return cleanAndFixJson<T>(rawText);
   }
 
   /**

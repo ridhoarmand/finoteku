@@ -5,6 +5,7 @@
  */
 
 import type { AIProvider, GenerateOptions } from './base.ts';
+import { cleanAndFixJson } from './router.ts';
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const DEFAULT_MODEL = 'google/gemini-2.5-flash:free';
@@ -87,8 +88,7 @@ export class OpenRouterProvider implements AIProvider {
     }
 
     const rawText = data.choices?.[0]?.message?.content || '';
-    const jsonStr = rawText.replace(/```json\n?|\n?```/g, '').trim();
-    return JSON.parse(jsonStr) as T;
+    return cleanAndFixJson<T>(rawText);
   }
 
   async parseImage(base64Image: string, prompt: string): Promise<string> {
