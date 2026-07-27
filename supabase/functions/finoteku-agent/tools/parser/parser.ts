@@ -112,18 +112,34 @@ ${incomeCats.map((c) => `- ${c.name}${c.parent_name ? ` [${c.parent_name}]` : ''
 Wallets:
 ${userContext.wallets.map((w) => `- ${w.name}`).join('\n')}`;
 
+    // Build dynamic system prompt with user custom instructions & few-shot examples
+    let systemPrompt = PARSER_SYSTEM_PROMPT;
+
+    if (userContext.agentTraining?.systemInstructions && userContext.agentTraining.systemInstructions.length > 0) {
+      systemPrompt += `\n\nUser Custom Guidelines (Follow strictly):\n${userContext.agentTraining.systemInstructions.map((ins, i) => `${i + 1}. ${ins}`).join('\n')}`;
+    }
+
+    if (userContext.agentTraining?.fewShotExamples && userContext.agentTraining.fewShotExamples.length > 0) {
+      systemPrompt += `\n\nUser Few-Shot Training Examples (Follow these examples for category/wallet/notes mapping):`;
+      userContext.agentTraining.fewShotExamples.forEach((ex, i) => {
+        systemPrompt += `\nExample ${i + 1}: Input: "${ex.sampleInput}" -> Return: ${JSON.stringify(ex.expectedOutput)}`;
+      });
+    }
+
     try {
       const parsed = await this.ai!.generateJSON<ParsedAIResponse>(prompt, {
-        systemPrompt: PARSER_SYSTEM_PROMPT,
-        maxTokens: 200,
+        systemPrompt,
+        maxTokens: 300,
         temperature: 0.1,
       });
 
       console.log('[TransactionParser] AI parsed:', parsed);
 
-      if (!parsed.amount || !parsed.wallet || parsed.dateOffset === undefined) {
+      if (!parsed.amount || !parsed.wallet) {
         throw new Error('AI response missing required fields');
       }
+
+      const dateOffset = parsed.dateOffset ?? 0;
 
       const isTransfer = parsed.type === 'transfer';
 
@@ -158,7 +174,7 @@ ${userContext.wallets.map((w) => `- ${w.name}`).join('\n')}`;
         walletHint: wallet.name,
         toWalletHint: toWallet?.name || undefined,
         notes: parsed.notes || 'Transaksi',
-        dateOffset: Number(parsed.dateOffset),
+        dateOffset: Number(dateOffset),
         _aiParsed: true,
       };
 

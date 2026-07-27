@@ -1977,8 +1977,40 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUN
 
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "postgres";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
+-- ==========================================
+-- Agent Training & Few-Shot Examples Schema
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS "public"."agent_training" (
+    "id" uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    "user_id" uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    "training_type" text NOT NULL CHECK (training_type IN ('system_instruction', 'few_shot_example')),
+    "sample_input" text,
+    "expected_output" jsonb,
+    "instruction_text" text,
+    "is_active" boolean DEFAULT true,
+    "created_at" timestamp with time zone DEFAULT now(),
+    "updated_at" timestamp with time zone DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS "idx_agent_training_user" ON "public"."agent_training" ("user_id", "training_type");
+
+CREATE OR REPLACE TRIGGER "update_agent_training_updated_at"
+BEFORE UPDATE ON "public"."agent_training"
+FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
+
+ALTER TABLE "public"."agent_training" ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users manage own agent training" ON "public"."agent_training"
+    FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Service role full access on agent_training" ON "public"."agent_training"
+    FOR ALL USING (auth.role() = 'service_role');
+
+GRANT ALL ON TABLE "public"."agent_training" TO "anon";
+GRANT ALL ON TABLE "public"."agent_training" TO "authenticated";
+GRANT ALL ON TABLE "public"."agent_training" TO "service_role";
+
 
 
 

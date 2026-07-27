@@ -5,6 +5,7 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import * as categoryData from './categories.ts';
 import * as walletData from './wallets.ts';
+import * as trainingData from './training.ts';
 
 export interface UserContext {
   userId: string;
@@ -12,6 +13,7 @@ export interface UserContext {
   wallets: walletData.WalletRecord[];
   parserMode: 'server_key' | 'user_key';
   aiApiKey: string | null;
+  agentTraining?: trainingData.AgentTrainingContext;
 }
 
 export interface BotLink {
@@ -22,16 +24,17 @@ export interface BotLink {
 
 /**
  * Ambil konteks lengkap user untuk pemrosesan agent
- * Termasuk: kategori, wallet, dan preferensi parsing
+ * Termasuk: kategori, wallet, preferensi, dan instruksi/contoh pelatihan agent
  */
 export async function getContext(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<UserContext | null> {
-  const [categoriesResult, walletsResult, botLinkResult] = await Promise.all([
+  const [categoriesResult, walletsResult, botLinkResult, trainingResult] = await Promise.all([
     categoryData.getAll(supabase, userId),
     walletData.getBalances(supabase, userId),
     supabase.from('bot_links').select('parser_mode, ai_api_key').eq('user_id', userId).single(),
+    trainingData.getAgentTraining(supabase, userId),
   ]);
 
   if (!categoriesResult.data && !walletsResult.data) {
@@ -42,8 +45,9 @@ export async function getContext(
     userId,
     categories: categoriesResult.data || [],
     wallets: walletsResult.data || [],
-    parserMode: (botLinkResult.data?.parser_mode as UserContext['parserMode']) || 'regex',
+    parserMode: (botLinkResult.data?.parser_mode as UserContext['parserMode']) || 'server_key',
     aiApiKey: botLinkResult.data?.ai_api_key || null,
+    agentTraining: trainingResult,
   };
 }
 
