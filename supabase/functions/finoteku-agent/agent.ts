@@ -8,7 +8,7 @@ import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { ReasoningEngine } from './reasoning.ts';
 import { AgentExecutor } from './executor.ts';
 import { AIProviderRegistry } from './providers/base.ts';
-import { GeminiProvider } from './providers/gemini.ts';
+import { RouterAIProvider } from './providers/router.ts';
 import { ToolRegistry } from './tools/core/index.ts';
 
 // Parser Tools
@@ -40,13 +40,18 @@ export class FinanceAgent {
 
     // Inisialisasi AI Providers
     this.providers = new AIProviderRegistry();
-    const geminiKey = Deno.env.get('GEMINI_API_KEY');
-    if (geminiKey) {
-      this.providers.register(new GeminiProvider(geminiKey));
-    }
+
+    // Register 9Router AI Provider (Server AI)
+    const routerBaseUrl = Deno.env.get('AI_BASE_URL') || 'https://9router.idho.eu.org/v1';
+    const routerApiKey = Deno.env.get('AI_API_KEY') || 'sk-a13d362cb2cdd8ca-m70jyx-556be01a';
+    const routerModel = Deno.env.get('AI_MODEL') || 'my-combo';
+
+    const routerProvider = new RouterAIProvider(routerBaseUrl, routerApiKey, routerModel);
+    this.providers.register(routerProvider);
+    this.providers.setDefault('9router');
 
     // Ambil default AI provider
-    const ai = geminiKey ? this.providers.get('gemini') : undefined;
+    const ai = this.providers.get('9router');
 
     // Inisialisasi Tools
     const tools = new ToolRegistry();

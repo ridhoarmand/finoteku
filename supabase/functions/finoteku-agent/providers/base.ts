@@ -39,7 +39,7 @@ export interface AIProvider {
  */
 export class AIProviderRegistry {
   private providers: Map<string, AIProvider> = new Map();
-  private defaultProviderName: string = 'gemini';
+  private defaultProviderName: string = '9router';
 
   register(provider: AIProvider): void {
     this.providers.set(provider.name, provider);

@@ -45,7 +45,7 @@ serve(async (req: Request) => {
     // Initialize Agent
     const agent = new FinanceAgent({
       supabase,
-      defaultProvider: 'gemini',
+      defaultProvider: '9router',
     });
 
     // Process input
