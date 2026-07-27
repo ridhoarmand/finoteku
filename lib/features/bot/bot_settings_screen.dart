@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/bot_link.dart';
+import '../../services/agent_training_service.dart';
 import '../../services/supabase_service.dart';
 import '../../services/user_service.dart';
-import 'bot_link_service.dart';
+import '../../utils/environment.dart';
+import 'agent_training_screen.dart';
 import 'bot_provider.dart';
-
-// Ganti sesuai nomor Whatsapp bot Finoteku yang online
-const String waBotNumber = "6285156897928"; // Placeholder, can be changed later
 
 /// Bot Settings Screen - Configure Telegram, WhatsApp and Parser Mode
 class BotSettingsScreen extends ConsumerStatefulWidget {
@@ -21,19 +19,6 @@ class BotSettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
-  final _apiKeyController = TextEditingController();
-  ParserMode _selectedParserMode = ParserMode.serverKey;
-  AIProvider _selectedAIProvider = AIProvider.gemini;
-  bool _showApiKey = false;
-  bool _isSaving = false;
-  bool _isEditing = false;
-  bool _hasInitialized = false;
-
-  @override
-  void dispose() {
-    _apiKeyController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,8 +49,6 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
     BotLink? telegramBotLink,
     BotLink? whatsappBotLink,
   ) {
-    final userProfileAsync = ref.watch(userProfileProvider);
-
     return RefreshIndicator(
       onRefresh: () async {
         // Invalidate providers to reload data
@@ -86,23 +69,8 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
 
           const SizedBox(height: 24),
 
-          // Parser Configuration (ALWAYS show - stored in users table)
-          userProfileAsync.when(
-            loading: () => const Card(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-            ),
-            error: (e, _) => Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text('Error loading settings: $e'),
-              ),
-            ),
-            data: (userProfile) =>
-                _buildParserConfigCard(context, theme, userProfile),
-          ),
+          // Agent Training & Few-Shot Customization
+          _buildAgentTrainingCard(context, theme),
         ],
       ),
     );
@@ -194,31 +162,8 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
     );
   }
 
-  Widget _buildParserConfigCard(
-    BuildContext context,
-    ThemeData theme,
-    Map<String, dynamic>? userProfile,
-  ) {
-    // Initialize state from user profile on first build only
-    if (!_hasInitialized && userProfile != null) {
-      _hasInitialized = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {
-            _selectedParserMode = ParserMode.fromValue(
-              userProfile['parser_mode'] as String? ?? 'server_key',
-            );
-            _selectedAIProvider = AIProvider.fromValue(
-              userProfile['ai_provider'] as String? ?? 'none',
-            );
-          });
-        }
-      });
-    }
-
-    final hasApiKey =
-        userProfile?['ai_api_key'] != null &&
-        (userProfile!['ai_api_key'] as String).isNotEmpty;
+  Widget _buildAgentTrainingCard(BuildContext context, ThemeData theme) {
+    final trainingAsync = ref.watch(agentTrainingListProvider);
 
     return Card(
       child: Padding(
@@ -235,7 +180,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
-                    Icons.auto_awesome,
+                    Icons.psychology,
                     color: theme.colorScheme.primary,
                     size: 24,
                   ),
@@ -246,13 +191,13 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Mode Parser',
+                        'Instruksi & Contoh Chat',
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        'Pilih cara parsing transaksi',
+                        'Latih dan arahkan gaya AI dengan instruksi & contoh chat Anda',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: Colors.grey,
                         ),
@@ -263,266 +208,53 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
               ],
             ),
             const SizedBox(height: 16),
+            trainingAsync.when(
+              loading: () => const SizedBox(),
+              error: (e, _) => const SizedBox(),
+              data: (trainingList) {
+                final instructions = trainingList.where((i) => i.isInstruction && i.isActive).length;
+                final examples = trainingList.where((i) => i.isFewShot && i.isActive).length;
 
-            // Parser mode selection (exclude regex)
-            ...ParserMode.values
-                .where((mode) => mode != ParserMode.regex)
-                .map((mode) => _buildParserModeOption(theme, mode)),
-
-            // Show AI provider and API key input only for user_key mode
-            if (_selectedParserMode == ParserMode.userKey) ...[
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 16),
-
-              // AI Provider dropdown
-              DropdownButtonFormField<AIProvider>(
-                initialValue: _selectedAIProvider,
-                decoration: const InputDecoration(
-                  labelText: 'AI Provider',
-                  border: OutlineInputBorder(),
-                ),
-                items: AIProvider.values.map((provider) {
-                  return DropdownMenuItem(
-                    value: provider,
-                    child: Text(provider.displayName),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedAIProvider = value ?? AIProvider.gemini;
-                  });
-                },
-              ),
-
-              const SizedBox(height: 16),
-
-              // API Key status or input
-              if (hasApiKey && !_isEditing)
-                _buildApiKeyStatus(theme, userProfile)
-              else
-                _buildApiKeyInput(theme),
-            ],
-
-            const SizedBox(height: 16),
-
-            // Info box based on selected mode
-            _buildInfoBox(theme),
-
-            const SizedBox(height: 16),
-
-            // Save button
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _isSaving ? null : _saveConfig,
-                child: _isSaving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Simpan'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildParserModeOption(ThemeData theme, ParserMode mode) {
-    final isSelected = _selectedParserMode == mode;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            _selectedParserMode = mode;
-            if (mode != ParserMode.userKey) {
-              _isEditing = false;
-            }
-          });
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: isSelected
-                  ? theme.colorScheme.primary
-                  : Colors.grey.shade300,
-              width: isSelected ? 2 : 1,
-            ),
-            borderRadius: BorderRadius.circular(12),
-            color: isSelected
-                ? theme.colorScheme.primary.withValues(alpha: 0.05)
-                : null,
-          ),
-          child: Row(
-            children: [
-              Icon(
-                isSelected
-                    ? Icons.radio_button_checked
-                    : Icons.radio_button_off,
-                color: isSelected ? theme.colorScheme.primary : Colors.grey,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      mode.displayName,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
-                    ),
-                    Text(
-                      mode.description,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildApiKeyStatus(ThemeData theme, Map<String, dynamic> userProfile) {
-    final apiKey = userProfile['ai_api_key'] as String? ?? '';
-    final maskedKey = apiKey.length <= 8
-        ? '••••••••'
-        : '${apiKey.substring(0, 4)}••••${apiKey.substring(apiKey.length - 4)}';
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.green.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.green.shade200),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.check_circle, color: Colors.green, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'API Key tersimpan',
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ),
-                Text(
-                  maskedKey,
-                  style: TextStyle(
-                    color: Colors.green.shade700,
-                    fontFamily: 'monospace',
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle_outline, color: theme.colorScheme.primary, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '$instructions Instruksi & $examples Contoh Chat Aktif',
+                          style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _isEditing = true;
-                _apiKeyController.clear();
-              });
-            },
-            child: const Text('Ubah'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildApiKeyInput(ThemeData theme) {
-    return TextFormField(
-      controller: _apiKeyController,
-      obscureText: !_showApiKey,
-      decoration: InputDecoration(
-        labelText: 'API Key',
-        border: const OutlineInputBorder(),
-        helperText: _getApiKeyHelperText(),
-        suffixIcon: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: Icon(_showApiKey ? Icons.visibility_off : Icons.visibility),
-              onPressed: () => setState(() => _showApiKey = !_showApiKey),
-            ),
-            IconButton(
-              icon: const Icon(Icons.content_paste),
-              onPressed: () async {
-                final data = await Clipboard.getData('text/plain');
-                if (data?.text != null) {
-                  _apiKeyController.text = data!.text!;
-                }
+                );
               },
             ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const AgentTrainingScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.tune),
+                label: const Text('Atur Instruksi & Contoh Chat'),
+              ),
+            ),
           ],
         ),
       ),
     );
-  }
-
-  Widget _buildInfoBox(ThemeData theme) {
-    String info;
-    IconData icon;
-    Color color;
-
-    switch (_selectedParserMode) {
-      case ParserMode.serverKey:
-        info = 'Parsing dengan AI menggunakan server. Akurasi ~95%. Gratis!';
-        icon = Icons.cloud;
-        color = Colors.blue;
-      case ParserMode.userKey:
-        info = 'Parsing dengan AI menggunakan API key Anda. Akurasi ~95%.';
-        icon = Icons.key;
-        color = theme.colorScheme.primary;
-      case ParserMode.regex:
-        // Shouldn't reach here since regex is filtered out
-        info = 'Mode tidak tersedia';
-        icon = Icons.error;
-        color = Colors.grey;
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: color),
-          const SizedBox(width: 8),
-          Expanded(child: Text(info, style: theme.textTheme.bodySmall)),
-        ],
-      ),
-    );
-  }
-
-  String _getApiKeyHelperText() {
-    switch (_selectedAIProvider) {
-      case AIProvider.gemini:
-        return 'Dapatkan dari aistudio.google.com atau GCP Console';
-      case AIProvider.openai:
-        return 'Dapatkan dari platform.openai.com';
-    }
   }
 
   Future<void> _openTelegramBot() async {
@@ -603,7 +335,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
 
     // 3. Konversi menjadi URI skema whatsapp
     final Uri whatsappUri = Uri.parse(
-      "https://wa.me/$waBotNumber?text=${Uri.encodeComponent(message)}",
+      "https://wa.me/${Environment.waBotNumber}?text=${Uri.encodeComponent(message)}",
     );
 
     // 4. Buka aplikasi WhatsApp
@@ -744,52 +476,5 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
         ),
       ),
     );
-  }
-
-  Future<void> _saveConfig() async {
-    setState(() => _isSaving = true);
-
-    try {
-      String? apiKey;
-      String aiProvider = 'none';
-
-      if (_selectedParserMode == ParserMode.userKey) {
-        apiKey = _apiKeyController.text.isNotEmpty
-            ? _apiKeyController.text
-            : null;
-        aiProvider = _selectedAIProvider.value;
-      }
-
-      await ref
-          .read(botLinkServiceProvider)
-          .updateParserConfig(
-            parserMode: _selectedParserMode.value,
-            aiProvider: aiProvider,
-            aiApiKey: apiKey,
-          );
-
-      // Refresh user profile to reflect new settings
-      ref.invalidate(userProfileProvider);
-
-      setState(() {
-        _isEditing = false;
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Pengaturan disimpan')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Gagal menyimpan: $e')));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
-      }
-    }
   }
 }
