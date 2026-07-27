@@ -7,6 +7,7 @@
 import type { AIProvider, GenerateOptions } from './base.ts';
 import { GeminiProvider } from './gemini.ts';
 import { OpenRouterProvider } from './openrouter.ts';
+import { RouterAIProvider } from './router.ts';
 import type { UserContext } from '../data/users.ts';
 
 export class DynamicAIProvider implements AIProvider {
@@ -42,6 +43,8 @@ export class DynamicAIProvider implements AIProvider {
         return new OpenRouterProvider(apiKey);
       } else if (providerType === 'gemini') {
         return new GeminiProvider(apiKey);
+      } else if (providerType === '9router' || providerType === 'router9') {
+        return new RouterAIProvider(undefined, apiKey);
       }
     }
 
