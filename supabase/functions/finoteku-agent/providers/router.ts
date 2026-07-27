@@ -238,10 +238,36 @@ export function cleanAndFixJson<T>(content: string): T {
   // Extract JSON object if CoT or preamble surrounds it
   const firstBrace = jsonString.indexOf('{');
   const lastBrace = jsonString.lastIndexOf('}');
+
   if (firstBrace !== -1 && lastBrace > firstBrace) {
     jsonString = jsonString.substring(firstBrace, lastBrace + 1);
   } else if (firstBrace !== -1) {
     jsonString = jsonString.substring(firstBrace);
+  } else {
+    // Fallback: If no '{' is found, try extracting key-value pairs from reasoning CoT text
+    const extractedObj: Record<string, any> = {};
+    const amountMatch = content.match(/amount["'\s:]+(\d[\d._]*)/i);
+    if (amountMatch) {
+      extractedObj.amount = parseInt(amountMatch[1].replace(/[._]/g, ''), 10);
+    }
+    const catMatch = content.match(/category["'\s:]+([^\n,.]+)/i);
+    if (catMatch) extractedObj.category = catMatch[1].trim();
+
+    const walletMatch = content.match(/wallet["'\s:]+([^\n,.]+)/i);
+    if (walletMatch) extractedObj.wallet = walletMatch[1].trim();
+
+    const notesMatch = content.match(/notes["'\s:]+([^\n,.]+)/i);
+    if (notesMatch) extractedObj.notes = notesMatch[1].trim();
+
+    const typeMatch = content.match(/type["'\s:]+(expense|income|transfer)/i);
+    if (typeMatch) extractedObj.type = typeMatch[1].toLowerCase();
+
+    if (extractedObj.amount && (extractedObj.wallet || extractedObj.category)) {
+      console.log('[cleanAndFixJson] Extracted structured data from CoT reasoning text:', extractedObj);
+      return extractedObj as T;
+    }
+
+    throw new Error(`Output AI tidak mengandung JSON valid: "${content.substring(0, 120)}..."`);
   }
 
   // Strip markdown code fences

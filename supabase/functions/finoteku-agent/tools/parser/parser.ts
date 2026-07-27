@@ -150,7 +150,7 @@ ${userContext.wallets.map((w) => `- ${w.name}`).join('\n')}`;
     try {
       const parsed = await this.ai!.generateJSON<ParsedAIResponse>(prompt, {
         systemPrompt,
-        maxTokens: 1024,
+        maxTokens: 2048,
         temperature: 0.1,
       });
 
