@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/agent_training_model.dart';
 import '../../services/agent_training_service.dart';
+import '../../services/supabase_service.dart';
+import '../category/providers/category_providers.dart';
+import '../wallet/providers/wallet_providers.dart';
 
 /// Screen for managing AI Training (Instruksi & Contoh Chat)
 class AgentTrainingScreen extends ConsumerStatefulWidget {
@@ -327,110 +330,184 @@ class _AgentTrainingScreenState extends ConsumerState<AgentTrainingScreen>
   }
 
   void _showAddExampleDialog(BuildContext context) {
+    final user = ref.read(currentUserProvider).value;
+    final userId = user?.id ?? '';
+    final categories = ref.read(categoriesProvider(userId)).value ?? [];
+    final wallets = ref.read(activeWalletsProvider(userId)).value ?? [];
+
     final sampleInputController = TextEditingController();
     final amountController = TextEditingController();
-    final categoryController = TextEditingController();
-    final walletController = TextEditingController();
     final notesController = TextEditingController();
+
+    String transactionType = 'expense';
+    String? selectedCategory = categories.isNotEmpty ? categories.first.name : null;
+    String? selectedWallet = wallets.isNotEmpty ? wallets.first.name : null;
+    String? selectedToWallet = wallets.length > 1 ? wallets[1].name : null;
 
     showDialog(
       context: context,
       builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Tambah Contoh Chat AI'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: sampleInputController,
-                  decoration: const InputDecoration(
-                    labelText: 'Pesan Contoh Chat',
-                    hintText: 'Misal: "kopi janji jiwa 22k bca"',
-                    border: OutlineInputBorder(),
-                  ),
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            return AlertDialog(
+              title: const Text('Tambah Contoh Chat AI'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Tuliskan contoh pesan chat dan tentukan nilai field sistem yang diharapkan:',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: sampleInputController,
+                      decoration: const InputDecoration(
+                        labelText: 'Pesan Contoh Chat',
+                        hintText: 'Misal: "jajan batagor 5k cash"',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: transactionType,
+                      decoration: const InputDecoration(
+                        labelText: 'Jenis Transaksi',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'expense', child: Text('Pengeluaran')),
+                        DropdownMenuItem(value: 'income', child: Text('Pemasukan')),
+                        DropdownMenuItem(value: 'transfer', child: Text('Transfer')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setDialogState(() => transactionType = val);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: amountController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Nominal Rp',
+                        hintText: 'Misal: 5000',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (transactionType != 'transfer') ...[
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedCategory,
+                        decoration: const InputDecoration(
+                          labelText: 'Kategori Sistem',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: categories.map((cat) {
+                          return DropdownMenuItem(
+                            value: cat.name,
+                            child: Text(cat.name),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          setDialogState(() => selectedCategory = val);
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedWallet,
+                      decoration: InputDecoration(
+                        labelText: transactionType == 'transfer' ? 'Dari Dompet' : 'Dompet / Wallet',
+                        border: const OutlineInputBorder(),
+                      ),
+                      items: wallets.map((w) {
+                        return DropdownMenuItem(
+                          value: w.name,
+                          child: Text(w.name),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setDialogState(() => selectedWallet = val);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    if (transactionType == 'transfer') ...[
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedToWallet,
+                        decoration: const InputDecoration(
+                          labelText: 'Ke Dompet',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: wallets.map((w) {
+                          return DropdownMenuItem(
+                            value: w.name,
+                            child: Text(w.name),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          setDialogState(() => selectedToWallet = val);
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    TextField(
+                      controller: notesController,
+                      decoration: const InputDecoration(
+                        labelText: 'Catatan / Keterangan (Opsional)',
+                        hintText: 'Misal: Batagor',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: amountController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Nominal Rp',
-                    hintText: 'Misal: 22000',
-                    border: OutlineInputBorder(),
-                  ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Batal'),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: categoryController,
-                  decoration: const InputDecoration(
-                    labelText: 'Kategori',
-                    hintText: 'Misal: Minuman / Makanan',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: walletController,
-                  decoration: const InputDecoration(
-                    labelText: 'Dompet / Wallet',
-                    hintText: 'Misal: BCA / Cash',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: notesController,
-                  decoration: const InputDecoration(
-                    labelText: 'Catatan / Item (Opsional)',
-                    hintText: 'Misal: Kopi Janji Jiwa',
-                    border: OutlineInputBorder(),
-                  ),
+                FilledButton(
+                  onPressed: () async {
+                    final input = sampleInputController.text.trim();
+                    final amountText = amountController.text.trim();
+                    final notes = notesController.text.trim();
+
+                    if (input.isEmpty || amountText.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Pesan contoh dan nominal wajib diisi')),
+                      );
+                      return;
+                    }
+
+                    final amount = double.tryParse(amountText) ?? 0;
+                    final expectedOutput = <String, dynamic>{
+                      'type': transactionType,
+                      'amount': amount,
+                      if (transactionType != 'transfer' && selectedCategory != null)
+                        'category': selectedCategory!,
+                      if (selectedWallet != null) 'wallet': selectedWallet!,
+                      if (transactionType == 'transfer' && selectedToWallet != null)
+                        'toWallet': selectedToWallet!,
+                      if (notes.isNotEmpty) 'notes': notes,
+                    };
+
+                    final service = ref.read(agentTrainingServiceProvider);
+                    await service.addFewShotExample(
+                      sampleInput: input,
+                      expectedOutput: expectedOutput,
+                    );
+
+                    ref.invalidate(agentTrainingListProvider);
+                    if (ctx.mounted) Navigator.of(ctx).pop();
+                  },
+                  child: const Text('Simpan Contoh'),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Batal'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                final input = sampleInputController.text.trim();
-                final amountText = amountController.text.trim();
-                final category = categoryController.text.trim();
-                final wallet = walletController.text.trim();
-                final notes = notesController.text.trim();
-
-                if (input.isEmpty || amountText.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Pesan contoh dan nominal wajib diisi')),
-                  );
-                  return;
-                }
-
-                final amount = double.tryParse(amountText) ?? 0;
-                final expectedOutput = {
-                  'type': 'expense',
-                  'amount': amount,
-                  if (category.isNotEmpty) 'category': category,
-                  if (wallet.isNotEmpty) 'wallet': wallet,
-                  if (notes.isNotEmpty) 'notes': notes,
-                };
-
-                final service = ref.read(agentTrainingServiceProvider);
-                await service.addFewShotExample(
-                  sampleInput: input,
-                  expectedOutput: expectedOutput,
-                );
-
-                ref.invalidate(agentTrainingListProvider);
-                if (ctx.mounted) Navigator.of(ctx).pop();
-              },
-              child: const Text('Simpan Contoh'),
-            ),
-          ],
+            );
+          },
         );
       },
     );
