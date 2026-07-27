@@ -121,10 +121,10 @@ Input: "${text}"
 Type Hint: ${typeHint} (prioritize this type if set)
 
 Expense Categories:
-${expenseCats.map((c) => `- ${c.name}${c.parent_name ? ` [${c.parent_name}]` : ''}`).join('\n')}
+${expenseCats.map((c) => `- ${c.name}`).join('\n')}
 
 Income Categories:
-${incomeCats.map((c) => `- ${c.name}${c.parent_name ? ` [${c.parent_name}]` : ''}`).join('\n')}
+${incomeCats.map((c) => `- ${c.name}`).join('\n')}
 
 Wallets:
 ${userContext.wallets.map((w) => `- ${w.name}`).join('\n')}`;
