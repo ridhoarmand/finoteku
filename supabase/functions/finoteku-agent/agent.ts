@@ -1,10 +1,7 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { ReasoningEngine } from './reasoning.ts';
 import { AgentExecutor } from './executor.ts';
-import { AIProviderRegistry } from './providers/base.ts';
 import { RouterAIProvider } from './providers/router.ts';
-import { GeminiProvider } from './providers/gemini.ts';
-import { DynamicAIProvider } from './providers/dynamic.ts';
 import { ToolRegistry } from './tools/core/index.ts';
 
 // Parser Tools
@@ -29,26 +26,17 @@ import type { AgentConfig, AgentInput, AgentResponse } from './types.ts';
 export class FinanceAgent {
   private executor: AgentExecutor;
   private supabase: SupabaseClient;
-  private providers: AIProviderRegistry;
-  private ai: DynamicAIProvider;
+  private ai: RouterAIProvider;
 
   constructor(config: AgentConfig) {
     this.supabase = config.supabase as SupabaseClient;
 
-    // Inisialisasi AI Providers
-    this.providers = new AIProviderRegistry();
-
-    // Register 9Router AI Provider (Server AI)
+    // Inisialisasi 9Router AI Provider (Server AI)
     const routerBaseUrl = Deno.env.get('AI_BASE_URL') || 'https://9router.idho.eu.org/v1';
     const routerApiKey = Deno.env.get('AI_API_KEY') || 'sk-a13d362cb2cdd8ca-m70jyx-556be01a';
     const routerModel = Deno.env.get('AI_MODEL') || 'my-combo';
 
-    const routerProvider = new RouterAIProvider(routerBaseUrl, routerApiKey, routerModel);
-    this.providers.register(routerProvider);
-    this.providers.setDefault('9router');
-
-    // Setup Dynamic AI Provider with 9Router as default
-    this.ai = new DynamicAIProvider(routerProvider);
+    this.ai = new RouterAIProvider(routerBaseUrl, routerApiKey, routerModel);
 
     // Inisialisasi Tools
     const tools = new ToolRegistry();
@@ -80,7 +68,7 @@ export class FinanceAgent {
   }
 
   /**
-   * Memproses input dari platform manapun (Telegram, API, dll)
+   * Memproses input dari platform manapun (Telegram, WhatsApp, API, dll)
    * @param input - Input dari user (text, voice, atau image)
    * @param userContextInput - Optional: context user yang sudah ada
    */
@@ -97,9 +85,6 @@ export class FinanceAgent {
         content: '⚠️ Akun belum terhubung. Silakan hubungkan melalui aplikasi.',
       };
     }
-
-    // Atur context user di dynamic provider sebelum eksekusi
-    this.ai.setUserContext(userContext);
 
     // Cek apakah ada transaksi pending yang menunggu konfirmasi
     const platform = (input.platform as pendingData.Platform) || 'telegram';
