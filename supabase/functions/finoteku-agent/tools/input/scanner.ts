@@ -42,8 +42,18 @@ export class ImageScannerTool extends BaseTool {
       // Extract text from receipt using OCR
       const extractedText = await this.extractTextFromReceipt(image, userContext);
 
-      if (!extractedText || extractedText.trim().length === 0) {
-        return this.error('Tidak dapat membaca struk. Pastikan foto jelas dan teks terlihat.');
+      if (
+        !extractedText ||
+        extractedText.trim().length === 0 ||
+        extractedText.toLowerCase().includes('tanpa dukungan vision') ||
+        extractedText.toLowerCase().includes('tidak bisa diproses')
+      ) {
+        return this.error(
+          '📸 <b>Model AI Server saat ini belum mendukung analisis foto struk.</b>\n\n' +
+            'Silakan catat transaksi menggunakan:\n' +
+            '• 💬 Pesan teks (contoh: "makan sate 25k cash")\n' +
+            '• 🎤 Voice note WhatsApp',
+        );
       }
 
       console.log('[Scanner] Extracted text:', extractedText);
@@ -58,7 +68,11 @@ export class ImageScannerTool extends BaseTool {
       );
     } catch (error) {
       console.error('[Scanner] OCR failed:', error);
-      return this.error('Gagal membaca struk. Pastikan foto jelas.', (error as Error).message);
+      return this.error(
+        '📸 <b>Fitur analisis foto struk saat ini belum didukung oleh model AI server.</b>\n\n' +
+          'Silakan gunakan input teks atau voice note.',
+        (error as Error).message,
+      );
     }
   }
 

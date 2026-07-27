@@ -195,8 +195,8 @@ export class RouterAIProvider implements AIProvider {
       max_tokens: 1024,
     });
 
-    if (!content) {
-      throw new Error('Gagal mengekstrak gambar dengan Vision API');
+    if (!content || content.toLowerCase().includes('tanpa dukungan vision') || content.toLowerCase().includes('tidak bisa diproses')) {
+      throw new Error('Model AI Server (9Router) saat ini belum mendukung analisis gambar (vision).');
     }
     return content;
   }
