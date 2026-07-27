@@ -1,6 +1,6 @@
 /**
  * Users Data Access Layer
- * Mengambil data user dan konteks untuk agent
+ * Mengambil data user dan konteks pelatihan agent
  */
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import * as categoryData from './categories.ts';
@@ -11,31 +11,20 @@ export interface UserContext {
   userId: string;
   categories: categoryData.CategoryRecord[];
   wallets: walletData.WalletRecord[];
-  parserMode: 'server_key' | 'user_key';
-  aiProvider: string;
-  aiApiKey: string | null;
   agentTraining?: trainingData.AgentTrainingContext;
-}
-
-export interface BotLink {
-  user_id: string;
-  parser_mode: string;
-  ai_provider: string;
-  ai_api_key: string | null;
 }
 
 /**
  * Ambil konteks lengkap user untuk pemrosesan agent
- * Termasuk: kategori, wallet, preferensi, dan instruksi/contoh pelatihan agent
+ * Termasuk: kategori, wallet, dan instruksi/contoh pelatihan agent
  */
 export async function getContext(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<UserContext | null> {
-  const [categoriesResult, walletsResult, userResult, trainingResult] = await Promise.all([
+  const [categoriesResult, walletsResult, trainingResult] = await Promise.all([
     categoryData.getAll(supabase, userId),
     walletData.getBalances(supabase, userId),
-    supabase.from('users').select('parser_mode, ai_provider, ai_api_key').eq('id', userId).single(),
     trainingData.getAgentTraining(supabase, userId),
   ]);
 
@@ -47,15 +36,12 @@ export async function getContext(
     userId,
     categories: categoriesResult.data || [],
     wallets: walletsResult.data || [],
-    parserMode: (userResult.data?.parser_mode as UserContext['parserMode']) || 'server_key',
-    aiProvider: userResult.data?.ai_provider || '9router',
-    aiApiKey: userResult.data?.ai_api_key || null,
     agentTraining: trainingResult,
   };
 }
 
 /**
- * Cari user berdasarkan platform ID (telegram, discord, dll)
+ * Cari user berdasarkan platform ID (telegram, whatsapp, dll)
  */
 export async function getByPlatformId(
   supabase: SupabaseClient,
