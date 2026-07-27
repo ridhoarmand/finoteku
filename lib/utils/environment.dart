@@ -21,6 +21,12 @@ class Environment {
     defaultValue: 'your-anon-key-here',
   );
 
+  // WhatsApp Configuration
+  static const String waBotNumber = String.fromEnvironment(
+    'WA_BOT_NUMBER',
+    defaultValue: '6285156897928',
+  );
+
   /// Validate that required environment variables are set
   static bool validateConfig() {
     bool isValid = true;
