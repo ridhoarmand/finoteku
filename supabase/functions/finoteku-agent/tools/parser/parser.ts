@@ -6,6 +6,7 @@
 import { BaseTool, type ToolParams } from '../core/base.ts';
 import type { ToolResult } from '../../types.ts';
 import type { UserContext } from '../../data/users.ts';
+import type { CategoryRecord } from '../../data/categories.ts';
 import { resolveCashWallet, resolveWalletByHint } from '../../data/wallets.ts';
 import type { AIProvider } from '../../providers/base.ts';
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -142,6 +143,7 @@ ${userContext.wallets.map((w) => `- ${w.name}`).join('\n')}`;
       });
     }
 
+    systemPrompt += `\n\nCRITICAL FOR CATEGORY: Return ONLY the exact Category name itself (e.g. "Jajan/Camilan" or "Makanan"). Do NOT append parent category name or brackets in the "category" field.`;
     systemPrompt += `\n\nCRITICAL: You MUST respond ONLY with the raw JSON object. Do NOT include any reasoning, explanation, or extra text before or after the JSON.`;
 
     try {
@@ -161,18 +163,10 @@ ${userContext.wallets.map((w) => `- ${w.name}`).join('\n')}`;
 
       const isTransfer = parsed.type === 'transfer';
 
-      // STRICT validation for non-transfer categories
-      let category = null;
+      // SMART category validation for non-transfer transactions
+      let category: CategoryRecord | null = null;
       if (!isTransfer) {
-        category = userContext.categories.find((c) =>
-          c.name.toLowerCase() === parsed.category?.toLowerCase() && c.type === parsed.type
-        );
-        if (!category) {
-          // Fallback to name-only match if type mismatched
-          category = userContext.categories.find((c) =>
-            c.name.toLowerCase() === parsed.category?.toLowerCase()
-          );
-        }
+        category = resolveCategoryByHint(userContext.categories, parsed.category, parsed.type);
 
         if (!category) {
           console.error('[TransactionParser] Category not found:', parsed.category);
@@ -283,4 +277,38 @@ ${userContext.wallets.map((w) => `- ${w.name}`).join('\n')}`;
 
     return message;
   }
+}
+
+/**
+ * Smart Category Resolver
+ * Cleans parent category brackets, strips whitespace, and handles alias/part matching
+ */
+function resolveCategoryByHint(
+  categories: CategoryRecord[],
+  rawCategoryHint?: string,
+  targetType?: string,
+): CategoryRecord | null {
+  if (!rawCategoryHint) return null;
+
+  // Clean raw hint: "Jajan/Camilan [Makan & Minum]" -> "Jajan/Camilan"
+  const cleanHint = rawCategoryHint.replace(/\s*\[.*\]/g, '').trim().toLowerCase();
+
+  // 1. Exact name + type match
+  let match = categories.find(
+    (c: CategoryRecord) => c.name.toLowerCase() === cleanHint && (targetType ? c.type === targetType : true),
+  );
+  if (match) return match;
+
+  // 2. Exact name match ignoring type
+  match = categories.find((c: CategoryRecord) => c.name.toLowerCase() === cleanHint);
+  if (match) return match;
+
+  // 3. Substring / slash-part match (e.g. "Jajan" matches "Jajan/Camilan")
+  match = categories.find((c: CategoryRecord) => {
+    const cName = c.name.toLowerCase();
+    const parts = cName.split('/').map((p: string) => p.trim());
+    return parts.some((p: string) => cleanHint.includes(p) || p.includes(cleanHint));
+  });
+
+  return match || null;
 }
