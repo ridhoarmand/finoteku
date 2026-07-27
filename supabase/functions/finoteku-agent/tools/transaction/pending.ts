@@ -113,7 +113,7 @@ export class PendingHandlerTool extends BaseTool {
         amount: pending.amount,
         date: pending.date,
         notes: pending.notes,
-        category_id: pending.category_id,
+        category_id: pending.category_id!,
         wallet_id: pending.wallet_id,
       });
       error = result.error;
