@@ -139,7 +139,7 @@ export class RouterAIProvider implements AIProvider {
     const content = await this.chatCompletions({
       messages,
       temperature: options?.temperature ?? 0.1,
-      max_tokens: options?.maxTokens ?? 512,
+      max_tokens: options?.maxTokens ?? 1024,
       response_format: { type: 'json_object' },
     });
 
@@ -150,8 +150,17 @@ export class RouterAIProvider implements AIProvider {
     const firstBrace = content.indexOf('{');
     const lastBrace = content.lastIndexOf('}');
     let jsonString = content;
+
     if (firstBrace !== -1 && lastBrace > firstBrace) {
       jsonString = content.substring(firstBrace, lastBrace + 1);
+    } else if (firstBrace !== -1) {
+      jsonString = content.substring(firstBrace).replace(/```json\n?|\n?```/g, '').trim();
+      if ((jsonString.match(/"/g) || []).length % 2 !== 0) {
+        jsonString += '"';
+      }
+      if (!jsonString.endsWith('}')) {
+        jsonString += '}';
+      }
     } else {
       jsonString = content.replace(/```json\n?|\n?```/g, '').trim();
     }

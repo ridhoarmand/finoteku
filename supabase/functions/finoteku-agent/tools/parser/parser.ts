@@ -142,10 +142,12 @@ ${userContext.wallets.map((w) => `- ${w.name}`).join('\n')}`;
       });
     }
 
+    systemPrompt += `\n\nCRITICAL: You MUST respond ONLY with the raw JSON object. Do NOT include any reasoning, explanation, or extra text before or after the JSON.`;
+
     try {
       const parsed = await this.ai!.generateJSON<ParsedAIResponse>(prompt, {
         systemPrompt,
-        maxTokens: 300,
+        maxTokens: 1024,
         temperature: 0.1,
       });
 
