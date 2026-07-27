@@ -13,13 +13,13 @@ export interface PendingTransaction {
   platform_identifier: string;
   type: 'income' | 'expense' | 'transfer';
   amount: number;
-  category_id: string;
-  category_name: string; // From VIEW join
-  category_parent?: string; // From VIEW join
+  category_id: string | null;
+  category_name: string | null; // From VIEW join
+  category_parent?: string | null; // From VIEW join
   wallet_id: string;
   wallet_name: string; // From VIEW join
-  to_wallet_id?: string;
-  to_wallet_name?: string; // From VIEW join
+  to_wallet_id?: string | null;
+  to_wallet_name?: string | null; // From VIEW join
   notes: string;
   date: string;
   original_input?: string;
@@ -29,9 +29,9 @@ export interface PendingTransaction {
 export interface PendingTransactionInput {
   type: 'income' | 'expense' | 'transfer';
   amount: number;
-  category_id: string;
+  category_id: string | null;
   wallet_id: string;
-  to_wallet_id?: string;
+  to_wallet_id?: string | null;
   notes: string;
   date: string;
   original_input?: string;

@@ -33,7 +33,8 @@ interface ParsedAIResponse {
 }
 
 // System prompt statis — dikirim sebagai systemInstruction (dioptimasi oleh Gemini)
-const PARSER_SYSTEM_PROMPT = `You are a transaction parser for an Indonesian finance app. Parse text into structured JSON.
+const PARSER_SYSTEM_PROMPT =
+  `You are a transaction parser for an Indonesian finance app. Parse text into structured JSON.
 
 Rules by Step:
 1. Priority: If input contains "[Catatan Tambahan User: ...]", treat that text as the ABSOLUTE HIGHEST priority for determining the Category, Wallet, and Notes. It overrides the raw text/OCR.
@@ -69,7 +70,10 @@ export class TransactionParserTool extends BaseTool {
       if (this.ai) {
         return await this.parseWithAI(text, userContext);
       }
-      return this.error('❌ AI parsing tidak tersedia. Silakan hubungi admin.', 'AI provider not configured');
+      return this.error(
+        '❌ AI parsing tidak tersedia. Silakan hubungi admin.',
+        'AI provider not configured',
+      );
     } catch (error) {
       console.error('[TransactionParser] Error:', error);
       return this.error('❌ Gagal memproses transaksi', (error as Error).message);
@@ -89,9 +93,21 @@ export class TransactionParserTool extends BaseTool {
     const incomeCats = userContext.categories.filter((c) => c.type === 'income');
 
     const lowerText = text.toLowerCase();
-    const isLikelyIncome = ['masuk', 'terima', 'dapat', 'pemasukan'].some((k) => lowerText.startsWith(k) || lowerText.includes(k));
-    const isLikelyTransfer = ['transfer', 'pindah', 'kirim', 'mutasi', 'tarik tunai', 'tarik', 'cabut dana'].some((k) => lowerText.startsWith(k) || lowerText.includes(k));
-    const isLikelyExpense = ['keluar', 'bayar', 'pengeluaran', 'beli'].some((k) => lowerText.startsWith(k) || lowerText.includes(k));
+    const isLikelyIncome = ['masuk', 'terima', 'dapat', 'pemasukan'].some((k) =>
+      lowerText.startsWith(k) || lowerText.includes(k)
+    );
+    const isLikelyTransfer = [
+      'transfer',
+      'pindah',
+      'kirim',
+      'mutasi',
+      'tarik tunai',
+      'tarik',
+      'cabut dana',
+    ].some((k) => lowerText.startsWith(k) || lowerText.includes(k));
+    const isLikelyExpense = ['keluar', 'bayar', 'pengeluaran', 'beli'].some((k) =>
+      lowerText.startsWith(k) || lowerText.includes(k)
+    );
 
     let typeHint = 'unknown';
     if (isLikelyTransfer) typeHint = 'transfer';
@@ -146,24 +162,37 @@ ${userContext.wallets.map((w) => `- ${w.name}`).join('\n')}`;
       // STRICT validation for non-transfer categories
       let category = null;
       if (!isTransfer) {
-        category = userContext.categories.find((c) => c.name.toLowerCase() === parsed.category?.toLowerCase() && c.type === parsed.type);
+        category = userContext.categories.find((c) =>
+          c.name.toLowerCase() === parsed.category?.toLowerCase() && c.type === parsed.type
+        );
         if (!category) {
           // Fallback to name-only match if type mismatched
-          category = userContext.categories.find((c) => c.name.toLowerCase() === parsed.category?.toLowerCase());
+          category = userContext.categories.find((c) =>
+            c.name.toLowerCase() === parsed.category?.toLowerCase()
+          );
         }
 
         if (!category) {
           console.error('[TransactionParser] Category not found:', parsed.category);
-          return this.error(`❌ Kategori "${parsed.category}" tidak ditemukan.\n\n` + `Gunakan salah satu:\n${userContext.categories.map((c) => `• ${c.name}`).join('\n')}`);
+          return this.error(
+            `❌ Kategori "${parsed.category}" tidak ditemukan.\n\n` +
+              `Gunakan salah satu:\n${userContext.categories.map((c) => `• ${c.name}`).join('\n')}`,
+          );
         }
       }
 
       // Wallet validation with normalization
       const wallet = resolveWalletByHint(userContext.wallets, parsed.wallet);
-      const toWallet = isTransfer ? resolveWalletByHint(userContext.wallets, parsed.toWallet) || resolveCashWallet(userContext.wallets) : null;
+      const toWallet = isTransfer
+        ? resolveWalletByHint(userContext.wallets, parsed.toWallet) ||
+          resolveCashWallet(userContext.wallets)
+        : null;
 
       if (!wallet) {
-        return this.error(`❌ Dompet "${parsed.wallet}" tidak ditemukan.\n\n` + `Dompet tersedia:\n${userContext.wallets.map((w) => `• ${w.name}`).join('\n')}`);
+        return this.error(
+          `❌ Dompet "${parsed.wallet}" tidak ditemukan.\n\n` +
+            `Dompet tersedia:\n${userContext.wallets.map((w) => `• ${w.name}`).join('\n')}`,
+        );
       }
 
       const data: TransactionData = {
@@ -185,7 +214,11 @@ ${userContext.wallets.map((w) => `- ${w.name}`).join('\n')}`;
       return this.success({ ...data, needsConfirmation: true }, message);
     } catch (error) {
       console.error('[TransactionParser] AI parsing error:', error);
-      return this.error('❌ AI tidak dapat memproses input.\n\n' + `Error: ${(error as Error).message}\n\n` + 'Coba format berbeda atau hubungi admin.', (error as Error).message);
+      return this.error(
+        '❌ AI tidak dapat memproses input.\n\n' + `Error: ${(error as Error).message}\n\n` +
+          'Coba format berbeda atau hubungi admin.',
+        (error as Error).message,
+      );
     }
   }
 
@@ -206,10 +239,16 @@ ${userContext.wallets.map((w) => `- ${w.name}`).join('\n')}`;
       year: 'numeric',
     });
 
-    const wallet = userContext.wallets.find((w) => w.name.toLowerCase() === data.walletHint.toLowerCase());
-    const toWallet = data.toWalletHint ? userContext.wallets.find((w) => w.name.toLowerCase() === data.toWalletHint!.toLowerCase()) : null;
+    const wallet = userContext.wallets.find((w) =>
+      w.name.toLowerCase() === data.walletHint.toLowerCase()
+    );
+    const toWallet = data.toWalletHint
+      ? userContext.wallets.find((w) => w.name.toLowerCase() === data.toWalletHint!.toLowerCase())
+      : null;
 
-    const category = userContext.categories.find((c) => c.name.toLowerCase() === data.categoryHint.toLowerCase());
+    const category = userContext.categories.find((c) =>
+      c.name.toLowerCase() === data.categoryHint.toLowerCase()
+    );
     let categoryDisplay = category?.name || data.categoryHint;
     if (category?.parent_name) {
       categoryDisplay = `${category.parent_name} > ${category.name}`;

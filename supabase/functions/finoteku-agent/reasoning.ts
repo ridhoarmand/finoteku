@@ -9,13 +9,29 @@ import type { AgentEvaluation, AgentInput, AgentPlan, Intent, ToolResult } from 
 
 // Keywords untuk deteksi intent
 const BALANCE_KEYWORDS = ['saldo', 'balance', 'uang', 'berapa', 'dompet', 'wallet', 'rekening'];
-const SUMMARY_KEYWORDS = ['ringkasan', 'summary', 'laporan', 'bulan', 'bulanan', 'total', 'statistik'];
+const SUMMARY_KEYWORDS = [
+  'ringkasan',
+  'summary',
+  'laporan',
+  'bulan',
+  'bulanan',
+  'total',
+  'statistik',
+];
 const TRANSACTIONS_KEYWORDS = ['transaksi', 'riwayat', 'history', 'terakhir', 'terbaru', 'list'];
 const TREND_KEYWORDS = ['tren', 'trend', 'naik', 'turun', 'perbandingan', 'bandingkan'];
 const TIPS_KEYWORDS = ['hemat', 'saran', 'tips', 'rekomendasi', 'boros', 'kurangi', 'saving'];
 const CONFIRM_KEYWORDS = ['ya', 'y', 'yes', 'ok', 'oke', 'simpan', 'save'];
 const CANCEL_KEYWORDS = ['tidak', 'no', 'n', 'batal', 'cancel', 'batalkan'];
-const TRANSFER_KEYWORDS = ['transfer', 'pindah', 'kirim', 'mutasi', 'tarik', 'tarik tunai', 'cabut dana'];
+const TRANSFER_KEYWORDS = [
+  'transfer',
+  'pindah',
+  'kirim',
+  'mutasi',
+  'tarik',
+  'tarik tunai',
+  'cabut dana',
+];
 const INCOME_PREFIX = ['masuk', 'terima', 'dapat'];
 const EXPENSE_PREFIX = ['keluar', 'bayar', 'beli'];
 
@@ -109,7 +125,23 @@ export class ReasoningEngine {
    * Cek apakah input adalah pertanyaan
    */
   private isQuestion(text: string): boolean {
-    const questionIndicators = ['?', 'berapa', 'apa', 'gimana', 'bagaimana', 'kenapa', 'mengapa', 'siapa', 'kapan', 'dimana', 'jelaskan', 'ceritakan', 'tolong', 'bisa', 'apakah'];
+    const questionIndicators = [
+      '?',
+      'berapa',
+      'apa',
+      'gimana',
+      'bagaimana',
+      'kenapa',
+      'mengapa',
+      'siapa',
+      'kapan',
+      'dimana',
+      'jelaskan',
+      'ceritakan',
+      'tolong',
+      'bisa',
+      'apakah',
+    ];
     return questionIndicators.some((q) => text.includes(q));
   }
 

@@ -23,7 +23,11 @@ export class AgentExecutor {
    * @param userContext - Context user (kategori, wallet, preferensi)
    * @param hasPending - Apakah ada transaksi pending
    */
-  async execute(input: AgentInput, userContext: UserContext, hasPending?: boolean): Promise<AgentResponse> {
+  async execute(
+    input: AgentInput,
+    userContext: UserContext,
+    hasPending?: boolean,
+  ): Promise<AgentResponse> {
     try {
       // 1. PLAN - Tentukan intent dan tool yang digunakan
       console.log('[Executor] Planning:', input.type, input.content.substring(0, 50));
@@ -70,7 +74,11 @@ export class AgentExecutor {
         if (data && typeof data === 'object' && 'needsConfirmation' in data) {
           // Check if pending already exists (from previous update)
           const platform = (input.platform as pendingData.Platform) || 'telegram';
-          const existingPending = await pendingData.get(this.supabase, userContext.userId, platform);
+          const existingPending = await pendingData.get(
+            this.supabase,
+            userContext.userId,
+            platform,
+          );
 
           if (existingPending) {
             // Pending updated - just show confirmation, don't re-parse
@@ -95,14 +103,18 @@ export class AgentExecutor {
           const toWalletHint = (pendingDataPayload.toWalletHint || '').toLowerCase();
 
           // Exact match prioritizing type match
-          let category = userContext.categories.find((c) => c.name.toLowerCase() === categoryHint && c.type === pendingDataPayload.type);
+          let category = userContext.categories.find((c) =>
+            c.name.toLowerCase() === categoryHint && c.type === pendingDataPayload.type
+          );
           if (!category) {
             category = userContext.categories.find((c) => c.name.toLowerCase() === categoryHint);
           }
 
           // Wallets
           let wallet = resolveWalletByHint(userContext.wallets, walletHint);
-          let toWallet = toWalletHint ? resolveWalletByHint(userContext.wallets, toWalletHint) : null;
+          let toWallet = toWalletHint
+            ? resolveWalletByHint(userContext.wallets, toWalletHint)
+            : null;
 
           // CRITICAL: Category MUST exist for non-transfers
           if (!category && pendingDataPayload.type !== 'transfer') {
@@ -114,7 +126,8 @@ export class AgentExecutor {
 
             return {
               type: 'error',
-              content: `❌ <b>Kategori tidak ditemukan</b>\n\nKategori "${categoryHint}" tidak ada di akun Anda.\n\nGunakan salah satu kategori berikut:\n${categoryList}`,
+              content:
+                `❌ <b>Kategori tidak ditemukan</b>\n\nKategori "${categoryHint}" tidak ada di akun Anda.\n\nGunakan salah satu kategori berikut:\n${categoryList}`,
             };
           }
 
@@ -123,7 +136,11 @@ export class AgentExecutor {
             if (pendingDataPayload.type === 'transfer') {
               return {
                 type: 'error',
-                content: `❌ Dompet sumber "${pendingDataPayload.walletHint || '-'}" tidak ditemukan.\n\nDompet tersedia:\n${userContext.wallets.map((w) => `• ${w.name}`).join('\n')}`,
+                content: `❌ Dompet sumber "${
+                  pendingDataPayload.walletHint || '-'
+                }" tidak ditemukan.\n\nDompet tersedia:\n${
+                  userContext.wallets.map((w) => `• ${w.name}`).join('\n')
+                }`,
               };
             }
             wallet = userContext.wallets[0];
@@ -136,7 +153,8 @@ export class AgentExecutor {
           if (pendingDataPayload.type === 'transfer' && !toWallet) {
             return {
               type: 'error',
-              content: '❌ Dompet tujuan transfer tidak ditemukan. Tambahkan wallet Cash/Tunai terlebih dahulu.',
+              content:
+                '❌ Dompet tujuan transfer tidak ditemukan. Tambahkan wallet Cash/Tunai terlebih dahulu.',
             };
           }
 
@@ -144,22 +162,29 @@ export class AgentExecutor {
           const date = new Date();
           date.setDate(date.getDate() + (pendingDataPayload.dateOffset || 0));
 
-          const saveResult = await pendingData.save(this.supabase, userContext.userId, platform, input.conversationId, {
-            type: pendingDataPayload.type,
-            amount: pendingDataPayload.amount,
-            category_id: category?.id || '', // Transfers might not specify category initially
-            wallet_id: wallet.id,
-            to_wallet_id: toWallet?.id,
-            notes: pendingDataPayload.notes,
-            date: date.toISOString(),
-            original_input: input.content,
-          });
+          const saveResult = await pendingData.save(
+            this.supabase,
+            userContext.userId,
+            platform,
+            input.conversationId,
+            {
+              type: pendingDataPayload.type,
+              amount: pendingDataPayload.amount,
+              category_id: category?.id || null, // Transfers don't require category
+              wallet_id: wallet.id,
+              to_wallet_id: toWallet?.id,
+              notes: pendingDataPayload.notes,
+              date: date.toISOString(),
+              original_input: input.content,
+            },
+          );
 
           if (saveResult.error) {
             console.error('[Executor] Failed to save pending transaction:', saveResult.error);
             return {
               type: 'error',
-              content: `❌ Gagal menyimpan transaksi sementara.\nError: ${saveResult.error.message}`,
+              content:
+                `❌ Gagal menyimpan transaksi sementara.\nError: ${saveResult.error.message}`,
             };
           }
 
@@ -197,7 +222,11 @@ export class AgentExecutor {
   /**
    * Handle voice input dengan chaining: STT → Text Parser
    */
-  private async handleVoiceInput(input: AgentInput, userContext: UserContext, hasPending?: boolean): Promise<AgentResponse> {
+  private async handleVoiceInput(
+    input: AgentInput,
+    userContext: UserContext,
+    hasPending?: boolean,
+  ): Promise<AgentResponse> {
     // Step 1: Konversi suara ke teks
     const sttTool = this.tools.get('speech_to_text');
     if (!sttTool) {
@@ -228,7 +257,11 @@ export class AgentExecutor {
   /**
    * Handle image input dengan chaining: OCR → Text Parser
    */
-  private async handleImageInput(input: AgentInput, userContext: UserContext, hasPending?: boolean): Promise<AgentResponse> {
+  private async handleImageInput(
+    input: AgentInput,
+    userContext: UserContext,
+    hasPending?: boolean,
+  ): Promise<AgentResponse> {
     // Step 1: Extract text from image (OCR)
     const scannerTool = this.tools.get('image_scanner');
     if (!scannerTool) {
@@ -247,7 +280,9 @@ export class AgentExecutor {
     // Step 2: Parse extracted text (same as text/voice input)
     // deno-lint-ignore no-explicit-any
     const text = (scanResult.data as any).text;
-    const finalContent = input.caption ? `${text}\n[Catatan Tambahan User: ${input.caption}]` : text;
+    const finalContent = input.caption
+      ? `${text}\n[Catatan Tambahan User: ${input.caption}]`
+      : text;
 
     const textInput: AgentInput = {
       ...input,

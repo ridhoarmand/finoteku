@@ -115,10 +115,11 @@ export class DataQueryTool extends BaseTool {
     const response = await this.ai.generateText(
       `Pertanyaan: "${question}"\nData: ${JSON.stringify(data)}`,
       {
-        systemPrompt: 'Kamu Finoteku, asisten keuangan. Jawab dalam Bahasa Indonesia santai, pakai emoji, format Rupiah. Maks 4 kalimat. Jika data kosong, sarankan user menambah data.',
+        systemPrompt:
+          'Kamu Finoteku, asisten keuangan. Jawab dalam Bahasa Indonesia santai, pakai emoji, format Rupiah. Maks 4 kalimat. Jika data kosong, sarankan user menambah data.',
         maxTokens: 300,
         temperature: 0.3,
-      }
+      },
     );
     return response;
   }

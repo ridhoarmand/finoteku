@@ -17,9 +17,18 @@ const WALLET_SYNONYMS: Record<string, string> = {
   bca: 'bca',
   'bank bca': 'bca',
   'bca mobile': 'bca',
+  cimb: 'cimb',
+  'cimb niaga': 'cimb',
+  jago: 'jago',
   mandiri: 'mandiri',
   bri: 'bri',
   bni: 'bni',
+  maybank: 'maybank',
+  neo: 'neo',
+  seabank: 'seabank',
+  'sea bank': 'seabank',
+  sea: 'seabank',
+  superbank: 'superbank',
 };
 
 export function normalizeWalletHint(name: string): string {
@@ -55,8 +64,14 @@ export function resolveCashWallet(wallets: WalletRecord[]): WalletRecord | null 
 /**
  * Ambil semua wallet dengan saldo
  */
-export async function getBalances(supabase: SupabaseClient, userId: string): Promise<{ data: WalletRecord[] | null; error: Error | null }> {
-  const { data, error } = await supabase.from('wallets').select('id, name, balance').eq('user_id', userId);
+export async function getBalances(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<{ data: WalletRecord[] | null; error: Error | null }> {
+  const { data, error } = await supabase.from('wallets').select('id, name, balance').eq(
+    'user_id',
+    userId,
+  );
 
   if (error) return { data: null, error };
 
@@ -73,8 +88,14 @@ export async function getBalances(supabase: SupabaseClient, userId: string): Pro
 /**
  * Ambil wallet berdasarkan ID
  */
-export async function getById(supabase: SupabaseClient, walletId: string): Promise<{ data: WalletRecord | null; error: Error | null }> {
-  const { data, error } = await supabase.from('wallets').select('id, name, balance').eq('id', walletId).single();
+export async function getById(
+  supabase: SupabaseClient,
+  walletId: string,
+): Promise<{ data: WalletRecord | null; error: Error | null }> {
+  const { data, error } = await supabase.from('wallets').select('id, name, balance').eq(
+    'id',
+    walletId,
+  ).single();
 
   return { data, error };
 }
@@ -82,7 +103,11 @@ export async function getById(supabase: SupabaseClient, walletId: string): Promi
 /**
  * Cari wallet berdasarkan nama (fuzzy match)
  */
-export async function findByName(supabase: SupabaseClient, userId: string, name: string): Promise<WalletRecord | null> {
+export async function findByName(
+  supabase: SupabaseClient,
+  userId: string,
+  name: string,
+): Promise<WalletRecord | null> {
   const { data } = await getBalances(supabase, userId);
   if (!data) return null;
 

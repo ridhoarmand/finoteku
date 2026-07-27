@@ -12,6 +12,7 @@ export interface UserContext {
   categories: categoryData.CategoryRecord[];
   wallets: walletData.WalletRecord[];
   parserMode: 'server_key' | 'user_key';
+  aiProvider: string;
   aiApiKey: string | null;
   agentTraining?: trainingData.AgentTrainingContext;
 }
@@ -19,6 +20,7 @@ export interface UserContext {
 export interface BotLink {
   user_id: string;
   parser_mode: string;
+  ai_provider: string;
   ai_api_key: string | null;
 }
 
@@ -30,10 +32,10 @@ export async function getContext(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<UserContext | null> {
-  const [categoriesResult, walletsResult, botLinkResult, trainingResult] = await Promise.all([
+  const [categoriesResult, walletsResult, userResult, trainingResult] = await Promise.all([
     categoryData.getAll(supabase, userId),
     walletData.getBalances(supabase, userId),
-    supabase.from('bot_links').select('parser_mode, ai_api_key').eq('user_id', userId).single(),
+    supabase.from('users').select('parser_mode, ai_provider, ai_api_key').eq('id', userId).single(),
     trainingData.getAgentTraining(supabase, userId),
   ]);
 
@@ -45,8 +47,9 @@ export async function getContext(
     userId,
     categories: categoriesResult.data || [],
     wallets: walletsResult.data || [],
-    parserMode: (botLinkResult.data?.parser_mode as UserContext['parserMode']) || 'server_key',
-    aiApiKey: botLinkResult.data?.ai_api_key || null,
+    parserMode: (userResult.data?.parser_mode as UserContext['parserMode']) || 'server_key',
+    aiProvider: userResult.data?.ai_provider || '9router',
+    aiApiKey: userResult.data?.ai_api_key || null,
     agentTraining: trainingResult,
   };
 }
