@@ -102,7 +102,7 @@ class BotLink {
 
 /// Available AI providers (for user_key mode)
 enum AIProvider {
-  gemini('gemini', 'Google Gemini'),
+  router9('9router', '9Router / OpenAI'),
   openai('openai', 'OpenAI');
 
   final String value;
@@ -113,7 +113,7 @@ enum AIProvider {
   static AIProvider fromValue(String value) {
     return AIProvider.values.firstWhere(
       (e) => e.value == value,
-      orElse: () => AIProvider.gemini,
+      orElse: () => AIProvider.router9,
     );
   }
 }
