@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*' # Trigger ONLY when pushing git tags starting with 'v' (e.g. v0.5.0, v1.0.0)
 
+permissions:
+  contents: write # CRITICAL: Gives GITHUB_TOKEN write permissions to create releases & upload assets
+
 jobs:
   build-and-release:
     name: Build APK & Publish Release
@@ -35,24 +38,26 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      # 5. Build Android Release APK (Split Per ABI + Universal)
+      # 5. Build Android Release APKs (Universal & Split ABIs)
       - name: Build Release APKs
-        run: flutter build apk --release --split-per-abi
+        run: |
+          flutter build apk --release
+          flutter build apk --release --split-per-abi
 
-      # 6. Extract Tag Name & Prepare ABI APK Assets
+      # 6. Extract Tag Name & Prepare Named APK Assets
       - name: Prepare APK Asset Names
         id: tag_name
         run: |
           TAG=${GITHUB_REF#refs/tags/}
           echo "TAG=${TAG}" >> $GITHUB_OUTPUT
           cd build/app/outputs/flutter-apk
-          cp app-arm64-v8a-release.apk finoteku-${TAG}-arm64-v8a.apk
-          cp app-armeabi-v7a-release.apk finoteku-${TAG}-armeabi-v7a.apk
-          cp app-x86_64-release.apk finoteku-${TAG}-x86_64.apk
-          cp app-release.apk finoteku-${TAG}-universal.apk
-          cp app-release.apk finoteku.apk
+          cp app-arm64-v8a-release.apk finoteku-${TAG}-arm64-v8a.apk || true
+          cp app-armeabi-v7a-release.apk finoteku-${TAG}-armeabi-v7a.apk || true
+          cp app-x86_64-release.apk finoteku-${TAG}-x86_64.apk || true
+          cp app-release.apk finoteku-${TAG}-universal.apk || true
+          cp app-release.apk finoteku.apk || true
 
-      # 7. Create GitHub Release & Upload Split ABI APK Assets
+      # 7. Create GitHub Release & Upload All APK Assets
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -62,10 +67,6 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            build/app/outputs/flutter-apk/finoteku-${{ steps.tag_name.outputs.TAG }}-arm64-v8a.apk
-            build/app/outputs/flutter-apk/finoteku-${{ steps.tag_name.outputs.TAG }}-armeabi-v7a.apk
-            build/app/outputs/flutter-apk/finoteku-${{ steps.tag_name.outputs.TAG }}-x86_64.apk
-            build/app/outputs/flutter-apk/finoteku-${{ steps.tag_name.outputs.TAG }}-universal.apk
-            build/app/outputs/flutter-apk/finoteku.apk
+            build/app/outputs/flutter-apk/finoteku-*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
