@@ -134,13 +134,21 @@ ${userContext.wallets.map((w) => `- ${w.name}`).join('\n')}`;
     let systemPrompt = PARSER_SYSTEM_PROMPT;
 
     if (userContext.agentTraining?.systemInstructions && userContext.agentTraining.systemInstructions.length > 0) {
-      systemPrompt += `\n\nUser Custom Guidelines (Follow strictly):\n${userContext.agentTraining.systemInstructions.map((ins, i) => `${i + 1}. ${ins}`).join('\n')}`;
+      systemPrompt += `\n\nUser Custom Guidelines (Follow strictly):\n${userContext.agentTraining.systemInstructions.map((ins: string, i: number) => `${i + 1}. ${ins}`).join('\n')}`;
+    }
+
+    if (userContext.recentHistory && userContext.recentHistory.length > 0) {
+      systemPrompt += `\n\nUser Confirmed Recent Transactions (Learn user's preferred category & wallet habits from these real history examples):`;
+      userContext.recentHistory.forEach((h) => {
+        const catName = h.parent_category_name ? `${h.parent_category_name} > ${h.category_name}` : (h.category_name || 'Lainnya');
+        systemPrompt += `\n- Item/Note: "${h.notes || 'Transaksi'}" | Rp ${h.amount} | Kategori: "${catName}" | Wallet: "${h.wallet_name || 'Cash'}"`;
+      });
     }
 
     if (userContext.agentTraining?.fewShotExamples && userContext.agentTraining.fewShotExamples.length > 0) {
       const topExamples = userContext.agentTraining.fewShotExamples.slice(-5);
-      systemPrompt += `\n\nUser Few-Shot Training Examples (Follow these mappings):`;
-      topExamples.forEach((ex, i) => {
+      systemPrompt += `\n\nUser Few-Shot Custom Rules:`;
+      topExamples.forEach((ex: any, i: number) => {
         systemPrompt += `\nEx ${i + 1}: "${ex.sampleInput}" -> ${JSON.stringify(ex.expectedOutput)}`;
       });
     }

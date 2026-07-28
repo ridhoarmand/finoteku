@@ -6,26 +6,29 @@ import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import * as categoryData from './categories.ts';
 import * as walletData from './wallets.ts';
 import * as trainingData from './training.ts';
+import * as transactionData from './transactions.ts';
 
 export interface UserContext {
   userId: string;
   categories: categoryData.CategoryRecord[];
   wallets: walletData.WalletRecord[];
   agentTraining?: trainingData.AgentTrainingContext;
+  recentHistory?: transactionData.RecentLearningExample[];
 }
 
 /**
  * Ambil konteks lengkap user untuk pemrosesan agent
- * Termasuk: kategori, wallet, dan instruksi/contoh pelatihan agent
+ * Termasuk: kategori, wallet, instruksi pelatihan, dan riwayat transaksi nyata terbaru untuk Self-Learning AI
  */
 export async function getContext(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<UserContext | null> {
-  const [categoriesResult, walletsResult, trainingResult] = await Promise.all([
+  const [categoriesResult, walletsResult, trainingResult, historyResult] = await Promise.all([
     categoryData.getAll(supabase, userId),
     walletData.getBalances(supabase, userId),
     trainingData.getAgentTraining(supabase, userId),
+    transactionData.getRecentLearningContext(supabase, userId, 5),
   ]);
 
   if (!categoriesResult.data && !walletsResult.data) {
@@ -37,6 +40,7 @@ export async function getContext(
     categories: categoriesResult.data || [],
     wallets: walletsResult.data || [],
     agentTraining: trainingResult,
+    recentHistory: historyResult || [],
   };
 }
 

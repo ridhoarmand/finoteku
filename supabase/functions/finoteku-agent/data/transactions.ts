@@ -91,6 +91,38 @@ export async function getRecent(
   return { data, error };
 }
 
+export interface RecentLearningExample {
+  notes: string | null;
+  amount: number;
+  category_name: string | null;
+  parent_category_name?: string | null;
+  wallet_name: string | null;
+  type: string | null;
+}
+
+/**
+ * Ambil riwayat transaksi nyata terbaru user untuk dijadikan konteks self-learning AI
+ */
+export async function getRecentLearningContext(
+  supabase: SupabaseClient,
+  userId: string,
+  limit: number = 5,
+): Promise<RecentLearningExample[]> {
+  try {
+    const { data, error } = await supabase
+      .from('ledger_entries')
+      .select('notes, amount, category_name, parent_category_name, wallet_name, type')
+      .eq('user_id', userId)
+      .order('date', { ascending: false })
+      .limit(limit);
+
+    if (error || !data) return [];
+    return data as RecentLearningExample[];
+  } catch (_e) {
+    return [];
+  }
+}
+
 /**
  * Buat transaksi baru
  */
