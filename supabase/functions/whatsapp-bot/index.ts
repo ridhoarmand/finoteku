@@ -192,11 +192,8 @@ serve(async (req: Request) => {
     const linkedUser = Array.isArray(userData) ? userData[0] : userData;
 
     if (!linkedUser) {
-      await send(
-        phone,
-        `⚠️ *Akun belum terhubung.*\n\nSilakan hubungkan melalui aplikasi Finoteku.`,
-      );
-      return new Response('User not linked', { status: 200 });
+      console.log(`[WhatsAppBot] Ignoring unlinked number: ${phone}`);
+      return new Response('Ignored - User not linked', { status: 200 });
     }
 
     const userId = linkedUser.user_id;
