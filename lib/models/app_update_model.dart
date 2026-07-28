@@ -26,20 +26,30 @@ class AppRelease {
     final body = (json['body'] as String?) ?? 'Pembaruan aplikasi terbaru telah tersedia.';
     final publishedAt = (json['published_at'] as String?) ?? '';
 
-    // Find the APK download asset
+    // Find the best matching APK download asset (arm64-v8a > universal > fallback)
     String downloadUrl = (json['html_url'] as String?) ?? 'https://github.com/ridhoarmand/finoteku/releases';
     final assets = json['assets'] as List<dynamic>?;
     if (assets != null && assets.isNotEmpty) {
+      String? arm64Url;
+      String? universalUrl;
+      String? fallbackUrl;
+
       for (final asset in assets) {
         if (asset is Map<String, dynamic>) {
           final name = (asset['name'] as String?)?.toLowerCase() ?? '';
           final browserUrl = asset['browser_download_url'] as String?;
-          if (browserUrl != null && (name.endsWith('.apk') || name.contains('finoteku'))) {
-            downloadUrl = browserUrl;
-            break;
+          if (browserUrl != null && name.endsWith('.apk')) {
+            if (name.contains('arm64-v8a')) {
+              arm64Url = browserUrl;
+            } else if (name.contains('universal') || name == 'finoteku.apk') {
+              universalUrl = browserUrl;
+            } else {
+              fallbackUrl ??= browserUrl;
+            }
           }
         }
       }
+      downloadUrl = arm64Url ?? universalUrl ?? fallbackUrl ?? downloadUrl;
     }
 
     // Check if release body contains [MANDATORY] tag
