@@ -138,9 +138,10 @@ ${userContext.wallets.map((w) => `- ${w.name}`).join('\n')}`;
     }
 
     if (userContext.agentTraining?.fewShotExamples && userContext.agentTraining.fewShotExamples.length > 0) {
-      systemPrompt += `\n\nUser Few-Shot Training Examples (Follow these examples for category/wallet/notes mapping):`;
-      userContext.agentTraining.fewShotExamples.forEach((ex, i) => {
-        systemPrompt += `\nExample ${i + 1}: Input: "${ex.sampleInput}" -> Return: ${JSON.stringify(ex.expectedOutput)}`;
+      const topExamples = userContext.agentTraining.fewShotExamples.slice(-5);
+      systemPrompt += `\n\nUser Few-Shot Training Examples (Follow these mappings):`;
+      topExamples.forEach((ex, i) => {
+        systemPrompt += `\nEx ${i + 1}: "${ex.sampleInput}" -> ${JSON.stringify(ex.expectedOutput)}`;
       });
     }
 

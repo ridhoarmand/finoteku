@@ -86,14 +86,14 @@ export class ImageScannerTool extends BaseTool {
       .map((c) => c.name)
       .join(', ');
 
-    const prompt = `OCR struk belanja Indonesia. Baca dan ubah jadi SATU BARIS teks transaksi.
+    const prompt = `OCR struk belanja: Ekstrak HANYA data transaksi inti dalam 1 baris ringkas:
+Format: [Tanggal] [Perusahaan/Toko] Rp[Total Bayar] [Metode Pembayaran jika ada]
 
-Format: [tanggal] [kategori] [nominal] [wallet jika ada], [merchant - item]
-Contoh: "Jan 14 Jajan Beng-beng 10k" atau "260114 Makanan Nasi Ayam Rp10.000 BCA"
+Contoh:
+"25-07-2026 Amanda Brownies Rp109.000 BNI"
+"Indomaret Rp25.000 Cash"
 
-Kategori relevan: ${categories || 'Makanan, Belanja, Transportasi, Tagihan'}
-
-Aturan: Cari TOTAL pembayaran. Tulis natural/casual. Notes Title Case. Output SATU BARIS saja.`;
+Aturan: Abaikan semua detail barang/pajak/kembalian/kasir. HANYA keluarkan 1 baris murni tanpa teks pembuka.`;
 
     const response = await this.ai.parseImage(image, prompt);
 
