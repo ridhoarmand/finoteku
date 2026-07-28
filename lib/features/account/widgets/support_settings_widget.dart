@@ -5,6 +5,9 @@ import 'package:url_launcher/url_launcher.dart';
 import 'settings_section_widget.dart';
 import '../../../core/localization/app_localizations.dart';
 
+import '../../../services/app_update_service.dart';
+import '../../settings/widgets/app_update_dialog.dart';
+
 class SupportSettingsWidget extends ConsumerWidget {
   const SupportSettingsWidget({super.key});
 
@@ -13,6 +16,12 @@ class SupportSettingsWidget extends ConsumerWidget {
     return SettingsSectionWidget(
       title: ref.tr(context, 'support_section'),
       children: [
+        SettingsTileWidget(
+          icon: Icons.system_update_rounded,
+          title: 'Cek Pembaruan Aplikasi',
+          subtitle: 'Periksa versi rilis terbaru Finoteku',
+          onTap: () => _checkAppUpdate(context, ref),
+        ),
         SettingsTileWidget(
           icon: Icons.help_outline,
           title: ref.tr(context, 'help_faq'),
@@ -317,6 +326,36 @@ class SupportSettingsWidget extends ConsumerWidget {
       }
     } catch (e) {
       debugPrint('Error launching URL: $e');
+    }
+  }
+
+  Future<void> _checkAppUpdate(BuildContext context, WidgetRef ref) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('🔎 Memeriksa rilis versi terbaru...'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    final service = ref.read(appUpdateServiceProvider);
+    final updateInfo = await service.checkForUpdate();
+
+    if (!context.mounted) return;
+
+    if (updateInfo.isUpdateAvailable && updateInfo.latestRelease != null) {
+      await AppUpdateDialog.show(
+        context,
+        release: updateInfo.latestRelease!,
+        currentVersion: updateInfo.currentVersion,
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✅ Aplikasi Finoteku sudah menggunakan versi terbaru (v${updateInfo.currentVersion}).'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 }
