@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-/// Model representing a GitHub Release for In-App Update
+/// Model representing an App Release for In-App Update
 @immutable
 class AppRelease {
   final String tagName;
@@ -19,7 +19,26 @@ class AppRelease {
     this.isMandatory = false,
   });
 
-  /// Parse GitHub Releases API JSON response
+  /// Parse Supabase Database `app_versions` record
+  factory AppRelease.fromSupabaseJson(Map<String, dynamic> json) {
+    final version = (json['version'] as String?) ?? '';
+    final title = (json['title'] as String?) ?? 'Finoteku v$version';
+    final changelog = (json['changelog'] as String?) ?? 'Pembaruan aplikasi Finoteku dengan fitur terbaru dan perbaikan bug.';
+    final downloadUrl = (json['apk_url'] as String?) ?? '';
+    final publishedAt = (json['created_at'] as String?) ?? '';
+    final isMandatory = (json['is_mandatory'] as bool?) ?? false;
+
+    return AppRelease(
+      tagName: version.startsWith('v') ? version.substring(1) : version,
+      title: title,
+      changelog: changelog,
+      downloadUrl: downloadUrl,
+      publishedAt: publishedAt,
+      isMandatory: isMandatory,
+    );
+  }
+
+  /// Parse GitHub Releases API JSON response (Fallback)
   factory AppRelease.fromGitHubJson(Map<String, dynamic> json) {
     final tagName = (json['tag_name'] as String?) ?? '';
     final title = (json['name'] as String?) ?? tagName;
@@ -52,7 +71,6 @@ class AppRelease {
       downloadUrl = arm64Url ?? universalUrl ?? fallbackUrl ?? downloadUrl;
     }
 
-    // Check if release body contains [MANDATORY] tag
     final isMandatory = body.toLowerCase().contains('[mandatory]') || body.toLowerCase().contains('[wajib]');
 
     return AppRelease(

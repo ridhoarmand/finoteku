@@ -3,9 +3,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/app_update_model.dart';
+import 'supabase_service.dart';
 
 /// Result state for In-App Update check
 class AppUpdateInfo {
@@ -20,25 +22,31 @@ class AppUpdateInfo {
   });
 }
 
-/// Service for checking and managing GitHub Releases In-App Update
+/// Service for checking and managing Supabase & GitHub Releases In-App Update
 class AppUpdateService {
-  static const String repoUrl = 'https://api.github.com/repos/ridhoarmand/finoteku/releases/latest';
+  final SupabaseClient _supabase;
 
-  /// Check GitHub Releases for latest version
+  AppUpdateService(this._supabase);
+
+  /// Check for latest version via Supabase `app_versions` table
   Future<AppUpdateInfo> checkForUpdate() async {
+    String currentVersionStr = '0.5.0';
     try {
       final packageInfo = await PackageInfo.fromPlatform();
-      final currentVersionStr = packageInfo.version; // e.g. "0.4.0"
+      currentVersionStr = packageInfo.version;
+    } catch (_) {}
 
-      final response = await http.get(
-        Uri.parse(repoUrl),
-        headers: {'Accept': 'application/vnd.github.v3+json'},
-      ).timeout(const Duration(seconds: 8));
+    // 1. Try fetching latest release from Supabase `app_versions` table
+    try {
+      final response = await _supabase
+          .from('app_versions')
+          .select()
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> data = jsonDecode(response.body);
-        final release = AppRelease.fromGitHubJson(data);
-
+      if (response != null) {
+        final release = AppRelease.fromSupabaseJson(response);
         final isNewer = _isVersionNewer(release.tagName, currentVersionStr);
 
         return AppUpdateInfo(
@@ -46,28 +54,40 @@ class AppUpdateService {
           currentVersion: currentVersionStr,
           latestRelease: isNewer ? release : null,
         );
-      } else {
+      }
+    } catch (e) {
+      debugPrint('[AppUpdateService] Supabase version check fallback: $e');
+    }
+
+    // 2. Fallback: GitHub Releases Public API
+    try {
+      final response = await http.get(
+        Uri.parse('https://api.github.com/repos/ridhoarmand/finoteku/releases/latest'),
+        headers: {'Accept': 'application/vnd.github.v3+json'},
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        final release = AppRelease.fromGitHubJson(data);
+        final isNewer = _isVersionNewer(release.tagName, currentVersionStr);
+
         return AppUpdateInfo(
-          isUpdateAvailable: false,
+          isUpdateAvailable: isNewer,
           currentVersion: currentVersionStr,
+          latestRelease: isNewer ? release : null,
         );
       }
     } catch (e) {
-      debugPrint('[AppUpdateService] Error checking update: $e');
-      final packageInfo = await PackageInfo.fromPlatform().catchError((_) => PackageInfo(
-        appName: 'Finoteku',
-        packageName: 'com.finoteku.app',
-        version: '0.4.0',
-        buildNumber: '8',
-      ));
-      return AppUpdateInfo(
-        isUpdateAvailable: false,
-        currentVersion: packageInfo.version,
-      );
+      debugPrint('[AppUpdateService] GitHub fallback error: $e');
     }
+
+    return AppUpdateInfo(
+      isUpdateAvailable: false,
+      currentVersion: currentVersionStr,
+    );
   }
 
-  /// Launch APK download URL or Release page
+  /// Launch APK download URL or Storage link
   Future<bool> downloadAndInstallUpdate(String downloadUrl) async {
     try {
       final uri = Uri.parse(downloadUrl);
@@ -107,7 +127,8 @@ class AppUpdateService {
 
 /// Provider for AppUpdateService
 final appUpdateServiceProvider = Provider<AppUpdateService>((ref) {
-  return AppUpdateService();
+  final supabase = ref.watch(supabaseProvider);
+  return AppUpdateService(supabase);
 });
 
 /// FutureProvider to check update status on-demand or auto-check

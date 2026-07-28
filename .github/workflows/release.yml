@@ -6,7 +6,7 @@ on:
       - 'v*' # Trigger ONLY when pushing git tags starting with 'v' (e.g. v0.5.0, v1.0.0)
 
 permissions:
-  contents: write # CRITICAL: Gives GITHUB_TOKEN write permissions to create releases & upload assets
+  contents: write # Gives GITHUB_TOKEN write permissions to create releases & upload assets
 
 jobs:
   build-and-release:
@@ -70,3 +70,47 @@ jobs:
             build/app/outputs/flutter-apk/finoteku-*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 8. Upload APK to Supabase Storage & Database (For Private Repo In-App Update)
+      - name: Upload APK to Supabase Storage & Database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_KEY" ]; then
+            TAG=${{ steps.tag_name.outputs.TAG }}
+            CLEAN_VERSION=${TAG#v}
+            APK_NAME="finoteku-${TAG}-arm64-v8a.apk"
+            FILE_PATH="build/app/outputs/flutter-apk/${APK_NAME}"
+
+            if [ ! -f "$FILE_PATH" ]; then
+              APK_NAME="finoteku.apk"
+              FILE_PATH="build/app/outputs/flutter-apk/${APK_NAME}"
+            fi
+
+            echo "Uploading $FILE_PATH to Supabase Storage bucket app_releases..."
+            
+            # Ensure bucket exists
+            curl -s -X POST "${SUPABASE_URL}/storage/v1/bucket" \
+              -H "Authorization: Bearer ${SUPABASE_KEY}" \
+              -H "Content-Type: application/json" \
+              -d '{"id": "app_releases", "name": "app_releases", "public": true}' || true
+
+            # Upload file to Supabase Storage
+            curl -s -X POST "${SUPABASE_URL}/storage/v1/object/app_releases/${APK_NAME}" \
+              -H "Authorization: Bearer ${SUPABASE_KEY}" \
+              -H "x-upsert: true" \
+              -F "file=@${FILE_PATH}" || true
+
+            PUBLIC_APK_URL="${SUPABASE_URL}/storage/v1/object/public/app_releases/${APK_NAME}"
+
+            echo "Recording version ${CLEAN_VERSION} in Supabase app_versions table..."
+            curl -s -X POST "${SUPABASE_URL}/rest/v1/app_versions" \
+              -H "Authorization: Bearer ${SUPABASE_KEY}" \
+              -H "apikey: ${SUPABASE_KEY}" \
+              -H "Content-Type: application/json" \
+              -H "Prefer: resolution=merge-duplicates" \
+              -d "{\"version\": \"${CLEAN_VERSION}\", \"title\": \"Finoteku Release ${TAG}\", \"changelog\": \"Pembaruan aplikasi Finoteku rilis ${TAG} dengan fitur terbaru dan perbaikan bug.\", \"apk_url\": \"${PUBLIC_APK_URL}\"}" || true
+          else
+            echo "Skipping Supabase Upload: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY secret not set in GitHub Repository Secrets."
+          fi
