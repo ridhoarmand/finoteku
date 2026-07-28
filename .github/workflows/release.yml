@@ -39,10 +39,14 @@ jobs:
       - name: Build Release APK
         run: flutter build apk --release
 
-      # 6. Extract Tag Name
-      - name: Get Tag Name
+      # 6. Extract Tag Name & Rename APK
+      - name: Prepare APK Asset Name
         id: tag_name
-        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          echo "TAG=${TAG}" >> $GITHUB_OUTPUT
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/finoteku-${TAG}.apk
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/finoteku.apk
 
       # 7. Create GitHub Release & Upload APK Asset
       - name: Create GitHub Release
@@ -54,6 +58,7 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/flutter-apk/finoteku-${{ steps.tag_name.outputs.TAG }}.apk
+            build/app/outputs/flutter-apk/finoteku.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
