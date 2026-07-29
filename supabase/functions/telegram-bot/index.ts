@@ -13,6 +13,7 @@ import {
   parseCallbackQuery,
   parseTelegramUpdate,
   removeMessageButtons,
+  sendChatAction,
   sendTelegramMessage,
   sendTelegramMessageWithButtons,
 } from './telegram.ts';
@@ -250,6 +251,9 @@ serve(async (req: Request) => {
     }
 
     const userId = linkedUser.user_id;
+
+    // Tampilkan indikator "sedang mengetik..." di Telegram secara instan
+    sendChatAction(TELEGRAM_BOT_TOKEN, chatId, 'typing').catch((e) => console.error('Typing error:', e));
 
     // 5. Bangun AgentInput berdasarkan tipe pesan
     let agentInput: AgentInput;

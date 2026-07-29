@@ -39,14 +39,21 @@ const PARSER_SYSTEM_PROMPT =
   `You are a transaction parser for an Indonesian finance app. Parse text into structured JSON.
 
 Rules by Step:
-1. Priority: If input contains "[Catatan Tambahan User: ...]", treat that text as the ABSOLUTE HIGHEST priority for determining the Category, Wallet, and Notes. It overrides the raw text/OCR.
-2. Detect Type: "transfer" (pindah saldo, tarik tunai). "income" (pemasukan, gaji). "expense" (pengeluaran, belanja).
-3. Special transfer rule: "tarik tunai bca" means transfer FROM BCA TO Cash unless destination is explicitly provided.
-4. Category: Pick EXACTLY one name from the provided category lists matching the detected type. For transfer, category can be "Transfer" as placeholder.
-5. Wallet: Pick EXACT name from list. Default "Cash". For transfers: wallet=source, toWallet=destination.
-6. DateOffset: 0=today, -1=kemarin, 1=besok.
-7. Amount: Extract numbers (25rb=25000, 2jt=2000000).
-8. Notes: Extract ONLY the specific context or items (e.g., "Makan Siang"). NEVER include the transaction type or the category name in the notes! Keep it concise in Title Case.
+1. Structured Templates & Emoji Markers:
+   - If input contains "💸" or "Pengeluaran", set type = "expense".
+   - If input contains "💰" or "Pemasukan", set type = "income".
+   - Line with "📁" or "Kategori" contains the Category.
+   - Line with "💳" or "Dompet"/"Wallet" contains the Wallet.
+   - Line with "💵" or "Rp" contains the Amount.
+   - Line with "📝" or "Catatan"/"Notes" contains the Notes.
+2. Priority: If input contains "[Catatan Tambahan User: ...]", treat that text as the ABSOLUTE HIGHEST priority.
+3. Detect Type: "transfer" (pindah saldo, tarik tunai). "income" (pemasukan, gaji). "expense" (pengeluaran, belanja).
+4. Special transfer rule: "tarik tunai bca" means transfer FROM BCA TO Cash unless destination is explicitly provided.
+5. Category: Pick EXACTLY one name from the provided category lists matching the detected type.
+6. Wallet: Pick EXACT name from list. Default "Cash".
+7. DateOffset: Calculate relative date offset if date is specified.
+8. Amount: Extract numbers (100.000 = 100000, 25rb = 25000, 2jt = 2000000).
+9. Notes: Extract ONLY the specific context or items (e.g., "Tambahan Uang Saku Ke Sidareja"). NEVER include the transaction type or category name in notes! Keep it concise in Title Case.
 
 Return JSON: {"type","amount","category","wallet","toWallet"(transfers only),"dateOffset","notes"}`;
 
@@ -95,26 +102,38 @@ export class TransactionParserTool extends BaseTool {
     const incomeCats = userContext.categories.filter((c) => c.type === 'income');
 
     const lowerText = text.toLowerCase();
-    const isLikelyIncome = ['masuk', 'terima', 'dapat', 'pemasukan'].some((k) =>
-      lowerText.startsWith(k) || lowerText.includes(k)
+    const isLikelyExpense = text.includes('💸') || ['keluar', 'bayar', 'pengeluaran', 'beli', 'belanja'].some((k) =>
+      lowerText.includes(k)
     );
-    const isLikelyTransfer = [
-      'transfer',
-      'pindah',
-      'kirim',
-      'mutasi',
-      'tarik tunai',
-      'tarik',
-      'cabut dana',
-    ].some((k) => lowerText.startsWith(k) || lowerText.includes(k));
-    const isLikelyExpense = ['keluar', 'bayar', 'pengeluaran', 'beli'].some((k) =>
-      lowerText.startsWith(k) || lowerText.includes(k)
+    const isLikelyIncome = text.includes('💰') || ['masuk', 'terima', 'dapat', 'pemasukan', 'gaji', 'tunjangan'].some((k) =>
+      lowerText.includes(k)
+    );
+    const isLikelyTransfer = ['transfer', 'pindah', 'kirim', 'mutasi', 'tarik tunai', 'tarik'].some((k) =>
+      lowerText.includes(k)
     );
 
     let typeHint = 'unknown';
-    if (isLikelyTransfer) typeHint = 'transfer';
+    if (isLikelyExpense) typeHint = 'expense';
     else if (isLikelyIncome) typeHint = 'income';
-    else if (isLikelyExpense) typeHint = 'expense';
+    else if (isLikelyTransfer) typeHint = 'transfer';
+
+    // Extract structured template hints (emoji markers: 💸/💰, 💳, 💵, 📁, 📝)
+    let templateCategoryHint: string | undefined;
+    let templateNotesHint: string | undefined;
+    let templateWalletHint: string | undefined;
+
+    const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+    for (const line of lines) {
+      if (line.includes('📁') || line.toLowerCase().startsWith('kategori:')) {
+        templateCategoryHint = line.replace(/📁|kategori:/gi, '').trim();
+      }
+      if (line.includes('📝') || line.toLowerCase().startsWith('catatan:') || line.toLowerCase().startsWith('notes:')) {
+        templateNotesHint = line.replace(/📝|catatan:|notes:/gi, '').trim();
+      }
+      if (line.includes('💳') || line.toLowerCase().startsWith('dompet:') || line.toLowerCase().startsWith('wallet:')) {
+        templateWalletHint = line.replace(/💳|dompet:|wallet:/gi, '').trim();
+      }
+    }
 
     // User prompt — hanya data dinamis
     const prompt = `Date: ${dateStr}
@@ -163,7 +182,18 @@ ${userContext.wallets.map((w) => `- ${w.name}`).join('\n')}`;
         temperature: 0.1,
       });
 
-      console.log('[TransactionParser] AI parsed:', parsed);
+      console.log('[TransactionParser] AI parsed raw:', parsed);
+
+      // Apply structured template hints if parsed by emoji markers (📁, 📝, 💳)
+      if (templateCategoryHint && templateCategoryHint.length > 0) {
+        parsed.category = templateCategoryHint;
+      }
+      if (templateNotesHint && templateNotesHint.length > 0) {
+        parsed.notes = templateNotesHint;
+      }
+      if (templateWalletHint && templateWalletHint.length > 0) {
+        parsed.wallet = templateWalletHint;
+      }
 
       if (!parsed.amount || !parsed.wallet) {
         throw new Error('AI response missing required fields');
