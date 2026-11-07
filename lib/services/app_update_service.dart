@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -28,12 +29,28 @@ class AppUpdateService {
 
   AppUpdateService(this._supabase);
 
+  static const _lastCheckKey = 'app_update_last_check';
+
+  /// Automatic check, at most once per [interval]; null when skipped.
+  Future<AppUpdateInfo?> checkForUpdateDaily({
+    Duration interval = const Duration(hours: 24),
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final last = prefs.getInt(_lastCheckKey);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (last != null && now - last < interval.inMilliseconds) return null;
+    await prefs.setInt(_lastCheckKey, now);
+    return checkForUpdate();
+  }
+
   /// Check for latest version via Supabase `app_versions` table
   Future<AppUpdateInfo> checkForUpdate() async {
-    String currentVersionStr = '0.5.0';
+    String currentVersionStr = '0.0.0';
+    int currentBuild = 0;
     try {
       final packageInfo = await PackageInfo.fromPlatform();
       currentVersionStr = packageInfo.version;
+      currentBuild = int.tryParse(packageInfo.buildNumber) ?? 0;
     } catch (_) {}
 
     // 1. Try fetching latest release from Supabase `app_versions` table
@@ -47,7 +64,12 @@ class AppUpdateService {
 
       if (response != null) {
         final release = AppRelease.fromSupabaseJson(response);
-        final isNewer = _isVersionNewer(release.tagName, currentVersionStr);
+        final isNewer = isNewerRelease(
+          release.tagName,
+          release.buildNumber,
+          currentVersionStr,
+          currentBuild,
+        );
 
         return AppUpdateInfo(
           isUpdateAvailable: isNewer,
@@ -61,15 +83,24 @@ class AppUpdateService {
 
     // 2. Fallback: GitHub Releases Public API
     try {
-      final response = await http.get(
-        Uri.parse('https://api.github.com/repos/ridhoarmand/finoteku/releases/latest'),
-        headers: {'Accept': 'application/vnd.github.v3+json'},
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .get(
+            Uri.parse(
+              'https://api.github.com/repos/ridhoarmand/finoteku/releases/latest',
+            ),
+            headers: {'Accept': 'application/vnd.github.v3+json'},
+          )
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
         final release = AppRelease.fromGitHubJson(data);
-        final isNewer = _isVersionNewer(release.tagName, currentVersionStr);
+        final isNewer = isNewerRelease(
+          release.tagName,
+          release.buildNumber,
+          currentVersionStr,
+          currentBuild,
+        );
 
         return AppUpdateInfo(
           isUpdateAvailable: isNewer,
@@ -100,29 +131,6 @@ class AppUpdateService {
       return false;
     }
   }
-
-  /// Compare Semantic Versions (e.g. "0.5.0" vs "0.4.0")
-  bool _isVersionNewer(String latestTag, String currentVersion) {
-    try {
-      final cleanLatest = latestTag.replaceAll(RegExp(r'[^0-9.]'), '');
-      final cleanCurrent = currentVersion.replaceAll(RegExp(r'[^0-9.]'), '');
-
-      final latestParts = cleanLatest.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-      final currentParts = cleanCurrent.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-
-      final maxLength = latestParts.length > currentParts.length ? latestParts.length : currentParts.length;
-
-      for (int i = 0; i < maxLength; i++) {
-        final l = i < latestParts.length ? latestParts[i] : 0;
-        final c = i < currentParts.length ? currentParts[i] : 0;
-        if (l > c) return true;
-        if (l < c) return false;
-      }
-      return false;
-    } catch (_) {
-      return false;
-    }
-  }
 }
 
 /// Provider for AppUpdateService
@@ -136,3 +144,27 @@ final checkForUpdateProvider = FutureProvider<AppUpdateInfo>((ref) async {
   final service = ref.watch(appUpdateServiceProvider);
   return await service.checkForUpdate();
 });
+
+/// True when [latest] (+ optional build) is newer than the installed version.
+/// Names compare part by part ("0.10.0" > "0.9.9"); with equal names the build
+/// number decides. Anything after "+" or "-" in a name is ignored.
+bool isNewerRelease(
+  String latest,
+  int? latestBuild,
+  String current,
+  int currentBuild,
+) {
+  List<int> parts(String v) => v
+      .replaceFirst(RegExp(r'^v'), '')
+      .split(RegExp(r'[+-]'))
+      .first
+      .split('.')
+      .map((e) => int.tryParse(e) ?? 0)
+      .toList();
+  final a = parts(latest), b = parts(current);
+  for (var i = 0; i < (a.length > b.length ? a.length : b.length); i++) {
+    final x = i < a.length ? a[i] : 0, y = i < b.length ? b[i] : 0;
+    if (x != y) return x > y;
+  }
+  return latestBuild != null && latestBuild > currentBuild;
+}

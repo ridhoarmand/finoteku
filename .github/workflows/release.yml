@@ -1,12 +1,20 @@
 name: Automated Android Release
 
+# Release = push a tag vX.Y.Z whose X.Y.Z equals `version:` in pubspec.yaml.
+# Every check below fails the job instead of shipping a broken or unsigned APK.
+# Steps and secrets are documented in CLAUDE.md ("Release").
 on:
   push:
     tags:
-      - 'v*' # Trigger ONLY when pushing git tags starting with 'v' (e.g. v0.5.0, v1.0.0)
+      - 'v*'
 
 permissions:
-  contents: write # Gives GITHUB_TOKEN write permissions to create releases & upload assets
+  contents: write
+
+env:
+  # SHA-256 of the release certificate (~/.finoteku-keys/finoteku-release.jks, alias finoteku).
+  # Every release must carry it, otherwise it cannot be installed over the previous one.
+  RELEASE_CERT_SHA256: 20eac7cd856fbadae61e22bd44064b7fadcc69d55356967e720851df059e29bf
 
 jobs:
   build-and-release:
@@ -14,115 +22,139 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout Repository
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # 2. Setup Java
+      - name: Check version, tag and secrets
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for s in SUPABASE_URL SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY ANDROID_KEYSTORE_BASE64 \
+                   ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            [ -n "${!s}" ] || { echo "::error::Secret $s is missing"; exit 1; }
+          done
+          TAG=${GITHUB_REF#refs/tags/}
+          PUB=$(grep -m1 '^version:' pubspec.yaml | sed 's/version:[[:space:]]*//; s/\r//')
+          NAME=${PUB%+*}; BUILD=${PUB#*+}
+          [ "v$NAME" = "$TAG" ] || { echo "::error::Tag $TAG does not match pubspec version $NAME"; exit 1; }
+          PREV=$(git tag --list 'v*' --sort=-v:refname | grep -vx "$TAG" | head -1 || true)
+          if [ -n "$PREV" ]; then
+            PREV_PUB=$(git show "$PREV:pubspec.yaml" | grep -m1 '^version:' | sed 's/version:[[:space:]]*//; s/\r//')
+            PREV_NAME=${PREV_PUB%+*}; PREV_BUILD=${PREV_PUB#*+}
+            [ "$(printf '%s\n%s\n' "$PREV_NAME" "$NAME" | sort -V | tail -1)" = "$NAME" ] && [ "$NAME" != "$PREV_NAME" ] \
+              || { echo "::error::Version $NAME must be higher than $PREV_NAME ($PREV)"; exit 1; }
+            [ "$BUILD" -gt "$PREV_BUILD" ] || { echo "::error::Build number $BUILD must be higher than $PREV_BUILD ($PREV)"; exit 1; }
+          fi
+          echo "Releasing $NAME+$BUILD (previous: ${PREV:-none})"
+
       - name: Setup Java JDK
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      # 3. Setup Flutter SDK
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
 
-      # 4. Install Dependencies
       - name: Install Dependencies
         run: flutter pub get
 
-      # 5. Compile-time config: the app reads Supabase credentials via --dart-define.
-      #    Without this the APK ships placeholder values and every login fails.
-      - name: Create .env from secrets
+      # The app reads Supabase credentials at compile time (--dart-define-from-file).
+      - name: Create .env and keystore from secrets
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
-          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
-            echo "::error::SUPABASE_URL / SUPABASE_ANON_KEY secrets are missing"; exit 1
-          fi
           printf 'SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\n' "$SUPABASE_URL" "$SUPABASE_ANON_KEY" > .env
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
 
-      # 6. Build Android Release APKs (Universal & Split ABIs)
       - name: Build Release APKs
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           flutter build apk --release --dart-define-from-file=.env
           flutter build apk --release --split-per-abi --dart-define-from-file=.env
 
-      # 6. Extract Tag Name & Prepare Named APK Assets
+      - name: Verify signature and baked-in config
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        run: |
+          set -euo pipefail
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
+          for apk in build/app/outputs/flutter-apk/app-*release.apk; do
+            CERT=$("$APKSIGNER" verify --print-certs "$apk" | grep -m1 'SHA-256 digest' | awk '{print $NF}')
+            [ "$CERT" = "$RELEASE_CERT_SHA256" ] || { echo "::error::$apk signed with $CERT, expected release cert"; exit 1; }
+          done
+          unzip -p build/app/outputs/flutter-apk/app-arm64-v8a-release.apk lib/arm64-v8a/libapp.so | grep -qaF "$SUPABASE_URL" \
+            || { echo "::error::Supabase URL is not compiled into the APK"; exit 1; }
+          echo "All APKs carry the release certificate and the Supabase config."
+
       - name: Prepare APK Asset Names
         id: tag_name
         run: |
           TAG=${GITHUB_REF#refs/tags/}
           echo "TAG=${TAG}" >> $GITHUB_OUTPUT
           cd build/app/outputs/flutter-apk
-          cp app-arm64-v8a-release.apk finoteku-${TAG}-arm64-v8a.apk || true
-          cp app-armeabi-v7a-release.apk finoteku-${TAG}-armeabi-v7a.apk || true
-          cp app-x86_64-release.apk finoteku-${TAG}-x86_64.apk || true
-          cp app-release.apk finoteku-${TAG}-universal.apk || true
-          cp app-release.apk finoteku.apk || true
+          cp app-arm64-v8a-release.apk finoteku-${TAG}-arm64-v8a.apk
+          cp app-armeabi-v7a-release.apk finoteku-${TAG}-armeabi-v7a.apk
+          cp app-x86_64-release.apk finoteku-${TAG}-x86_64.apk
+          cp app-release.apk finoteku-${TAG}-universal.apk
 
-      # 7. Create GitHub Release & Upload All APK Assets
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag_name.outputs.TAG }}
-          name: Finoteku Release ${{ steps.tag_name.outputs.TAG }}
+          name: Finoteku ${{ steps.tag_name.outputs.TAG }}
           generate_release_notes: true
-          draft: false
-          prerelease: false
           files: |
             build/app/outputs/flutter-apk/finoteku-*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 8. Upload APK to Supabase Storage & Database (For Private Repo In-App Update)
-      - name: Upload APK to Supabase Storage & Database
+      # In-app update (repo is private, so the app reads app_versions + Storage, not GitHub).
+      # The universal APK installs on every phone and replaces the previous version.
+      - name: Publish to Supabase (in-app update)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_KEY" ]; then
-            TAG=${{ steps.tag_name.outputs.TAG }}
-            CLEAN_VERSION=${TAG#v}
-            APK_NAME="finoteku-${TAG}-arm64-v8a.apk"
-            FILE_PATH="build/app/outputs/flutter-apk/${APK_NAME}"
+          set -euo pipefail
+          TAG=${{ steps.tag_name.outputs.TAG }}
+          PUB=$(grep -m1 '^version:' pubspec.yaml | sed 's/version:[[:space:]]*//; s/\r//')
+          NAME=${PUB%+*}; BUILD=${PUB#*+}
+          APK_NAME="finoteku-${TAG}-universal.apk"
+          AUTH=(-H "Authorization: Bearer ${SUPABASE_KEY}" -H "apikey: ${SUPABASE_KEY}")
 
-            if [ ! -f "$FILE_PATH" ]; then
-              APK_NAME="finoteku.apk"
-              FILE_PATH="build/app/outputs/flutter-apk/${APK_NAME}"
-            fi
+          # bucket may already exist (409); anything else is an error
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "${SUPABASE_URL}/storage/v1/bucket" "${AUTH[@]}" \
+            -H "Content-Type: application/json" -d '{"id":"app_releases","name":"app_releases","public":true}')
+          case "$code" in 200|201|400|409) ;; *) echo "::error::Create bucket failed ($code)"; exit 1;; esac
 
-            echo "Uploading $FILE_PATH to Supabase Storage bucket app_releases..."
-            
-            # Ensure bucket exists
-            curl -s -X POST "${SUPABASE_URL}/storage/v1/bucket" \
-              -H "Authorization: Bearer ${SUPABASE_KEY}" \
-              -H "Content-Type: application/json" \
-              -d '{"id": "app_releases", "name": "app_releases", "public": true}' || true
+          curl -sf -X POST "${SUPABASE_URL}/storage/v1/object/app_releases/${APK_NAME}" "${AUTH[@]}" \
+            -H "x-upsert: true" -H "Content-Type: application/vnd.android.package-archive" \
+            --data-binary "@build/app/outputs/flutter-apk/${APK_NAME}" > /dev/null
 
-            # Upload file to Supabase Storage
-            curl -s -X POST "${SUPABASE_URL}/storage/v1/object/app_releases/${APK_NAME}" \
-              -H "Authorization: Bearer ${SUPABASE_KEY}" \
-              -H "x-upsert: true" \
-              -F "file=@${FILE_PATH}" || true
+          URL="${SUPABASE_URL}/storage/v1/object/public/app_releases/${APK_NAME}"
+          curl -sf -X POST "${SUPABASE_URL}/rest/v1/app_versions?on_conflict=version" "${AUTH[@]}" \
+            -H "Content-Type: application/json" -H "Prefer: resolution=merge-duplicates" \
+            -d "{\"version\":\"${NAME}\",\"build_number\":${BUILD},\"title\":\"Finoteku ${TAG}\",\"changelog\":\"Lihat catatan rilis ${TAG} di aplikasi.\",\"apk_url\":\"${URL}\"}" > /dev/null
 
-            PUBLIC_APK_URL="${SUPABASE_URL}/storage/v1/object/public/app_releases/${APK_NAME}"
-
-            echo "Recording version ${CLEAN_VERSION} in Supabase app_versions table..."
-            curl -s -X POST "${SUPABASE_URL}/rest/v1/app_versions" \
-              -H "Authorization: Bearer ${SUPABASE_KEY}" \
-              -H "apikey: ${SUPABASE_KEY}" \
-              -H "Content-Type: application/json" \
-              -H "Prefer: resolution=merge-duplicates" \
-              -d "{\"version\": \"${CLEAN_VERSION}\", \"title\": \"Finoteku Release ${TAG}\", \"changelog\": \"Pembaruan aplikasi Finoteku rilis ${TAG} dengan fitur terbaru dan perbaikan bug.\", \"apk_url\": \"${PUBLIC_APK_URL}\"}" || true
-          else
-            echo "Skipping Supabase Upload: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY secret not set in GitHub Repository Secrets."
-          fi
+          # read back: the update the apps will see
+          curl -sf "${SUPABASE_URL}/rest/v1/app_versions?version=eq.${NAME}&select=version,build_number,apk_url" "${AUTH[@]}"
+          curl -sf -o /dev/null -r 0-0 "$URL" && echo "APK is downloadable: $URL"

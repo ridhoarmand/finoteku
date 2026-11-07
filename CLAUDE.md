@@ -18,8 +18,32 @@ flutter test                                  # single file: flutter test test/m
 - The bot agent (sibling repo) has its own tests: `bun test supabase/functions/finoteku-agent`.
 
 - Supabase credentials are **compile-time** values (`String.fromEnvironment` in `lib/utils/environment.dart`). Every `flutter run`/`build` needs `--dart-define-from-file=.env`, or the app starts with placeholder credentials. `.vscode/launch.json` already passes it.
-- `release.sh` bumps the build number in `pubspec.yaml` (`x.y.z+N` → `+N+1`) and restores the original version if the build fails. Android builds are obfuscated with split debug info in `build/debug-info/`. `--install` runs `install_linux.sh` on the Linux bundle.
+- `release.sh` (local builds only, see Release) bumps the build number in `pubspec.yaml` (`x.y.z+N` → `+N+1`) and restores the original version if the build fails. Android builds are obfuscated with split debug info in `build/debug-info/`. `--install` runs `install_linux.sh` on the Linux bundle.
 - Providers are written by hand (no code generation).
+
+## Release (Android): the only correct way
+
+A release is a **tag push**; GitHub Actions (`.github/workflows/release.yml`) builds, checks and publishes. Do not hand out locally built APKs as releases.
+
+1. Bump `version:` in `pubspec.yaml`: the name **and** the build number go up (`0.5.3+12` → `0.5.4+13`). The build number is the Android versionCode; Android refuses to install a lower one over a higher one.
+2. Commit and push to `master`.
+3. `git tag -a v0.5.4 -m "Finoteku v0.5.4" && git push origin v0.5.4`. The tag must equal the pubspec name (`v` + `0.5.4`).
+4. Watch the run: `gh run watch <id> --exit-status`. It fails, instead of shipping, when the tag ≠ pubspec, a version/build is not higher than the previous tag, a secret is missing, an APK is not signed with the release certificate, or the Supabase URL is not compiled in.
+5. The run publishes the GitHub Release (per-ABI + universal APKs), uploads the universal APK to Supabase Storage `app_releases`, and upserts `app_versions` (version, build_number, apk_url). Apps check that table once a day (`AutoUpdateCheck`) and from Akun; the download installs **over** the current app because the signature and versionCode line up.
+
+Never:
+- build a release without `--dart-define-from-file=.env` (the APK then ships placeholder Supabase credentials and every login fails);
+- sign a release with a debug key (each machine/runner has a different one, so the APK cannot replace the installed app). `android/app/build.gradle.kts` refuses to build a release without the release keystore;
+- move or re-push an existing release tag (it re-runs the release); make a new version instead;
+- add `Co-Authored-By: Claude` (or any AI attribution) to commits.
+
+**Signing.** One keystore for CI and local builds: `~/.finoteku-keys/finoteku-release.jks` (alias `finoteku`), passwords in `~/.finoteku-keys/key.properties`, copied to `android/key.properties` (gitignored) for local builds. Certificate SHA-256 `20eac7cd856fbadae61e22bd44064b7fadcc69d55356967e720851df059e29bf` (also in the workflow). Losing the keystore means no update can ever replace installed apps.
+
+**GitHub secrets** (repo finoteku): `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (Storage upload + `app_versions`), `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
+
+**Verify a release APK** yourself: `unzip -p <apk> lib/arm64-v8a/libapp.so | grep -c "<SUPABASE_URL>"` (must be > 0) and `apksigner verify --print-certs <apk>` (SHA-256 must match above).
+
+**Local builds** (`./release.sh --android`) need JDK 17/21: this machine's Android Studio JBR is JDK 25, which Gradle 8.14 does not run on. Use CI for releases.
 
 ## Backend lives in another repo
 

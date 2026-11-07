@@ -1,7 +1,28 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android plugin.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Release signing: one keystore for CI and local builds, so every release can be
+// installed over the previous one. CI passes env vars; locally android/key.properties
+// (gitignored) points at ~/.finoteku-keys. See CLAUDE.md "Release".
+val keyProps = Properties().apply {
+    val f = rootProject.file("key.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+fun signingValue(env: String, prop: String): String? =
+    System.getenv(env)?.takeIf { it.isNotBlank() } ?: keyProps.getProperty(prop)
+
+val releaseStoreFile = signingValue("ANDROID_KEYSTORE_PATH", "storeFile")
+val buildsRelease = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
+if (buildsRelease && releaseStoreFile == null) {
+    throw GradleException(
+        "No release keystore: set ANDROID_KEYSTORE_* env vars or create android/key.properties. " +
+            "A debug-signed release cannot be installed over the previous version."
+    )
 }
 
 android {
@@ -34,6 +55,17 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (releaseStoreFile != null) {
+            create("release") {
+                storeFile = file(releaseStoreFile)
+                storePassword = signingValue("ANDROID_KEYSTORE_PASSWORD", "storePassword")
+                keyAlias = signingValue("ANDROID_KEY_ALIAS", "keyAlias")
+                keyPassword = signingValue("ANDROID_KEY_PASSWORD", "keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             // Enable code shrinking, obfuscation, and optimization
@@ -43,9 +75,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 }

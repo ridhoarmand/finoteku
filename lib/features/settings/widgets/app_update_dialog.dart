@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -24,10 +25,8 @@ class AppUpdateDialog extends ConsumerWidget {
     return showDialog<void>(
       context: context,
       barrierDismissible: !release.isMandatory,
-      builder: (ctx) => AppUpdateDialog(
-        release: release,
-        currentVersion: currentVersion,
-      ),
+      builder: (ctx) =>
+          AppUpdateDialog(release: release, currentVersion: currentVersion),
     );
   }
 
@@ -101,10 +100,14 @@ class AppUpdateDialog extends ConsumerWidget {
               constraints: const BoxConstraints(maxHeight: 180),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                color: theme.colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.5,
+                ),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                  color: theme.colorScheme.outlineVariant.withValues(
+                    alpha: 0.5,
+                  ),
                 ),
               ),
               child: SingleChildScrollView(
@@ -112,9 +115,7 @@ class AppUpdateDialog extends ConsumerWidget {
                   release.changelog.isNotEmpty
                       ? release.changelog
                       : 'Pembaruan aplikasi Finoteku dengan fitur terbaru dan perbaikan bug.',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    height: 1.4,
-                  ),
+                  style: theme.textTheme.bodyMedium?.copyWith(height: 1.4),
                 ),
               ),
             ),
@@ -142,11 +143,15 @@ class AppUpdateDialog extends ConsumerWidget {
                   child: ElevatedButton.icon(
                     onPressed: () async {
                       Navigator.of(context).pop();
-                      final success = await service.downloadAndInstallUpdate(release.downloadUrl);
+                      final success = await service.downloadAndInstallUpdate(
+                        release.downloadUrl,
+                      );
                       if (!success && context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('⚠️ Gagal mengunduh rilis APK. Silakan periksa koneksi internet.'),
+                            content: Text(
+                              '⚠️ Gagal mengunduh rilis APK. Silakan periksa koneksi internet.',
+                            ),
                           ),
                         );
                       }
@@ -170,4 +175,40 @@ class AppUpdateDialog extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Checks for a newer release once a day when the app shell opens (Android only:
+/// the update is an APK that the system installer puts over the current app).
+class AutoUpdateCheck extends ConsumerStatefulWidget {
+  final Widget child;
+  const AutoUpdateCheck({super.key, required this.child});
+
+  @override
+  ConsumerState<AutoUpdateCheck> createState() => _AutoUpdateCheckState();
+}
+
+class _AutoUpdateCheckState extends ConsumerState<AutoUpdateCheck> {
+  @override
+  void initState() {
+    super.initState();
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final info = await ref
+            .read(appUpdateServiceProvider)
+            .checkForUpdateDaily();
+        if (!mounted || info == null || !info.isUpdateAvailable) return;
+        await AppUpdateDialog.show(
+          context,
+          release: info.latestRelease!,
+          currentVersion: info.currentVersion,
+        );
+      } catch (e) {
+        debugPrint('[AutoUpdateCheck] $e'); // offline etc.: try again tomorrow
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
