@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/report_providers.dart';
 import '../models/report_models.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../category/theme/category_theme.dart';
 
 class IncomeExpenseToggle extends ConsumerWidget {
   const IncomeExpenseToggle({super.key});
@@ -36,7 +37,7 @@ class IncomeExpenseToggle extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
                   color: state.type == ReportType.expense
-                      ? Colors.red[400]
+                      ? CategoryTheme.expense
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(25),
                 ),
@@ -68,7 +69,7 @@ class IncomeExpenseToggle extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
                   color: state.type == ReportType.income
-                      ? Colors.green[400]
+                      ? CategoryTheme.income
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(25),
                 ),

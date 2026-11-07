@@ -2,8 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:timezone/data/latest.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
 import 'utils/desktop_window.dart'
     if (dart.library.html) 'utils/desktop_window_stub.dart';
 import 'routes/app_routes.dart';
@@ -43,9 +41,7 @@ class _MyAppState extends ConsumerState<MyApp> {
 
   Future<void> _initializeApp() async {
     try {
-      // Initialize timezone database (light operation)
-      tz.initializeTimeZones();
-      tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
+      await NotificationService.setLocalTimezone();
 
       // Initialize environment variables first (must be sequential)
       await Environment.initialize();
@@ -127,45 +123,36 @@ class _MyAppState extends ConsumerState<MyApp> {
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
         themeMode: ThemeMode.system,
-        home: Scaffold(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // App Logo
-                Image.asset(
-                  'assets/icon_transparent.png',
-                  width: 100,
-                  height: 100,
+        // Builder: Theme.of must be read below MaterialApp to get the app theme.
+        // Same look as SplashScreen so the hand-over is seamless.
+        home: Builder(
+          builder: (context) {
+            final theme = Theme.of(context);
+            return Scaffold(
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      'assets/icon_transparent.png',
+                      width: 100,
+                      height: 100,
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Finoteku',
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    const CircularProgressIndicator(),
+                  ],
                 ),
-                const SizedBox(height: 24),
-
-                // App Name
-                const Text(
-                  'Finoteku',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Loading indicator
-                const CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-                const SizedBox(height: 16),
-
-                // Loading text
-                const Text(
-                  'Initializing...',
-                  style: TextStyle(color: Colors.white70, fontSize: 16),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       );
     }

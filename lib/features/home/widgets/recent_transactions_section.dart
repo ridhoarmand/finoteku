@@ -6,6 +6,7 @@ import '../../../utils/category_icon_helper.dart';
 import '../../category/providers/category_providers.dart';
 import '../../transaction/providers/transaction_providers.dart';
 import '../../wallet/providers/wallet_providers.dart';
+import '../../../widgets/inline_error.dart';
 import '../../../models/ledger_entry.dart';
 import '../../category/theme/category_theme.dart';
 import '../../transaction/screens/transaction_detail_screen.dart';
@@ -20,7 +21,7 @@ class RecentTransactionsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final recentAsync = ref.watch(recentActivitiesProvider(userId));
-    final categoriesAsync = ref.watch(categoriesProvider(userId));
+    final categoriesAsync = ref.watch(categoriesAllProvider(userId));
     final walletsAsync = ref.watch(
       walletsProvider(userId),
     ); // Use all wallets for transfers
@@ -92,13 +93,17 @@ class RecentTransactionsSection extends ConsumerWidget {
         return categoriesAsync.when(
           loading: () =>
               const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-          error: (e, st) => const SizedBox.shrink(),
+          error: (e, st) => InlineError(
+            onRetry: () => ref.read(categoryRefreshProvider.notifier).bump(),
+          ),
           data: (categories) {
             return walletsAsync.when(
               loading: () => const Center(
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
-              error: (e, st) => const SizedBox.shrink(),
+              error: (e, st) => InlineError(
+                onRetry: () => refreshWalletProviders(ref),
+              ),
               data: (wallets) {
                 final categoryMap = {for (final c in categories) c.id: c};
                 final walletMap = {for (final w in wallets) w.id: w};
@@ -168,6 +173,8 @@ class RecentTransactionsSection extends ConsumerWidget {
                 }
 
                 return ListView.builder(
+                  // room for the floating + button over the last item
+                  padding: const EdgeInsets.only(bottom: 88),
                   itemCount: items.length,
                   itemBuilder: (context, index) {
                     final item = items[index];

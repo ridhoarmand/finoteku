@@ -230,7 +230,7 @@ class SupportSettingsWidget extends ConsumerWidget {
           children: [
             Icon(Icons.help_outline, color: theme.colorScheme.primary),
             const SizedBox(width: 8),
-            Text('Bantuan & FAQ'),
+            Text(ref.tr(context, 'help_faq')),
           ],
         ),
         content: SizedBox(

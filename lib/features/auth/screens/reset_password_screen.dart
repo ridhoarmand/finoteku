@@ -133,6 +133,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     labelText: ref.tr(context, 'new_password_label'),
                     prefixIcon: const Icon(Icons.lock),
                     suffixIcon: IconButton(
+                      tooltip: ref.tr(context, 'toggle_password_visibility'),
                       icon: Icon(
                         _obscureNewPassword
                             ? Icons.visibility
@@ -165,6 +166,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     labelText: ref.tr(context, 'confirm_password_label'),
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
+                      tooltip: ref.tr(context, 'toggle_password_visibility'),
                       icon: Icon(
                         _obscureConfirmPassword
                             ? Icons.visibility

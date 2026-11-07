@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../utils/currency_formatter.dart';
 import '../../category/providers/category_providers.dart';
+import '../../category/theme/category_theme.dart';
 import '../../transaction/providers/transaction_providers.dart';
 import '../../../models/category.dart';
+import '../../../widgets/inline_error.dart';
 
 class MonthlySummarySection extends ConsumerWidget {
   final String userId;
@@ -14,17 +16,25 @@ class MonthlySummarySection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final now = DateTime.now();
     final monthlyTxsAsync = ref.watch(
-      monthlyTransactionsProvider((userId: userId, year: now.year, month: now.month)),
+      monthlyTransactionsProvider((
+        userId: userId,
+        year: now.year,
+        month: now.month,
+      )),
     );
-    final categoriesAsync = ref.watch(categoriesProvider(userId));
+    final categoriesAsync = ref.watch(categoriesAllProvider(userId));
+    void retry() {
+      ref.read(transactionRefreshTriggerProvider.notifier).bump();
+      ref.read(categoryRefreshProvider.notifier).bump();
+    }
 
     return monthlyTxsAsync.when(
       loading: () => _containerSkeleton(context),
-      error: (e, st) => const SizedBox.shrink(),
+      error: (e, st) => InlineError(onRetry: retry),
       data: (txs) {
         return categoriesAsync.when(
           loading: () => _containerSkeleton(context),
-          error: (e, st) => const SizedBox.shrink(),
+          error: (e, st) => InlineError(onRetry: retry),
           data: (categories) {
             double income = 0;
             double expense = 0;
@@ -53,7 +63,9 @@ class MonthlySummarySection extends ConsumerWidget {
                 children: [
                   Text(
                     ref.tr(context, 'this_month'),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -62,7 +74,7 @@ class MonthlySummarySection extends ConsumerWidget {
                         child: _SummaryTile(
                           label: ref.tr(context, 'income'),
                           value: CurrencyFormatter.format(income, 'IDR'),
-                          color: Colors.green,
+                          color: CategoryTheme.income,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -70,7 +82,7 @@ class MonthlySummarySection extends ConsumerWidget {
                         child: _SummaryTile(
                           label: ref.tr(context, 'expense'),
                           value: CurrencyFormatter.format(expense, 'IDR'),
-                          color: Colors.red,
+                          color: CategoryTheme.expense,
                         ),
                       ),
                     ],
@@ -135,16 +147,16 @@ class _SummaryTile extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: color.withValues(alpha: 0.9),
-                ),
+              color: color.withValues(alpha: 0.9),
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             value,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: color,
-                ),
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
           ),
         ],
       ),

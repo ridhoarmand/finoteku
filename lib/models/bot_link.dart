@@ -103,7 +103,7 @@ class BotLink {
 /// Available AI providers (for user_key mode)
 enum AIProvider {
   gemini('gemini', 'Google Gemini'),
-  openai('openai', 'OpenAI');
+  openrouter('openrouter', 'OpenRouter');
 
   final String value;
   final String displayName;
@@ -120,11 +120,7 @@ enum AIProvider {
 
 /// Parser mode options
 enum ParserMode {
-  regex(
-    'regex',
-    'RegEx (Tanpa AI)',
-    'Parsing sederhana dengan aturan kata kunci',
-  ),
+  regex('regex', 'Tanpa AI', 'Aturan + belajar dari riwayat transaksi Anda'),
   serverKey('server_key', 'AI (Server)', 'Pakai AI dari server, gratis'),
   userKey('user_key', 'AI (Key Sendiri)', 'Pakai API key AI Anda sendiri');
 

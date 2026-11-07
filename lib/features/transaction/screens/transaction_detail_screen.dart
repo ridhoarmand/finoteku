@@ -538,7 +538,6 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
       });
       // Invalidate providers to ensure fresh data
       ref.invalidate(transactionProvider);
-      ref.invalidate(filteredTransactionsProvider);
       refreshWalletProviders(ref);
     }
   }

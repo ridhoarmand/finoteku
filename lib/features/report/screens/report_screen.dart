@@ -9,6 +9,7 @@ import '../widgets/category_pie_chart.dart';
 import '../widgets/category_list_tile.dart';
 import '../widgets/category_transactions_sheet.dart';
 import '../../transaction/screens/transaction_detail_screen.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class ReportScreen extends ConsumerStatefulWidget {
   const ReportScreen({super.key});
@@ -34,7 +35,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     final reportState = ref.watch(reportStateProvider);
 
     if (currentUserId == null) {
-      return const Scaffold(body: Center(child: Text('User not logged in')));
+      return Scaffold(
+        body: Center(child: Text(ref.tr(context, 'login_required_short'))),
+      );
     }
 
     final reportDataAsync = ref.watch(reportDataProvider(currentUserId));
@@ -69,7 +72,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Gagal memuat data laporan',
+                          ref.tr(context, 'report_load_failed'),
                           style: theme.textTheme.titleMedium?.copyWith(
                             color: theme.colorScheme.error,
                             fontWeight: FontWeight.w500,
@@ -88,7 +91,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                           onPressed: () {
                             ref.invalidate(reportDataProvider(currentUserId));
                           },
-                          child: const Text('Coba Lagi'),
+                          child: Text(ref.tr(context, 'retry')),
                         ),
                       ],
                     ),
@@ -184,7 +187,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Mulai catat transaksi untuk melihat laporan',
+              ref.tr(context, 'start_recording'),
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
               ),
@@ -251,7 +254,10 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     );
   }
 
-  void _handleCategoryTap(CategoryReportItem category, ReportState state) async {
+  void _handleCategoryTap(
+    CategoryReportItem category,
+    ReportState state,
+  ) async {
     if (category.hasChildren) {
       await _showSubcategoryDetail(category, state);
     } else {
@@ -296,13 +302,18 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Subkategori ${parentCategory.name}',
+                      ref
+                          .tr(context, 'report_subcategory_of')
+                          .replaceAll('{name}', parentCategory.name),
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                   IconButton(
+                    tooltip: MaterialLocalizations.of(
+                      context,
+                    ).closeButtonTooltip,
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close),
                   ),
@@ -334,12 +345,12 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                     },
                   ),
 
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.symmetric(vertical: 8.0),
                     child: Row(
                       children: [
                         Text(
-                          'Rincian Subkategori',
+                          ref.tr(context, 'report_subcategory_detail'),
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 12,
@@ -461,9 +472,15 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
         Navigator.of(context).pop();
       }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gagal memuat transaksi: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ref
+                .tr(context, 'error_loading_transactions')
+                .replaceAll('{error}', '$e'),
+          ),
+        ),
+      );
     }
   }
 
@@ -503,13 +520,16 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Detail Kategori Lainnya',
+                      ref.tr(context, 'report_other_category_detail'),
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                   IconButton(
+                    tooltip: MaterialLocalizations.of(
+                      context,
+                    ).closeButtonTooltip,
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close),
                   ),

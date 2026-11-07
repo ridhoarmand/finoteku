@@ -310,6 +310,9 @@ class TransactionBalanceSection extends ConsumerWidget {
                   ),
                   const Spacer(),
                   IconButton(
+                    tooltip: MaterialLocalizations.of(
+                      context,
+                    ).closeButtonTooltip,
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close),
                     padding: EdgeInsets.zero,

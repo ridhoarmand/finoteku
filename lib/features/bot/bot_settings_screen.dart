@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/localization/app_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -42,7 +43,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
     final whatsappBotLinkAsync = ref.watch(whatsappBotLinkProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Chat Bot')),
+      appBar: AppBar(title: Text(ref.tr(context, 'bot_title'))),
       body: telegramBotLinkAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
@@ -97,7 +98,9 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
             error: (e, _) => Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Text('Error loading settings: $e'),
+                child: Text(
+                  '${ref.tr(context, 'bot_load_settings_error')}: $e',
+                ),
               ),
             ),
             data: (userProfile) =>
@@ -149,10 +152,12 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                       ),
                       Text(
                         isConnected
-                            ? 'Terhubung${botLink?.platformUsername != null ? ' (@${botLink!.platformUsername})' : ''}'
-                            : 'Belum terhubung',
+                            ? '${ref.tr(context, 'bot_connected')}${botLink?.platformUsername != null ? ' (@${botLink!.platformUsername})' : ''}'
+                            : ref.tr(context, 'bot_not_connected'),
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: isConnected ? Colors.green : Colors.grey,
+                          color: isConnected
+                              ? Colors.green
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -160,15 +165,17 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                 ),
                 Icon(
                   isConnected ? Icons.check_circle : Icons.circle_outlined,
-                  color: isConnected ? Colors.green : Colors.grey,
+                  color: isConnected
+                      ? Colors.green
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ],
             ),
             const SizedBox(height: 16),
             Text(
               isConnected
-                  ? 'Anda dapat mencatat transaksi dengan mengirim pesan ke Finoteku Bot.'
-                  : 'Hubungkan Telegram untuk mencatat transaksi dengan mudah via chat.',
+                  ? ref.tr(context, 'bot_telegram_connected_desc')
+                  : ref.tr(context, 'bot_telegram_disconnected_desc'),
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
@@ -176,7 +183,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
               OutlinedButton.icon(
                 onPressed: _confirmDisconnect,
                 icon: const Icon(Icons.link_off),
-                label: const Text('Putuskan Koneksi'),
+                label: Text(ref.tr(context, 'bot_disconnect')),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.red,
                   side: const BorderSide(color: Colors.red),
@@ -186,7 +193,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
               FilledButton.icon(
                 onPressed: _openTelegramBot,
                 icon: const Icon(Icons.link),
-                label: const Text('Hubungkan Telegram'),
+                label: Text(ref.tr(context, 'bot_connect_telegram')),
               ),
           ],
         ),
@@ -216,9 +223,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
       });
     }
 
-    final hasApiKey =
-        userProfile?['ai_api_key'] != null &&
-        (userProfile!['ai_api_key'] as String).isNotEmpty;
+    final hasApiKey = userProfile?['has_ai_api_key'] == true;
 
     return Card(
       child: Padding(
@@ -246,13 +251,13 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Mode Parser',
+                        ref.tr(context, 'bot_parser_mode'),
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        'Pilih cara parsing transaksi',
+                        ref.tr(context, 'bot_parser_mode_sub'),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: Colors.grey,
                         ),
@@ -264,10 +269,9 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Parser mode selection (exclude regex)
-            ...ParserMode.values
-                .where((mode) => mode != ParserMode.regex)
-                .map((mode) => _buildParserModeOption(theme, mode)),
+            ...ParserMode.values.map(
+              (mode) => _buildParserModeOption(theme, mode),
+            ),
 
             // Show AI provider and API key input only for user_key mode
             if (_selectedParserMode == ParserMode.userKey) ...[
@@ -299,7 +303,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
 
               // API Key status or input
               if (hasApiKey && !_isEditing)
-                _buildApiKeyStatus(theme, userProfile)
+                _buildApiKeyStatus(theme)
               else
                 _buildApiKeyInput(theme),
             ],
@@ -322,7 +326,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Simpan'),
+                    : Text(ref.tr(context, 'save')),
               ),
             ),
           ],
@@ -352,7 +356,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
             border: Border.all(
               color: isSelected
                   ? theme.colorScheme.primary
-                  : Colors.grey.shade300,
+                  : Theme.of(context).colorScheme.outlineVariant,
               width: isSelected ? 2 : 1,
             ),
             borderRadius: BorderRadius.circular(12),
@@ -366,7 +370,9 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                 isSelected
                     ? Icons.radio_button_checked
                     : Icons.radio_button_off,
-                color: isSelected ? theme.colorScheme.primary : Colors.grey,
+                color: isSelected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -397,18 +403,13 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
     );
   }
 
-  Widget _buildApiKeyStatus(ThemeData theme, Map<String, dynamic> userProfile) {
-    final apiKey = userProfile['ai_api_key'] as String? ?? '';
-    final maskedKey = apiKey.length <= 8
-        ? '••••••••'
-        : '${apiKey.substring(0, 4)}••••${apiKey.substring(apiKey.length - 4)}';
-
+  Widget _buildApiKeyStatus(ThemeData theme) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.green.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.green.shade200),
+        border: Border.all(color: Colors.green.withValues(alpha: 0.4)),
       ),
       child: Row(
         children: [
@@ -418,17 +419,17 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'API Key tersimpan',
+                Text(
+                  ref.tr(context, 'bot_api_key_saved'),
                   style: TextStyle(
                     color: Colors.green,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
-                  maskedKey,
+                  '••••••••',
                   style: TextStyle(
-                    color: Colors.green.shade700,
+                    color: Colors.green,
                     fontFamily: 'monospace',
                   ),
                 ),
@@ -442,7 +443,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                 _apiKeyController.clear();
               });
             },
-            child: const Text('Ubah'),
+            child: Text(ref.tr(context, 'bot_change')),
           ),
         ],
       ),
@@ -461,10 +462,12 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
+              tooltip: ref.tr(context, 'toggle_password_visibility'),
               icon: Icon(_showApiKey ? Icons.visibility_off : Icons.visibility),
               onPressed: () => setState(() => _showApiKey = !_showApiKey),
             ),
             IconButton(
+              tooltip: MaterialLocalizations.of(context).pasteButtonLabel,
               icon: const Icon(Icons.content_paste),
               onPressed: () async {
                 final data = await Clipboard.getData('text/plain');
@@ -486,18 +489,17 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
 
     switch (_selectedParserMode) {
       case ParserMode.serverKey:
-        info = 'Parsing dengan AI menggunakan server. Akurasi ~95%. Gratis!';
+        info = ref.tr(context, 'bot_info_ai_server');
         icon = Icons.cloud;
         color = Colors.blue;
       case ParserMode.userKey:
-        info = 'Parsing dengan AI menggunakan API key Anda. Akurasi ~95%.';
+        info = ref.tr(context, 'bot_info_ai_own_key');
         icon = Icons.key;
         color = theme.colorScheme.primary;
       case ParserMode.regex:
-        // Shouldn't reach here since regex is filtered out
-        info = 'Mode tidak tersedia';
-        icon = Icons.error;
-        color = Colors.grey;
+        info = ref.tr(context, 'bot_info_regex');
+        icon = Icons.rule;
+        color = Colors.teal;
     }
 
     return Container(
@@ -519,9 +521,9 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
   String _getApiKeyHelperText() {
     switch (_selectedAIProvider) {
       case AIProvider.gemini:
-        return 'Dapatkan dari aistudio.google.com atau GCP Console';
-      case AIProvider.openai:
-        return 'Dapatkan dari platform.openai.com';
+        return ref.tr(context, 'bot_key_hint_gemini');
+      case AIProvider.openrouter:
+        return ref.tr(context, 'bot_key_hint_openrouter');
     }
   }
 
@@ -533,7 +535,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
     if (user == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Silakan login terlebih dahulu')),
+          SnackBar(content: Text(ref.tr(context, 'bot_login_first'))),
         );
       }
       return;
@@ -542,8 +544,10 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
     // Bot username - replace with your actual bot username
     const botUsername = 'FinotekuBot';
 
-    // Deep link with user ID: t.me/BotUsername?start=<user_id>
-    final uri = Uri.parse('https://t.me/$botUsername?start=${user.id}');
+    final token = await ref
+        .read(botLinkServiceProvider)
+        .createLinkToken('telegram');
+    final uri = Uri.parse('https://t.me/$botUsername?start=$token');
 
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -559,19 +563,17 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Putuskan Koneksi?'),
-        content: const Text(
-          'Anda tidak akan bisa mencatat transaksi via Telegram setelah memutuskan koneksi.',
-        ),
+        title: Text(ref.tr(context, 'bot_disconnect_telegram_title')),
+        content: Text(ref.tr(context, 'bot_disconnect_telegram_body')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
+            child: Text(ref.tr(context, 'cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Putuskan'),
+            child: Text(ref.tr(context, 'bot_disconnect')),
           ),
         ],
       ),
@@ -590,16 +592,17 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
     if (user == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Silakan login terlebih dahulu')),
+          SnackBar(content: Text(ref.tr(context, 'bot_login_first'))),
         );
       }
       return;
     }
 
-    final String userId = user.id;
-
-    // 2. Siapkan format pesan yang diwajibkan oleh Edge Function WA
-    final String message = "/hubungkan $userId";
+    // 2. Token sekali pakai (15 menit) dalam format pesan yang dikenali Edge Function WA
+    final token = await ref
+        .read(botLinkServiceProvider)
+        .createLinkToken('whatsapp');
+    final String message = "/hubungkan $token";
 
     // 3. Konversi menjadi URI skema whatsapp
     final Uri whatsappUri = Uri.parse(
@@ -618,11 +621,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
       // Tampilkan Alert/Tooltip bila aplikasi WhatsApp tidak terinstal
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Tidak dapat membuka WhatsApp. Pastikan aplikasi telah terinstal.',
-            ),
-          ),
+          SnackBar(content: Text(ref.tr(context, 'bot_whatsapp_open_failed'))),
         );
       }
     }
@@ -632,19 +631,17 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Putuskan Koneksi WhatsApp?'),
-        content: const Text(
-          'Anda tidak akan bisa mencatat transaksi via WhatsApp setelah memutuskan koneksi.',
-        ),
+        title: Text(ref.tr(context, 'bot_disconnect_whatsapp_title')),
+        content: Text(ref.tr(context, 'bot_disconnect_whatsapp_body')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
+            child: Text(ref.tr(context, 'cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Putuskan'),
+            child: Text(ref.tr(context, 'bot_disconnect')),
           ),
         ],
       ),
@@ -697,10 +694,12 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                       ),
                       Text(
                         isConnected
-                            ? 'Terhubung${botLink?.platformUserId != null ? ' (${botLink!.platformUserId})' : ''}'
-                            : 'Belum terhubung',
+                            ? '${ref.tr(context, 'bot_connected')}${botLink?.platformUserId != null ? ' (${botLink!.platformUserId})' : ''}'
+                            : ref.tr(context, 'bot_not_connected'),
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: isConnected ? Colors.green : Colors.grey,
+                          color: isConnected
+                              ? Colors.green
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -708,15 +707,17 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                 ),
                 Icon(
                   isConnected ? Icons.check_circle : Icons.circle_outlined,
-                  color: isConnected ? Colors.green : Colors.grey,
+                  color: isConnected
+                      ? Colors.green
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ],
             ),
             const SizedBox(height: 16),
             Text(
               isConnected
-                  ? 'Anda dapat mencatat transaksi dengan mengirim pesan WhatsApp ke Bot Finoteku.'
-                  : 'Hubungkan WhatsApp untuk mencatat transaksi dengan mudah via chat.',
+                  ? ref.tr(context, 'bot_whatsapp_connected_desc')
+                  : ref.tr(context, 'bot_whatsapp_disconnected_desc'),
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
@@ -724,7 +725,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
               OutlinedButton.icon(
                 onPressed: _confirmDisconnectWhatsApp,
                 icon: const Icon(Icons.link_off),
-                label: const Text('Putuskan Koneksi'),
+                label: Text(ref.tr(context, 'bot_disconnect')),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.red,
                   side: const BorderSide(color: Colors.red),
@@ -738,7 +739,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                   backgroundColor: const Color(0xFF25D366),
                   foregroundColor: Colors.white,
                 ),
-                label: const Text('Hubungkan WhatsApp'),
+                label: Text(ref.tr(context, 'bot_connect_whatsapp')),
               ),
           ],
         ),
@@ -776,15 +777,15 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Pengaturan disimpan')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ref.tr(context, 'bot_settings_saved'))),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Gagal menyimpan: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${ref.tr(context, 'bot_save_failed')}: $e')),
+        );
       }
     } finally {
       if (mounted) {

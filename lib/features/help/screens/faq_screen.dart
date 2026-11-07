@@ -43,10 +43,11 @@ class _FAQScreenState extends ConsumerState<FAQScreen> {
                 TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: 'Cari pertanyaan...',
+                    hintText: ref.tr(context, 'faq_search_hint'),
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
+                            tooltip: ref.tr(context, 'clear'),
                             icon: const Icon(Icons.clear),
                             onPressed: () {
                               _searchController.clear();
@@ -80,7 +81,7 @@ class _FAQScreenState extends ConsumerState<FAQScreen> {
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: FilterChip(
-                            label: const Text('Semua'),
+                            label: Text(ref.tr(context, 'all')),
                             selected: _selectedCategory == null,
                             onSelected: (selected) {
                               setState(() => _selectedCategory = null);
@@ -217,7 +218,11 @@ class _FAQScreenState extends ConsumerState<FAQScreen> {
               setState(() => _selectedCategory = section.category);
             },
             icon: const Icon(Icons.expand_more),
-            label: Text('Lihat ${section.items.length - 3} FAQ lainnya'),
+            label: Text(
+              ref
+                  .tr(context, 'faq_see_more')
+                  .replaceAll('{count}', '${section.items.length - 3}'),
+            ),
           ),
 
         const SizedBox(height: 24),
@@ -238,14 +243,14 @@ class _FAQScreenState extends ConsumerState<FAQScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Tidak ada hasil ditemukan',
+              ref.tr(context, 'faq_no_results'),
               style: theme.textTheme.titleMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Coba gunakan kata kunci yang berbeda',
+              ref.tr(context, 'faq_no_results_hint'),
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

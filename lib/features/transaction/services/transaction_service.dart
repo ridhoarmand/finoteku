@@ -5,6 +5,7 @@ import '../../../core/errors/failure.dart';
 import '../../../core/logging/logger.dart';
 import '../../../models/transaction.dart';
 import '../../../models/ledger_entry.dart';
+import '../../../services/supabase_service.dart';
 
 /// Service transaksi online-only (langsung Supabase)
 class TransactionService {
@@ -35,10 +36,10 @@ class TransactionService {
         query = query.lte('date', endDate.toIso8601String().split('T')[0]);
       }
 
-      final response = await query.order('date', ascending: false);
-      if (response.isEmpty) return [];
-
-      return (response as List)
+      final response = await fetchAllRows(
+        query.order('date', ascending: false).order('id'),
+      );
+      return response
           .map((item) => Transaction.fromJson(_convertFromSupabase(item)))
           .toList();
     } catch (e, st) {
@@ -70,19 +71,12 @@ class TransactionService {
         query = query.lte('date', endDate.toIso8601String().split('T')[0]);
       }
 
-      // Apply pagination and ordering
-      var finalQuery = query.order('date', ascending: false);
-
-      if (limit != null) finalQuery = finalQuery.limit(limit);
-      if (offset != null) {
-        finalQuery = finalQuery.range(offset, offset + (limit ?? 50) - 1);
-      }
-
-      final response = await finalQuery;
-      if (response.isEmpty) return [];
-      return (response as List)
-          .map((item) => LedgerEntry.fromJson(item as Map<String, dynamic>))
-          .toList();
+      // entry_id breaks date ties so pages neither repeat nor skip rows
+      final ordered = query.order('date', ascending: false).order('entry_id');
+      final response = limit == null && offset == null
+          ? await fetchAllRows(ordered)
+          : await ordered.range(offset ?? 0, (offset ?? 0) + (limit ?? 50) - 1);
+      return response.map(LedgerEntry.fromJson).toList();
     } catch (e, st) {
       AppLogger.e('fetch ledger entries failed', error: e, stackTrace: st);
       throw mapException(e, st);
@@ -194,45 +188,6 @@ class TransactionService {
     }
   }
 
-  // Ambil transaction by ID (memerlukan userId untuk security)
-  Future<Transaction?> getTransactionById(
-    String transactionId, {
-    String? userId,
-  }) async {
-    if (userId == null) return null;
-    return getTransaction(transactionId, userId);
-  }
-
-  // Get transactions summary (income, expense totals)
-  Future<Map<String, double>> getTransactionsSummary(
-    String userId, {
-    DateTime? startDate,
-    DateTime? endDate,
-  }) async {
-    final transactions = await getTransactions(
-      userId,
-      startDate: startDate,
-      endDate: endDate,
-    );
-    // NOTE: Summary di layer service ini menggunakan pendekatan tanda amount
-    // untuk menjaga low-coupling (tanpa memuat kategori). Klasifikasi berbasis
-    // kategori yang akurat tersedia di analytics providers.
-    double totalIncome = 0;
-    double totalExpense = 0;
-    for (final t in transactions) {
-      if (t.amount >= 0) {
-        totalIncome += t.amount;
-      } else {
-        totalExpense += t.amount.abs();
-      }
-    }
-    return {
-      'income': totalIncome,
-      'expense': totalExpense,
-      'balance': totalIncome - totalExpense,
-    };
-  }
-
   // Hapus transaction
   Future<void> deleteTransaction(String transactionId, String userId) async {
     final transaction = await getTransaction(transactionId, userId);
@@ -252,19 +207,6 @@ class TransactionService {
           .eq('user_id', userId);
     } catch (e, st) {
       AppLogger.e('delete transaction failed', error: e, stackTrace: st);
-      throw mapException(e, st);
-    }
-  }
-
-  // Recalculate a single wallet balance using server-side function
-  Future<void> recalcWalletBalance(String walletId, String userId) async {
-    try {
-      await _supabase.rpc(
-        'recalculate_wallet_balance',
-        params: {'p_wallet_id': walletId, 'p_user_id': userId},
-      );
-    } catch (e, st) {
-      AppLogger.e('recalc wallet balance failed', error: e, stackTrace: st);
       throw mapException(e, st);
     }
   }

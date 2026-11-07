@@ -43,7 +43,11 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
     return AlertDialog(
       title: Row(
         children: [
-          Icon(Icons.warning_amber_rounded, color: Colors.red[600], size: 28),
+          Icon(
+            Icons.warning_amber_rounded,
+            color: Theme.of(context).colorScheme.error,
+            size: 28,
+          ),
           const SizedBox(width: 8),
           Text(ref.tr(context, 'delete_account_title')),
         ],
@@ -57,8 +61,12 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.red[50],
-                border: Border.all(color: Colors.red[200]!),
+                color: Theme.of(context).colorScheme.errorContainer,
+                border: Border.all(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.error.withValues(alpha: 0.4),
+                ),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
@@ -68,7 +76,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                     children: [
                       Icon(
                         Icons.error_outline,
-                        color: Colors.red[700],
+                        color: Theme.of(context).colorScheme.onErrorContainer,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
@@ -76,7 +84,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                         ref.tr(context, 'delete_permanent_action'),
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: Colors.red[700],
+                          color: Theme.of(context).colorScheme.onErrorContainer,
                         ),
                       ),
                     ],
@@ -84,7 +92,10 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                   const SizedBox(height: 4),
                   Text(
                     ref.tr(context, 'delete_warning_message'),
-                    style: TextStyle(color: Colors.red[600], fontSize: 13),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onErrorContainer,
+                      fontSize: 13,
+                    ),
                   ),
                 ],
               ),
@@ -104,13 +115,21 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    border: Border.all(color: Colors.grey[300]!),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.data_usage, color: Colors.grey[600], size: 20),
+                      Icon(
+                        Icons.data_usage,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -122,7 +141,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                         _showDataSummary
                             ? Icons.expand_less
                             : Icons.expand_more,
-                        color: Colors.grey[600],
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ],
                   ),
@@ -134,7 +153,9 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.grey[50],
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
@@ -200,6 +221,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                         vertical: 8,
                       ),
                       suffixIcon: IconButton(
+                        tooltip: ref.tr(context, 'toggle_password_visibility'),
                         icon: Icon(
                           _obscurePassword
                               ? Icons.visibility
@@ -229,13 +251,20 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.red[50],
-                  border: Border.all(color: Colors.red[200]!),
+                  color: Theme.of(context).colorScheme.errorContainer,
+                  border: Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.error.withValues(alpha: 0.4),
+                  ),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   ref.tr(context, deleteState.error!),
-                  style: TextStyle(color: Colors.red[700], fontSize: 13),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ],
@@ -254,16 +283,18 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
         ElevatedButton(
           onPressed: deleteState.isLoading ? null : _handleDeleteAccount,
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red[600],
-            foregroundColor: Colors.white,
+            backgroundColor: Theme.of(context).colorScheme.error,
+            foregroundColor: Theme.of(context).colorScheme.onError,
           ),
           child: deleteState.isLoading
-              ? const SizedBox(
+              ? SizedBox(
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Theme.of(context).colorScheme.onError,
+                    ),
                   ),
                 )
               : Text(ref.tr(context, 'delete_confirm_button')),
@@ -277,9 +308,19 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: Colors.grey[600]),
+          Icon(
+            icon,
+            size: 16,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           const SizedBox(width: 8),
-          Text(label, style: TextStyle(fontSize: 13, color: Colors.grey[700])),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
           const Spacer(),
           Text(
             count.toString(),
@@ -357,8 +398,8 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(true),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red[600],
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                  foregroundColor: Theme.of(context).colorScheme.onError,
                 ),
                 child: Text(ref.tr(context, 'delete_yes_delete')),
               ),

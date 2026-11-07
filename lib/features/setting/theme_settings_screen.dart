@@ -16,6 +16,7 @@ class ThemeSettingsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(t('theme_settings')),
         leading: IconButton(
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),

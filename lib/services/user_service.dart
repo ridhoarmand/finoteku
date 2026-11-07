@@ -18,96 +18,24 @@ class UserService {
       final response = await _supabase
           .from('users')
           .select(
-            'id, email, full_name, currency, timezone, parser_mode, ai_provider, ai_api_key, created_at, updated_at',
+            'id, email, full_name, currency, timezone, parser_mode, ai_provider, created_at, updated_at',
           )
           .eq('id', userId)
           .single();
 
+      // The raw key never leaves the server; the app only needs to know one is saved.
+      try {
+        response['has_ai_api_key'] =
+            await _supabase.rpc('has_ai_api_key') == true;
+      } catch (_) {
+        response['has_ai_api_key'] =
+            false; // RPC not deployed yet: profile still loads
+      }
       return response;
     } on PostgrestException catch (e) {
       throw Exception('Database error: ${e.message}');
     } catch (e) {
       throw Exception('Unexpected error getting user profile: $e');
-    }
-  }
-
-  /// Get user timezone
-  Future<String> getUserTimezone() async {
-    try {
-      final profile = await getUserProfile();
-      return profile?['timezone'] ?? 'Asia/Jakarta'; // Default fallback
-    } catch (e) {
-      // Return default timezone if error occurs
-      return 'Asia/Jakarta';
-    }
-  }
-
-  /// Update user timezone
-  Future<void> updateUserTimezone(String timezone) async {
-    try {
-      final userId = _supabase.auth.currentUser?.id;
-      if (userId == null) throw Exception('User not authenticated');
-
-      await _supabase
-          .from('users')
-          .update({
-            'timezone': timezone,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', userId);
-    } on PostgrestException catch (e) {
-      throw Exception('Database error: ${e.message}');
-    } catch (e) {
-      throw Exception('Unexpected error updating timezone: $e');
-    }
-  }
-
-  /// Update user profile
-  Future<void> updateUserProfile({
-    String? fullName,
-    String? currency,
-    String? timezone,
-  }) async {
-    try {
-      final userId = _supabase.auth.currentUser?.id;
-      if (userId == null) throw Exception('User not authenticated');
-
-      final updateData = <String, dynamic>{
-        'updated_at': DateTime.now().toIso8601String(),
-      };
-
-      if (fullName != null) updateData['full_name'] = fullName;
-      if (currency != null) updateData['currency'] = currency;
-      if (timezone != null) updateData['timezone'] = timezone;
-
-      await _supabase.from('users').update(updateData).eq('id', userId);
-    } on PostgrestException catch (e) {
-      throw Exception('Database error: ${e.message}');
-    } catch (e) {
-      throw Exception('Unexpected error updating profile: $e');
-    }
-  }
-
-  /// Create user profile (called after registration)
-  Future<void> createUserProfile({
-    required String id,
-    required String email,
-    String? fullName,
-    String? currency,
-    String? timezone,
-  }) async {
-    try {
-      await _supabase.from('users').insert({
-        'id': id,
-        'email': email,
-        'full_name': fullName,
-        'currency': currency ?? 'IDR',
-        'timezone': timezone ?? 'Asia/Jakarta',
-      });
-    } on PostgrestException catch (e) {
-      throw Exception('Database error: ${e.message}');
-    } catch (e) {
-      throw Exception('Unexpected error creating user profile: $e');
     }
   }
 
@@ -142,10 +70,4 @@ final userServiceProvider = Provider<UserService>((ref) {
 final userProfileProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
   final userService = ref.watch(userServiceProvider);
   return await userService.getUserProfile();
-});
-
-/// Provider for user timezone
-final userTimezoneProvider = FutureProvider<String>((ref) async {
-  final userService = ref.watch(userServiceProvider);
-  return await userService.getUserTimezone();
 });

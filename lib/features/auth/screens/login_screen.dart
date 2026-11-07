@@ -263,6 +263,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               labelText: ref.tr(context, 'password_label'),
                               prefixIcon: const Icon(Icons.lock),
                               suffixIcon: IconButton(
+                                tooltip: ref.tr(
+                                  context,
+                                  'toggle_password_visibility',
+                                ),
                                 icon: Icon(
                                   _obscurePassword
                                       ? Icons.visibility

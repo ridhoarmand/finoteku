@@ -638,7 +638,7 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Tutup'),
+                  child: Text(ref.tr(context, 'close')),
                 ),
               ),
             ],
@@ -731,7 +731,7 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Tutup'),
+                  child: Text(ref.tr(context, 'close')),
                 ),
               ),
             ],

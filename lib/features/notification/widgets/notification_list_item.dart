@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/localization/app_localizations.dart';
 
 import '../models/daily_notification.dart';
 
-class NotificationListItem extends StatelessWidget {
+class NotificationListItem extends ConsumerWidget {
   final DailyNotification notification;
   final VoidCallback onToggle;
   final VoidCallback onEdit;
@@ -17,7 +19,7 @@ class NotificationListItem extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
@@ -61,10 +63,7 @@ class NotificationListItem extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Switch(
-              value: notification.isEnabled,
-              onChanged: (_) => onToggle(),
-            ),
+            Switch(value: notification.isEnabled, onChanged: (_) => onToggle()),
             PopupMenuButton<String>(
               onSelected: (value) {
                 switch (value) {
@@ -77,24 +76,24 @@ class NotificationListItem extends StatelessWidget {
                 }
               },
               itemBuilder: (context) => [
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'edit',
                   child: Row(
                     children: [
                       Icon(Icons.edit),
                       SizedBox(width: 8),
-                      Text('Edit'),
+                      Text(ref.tr(context, 'edit')),
                     ],
                   ),
                 ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'delete',
                   child: Row(
                     children: [
                       Icon(Icons.delete, color: Colors.red),
                       SizedBox(width: 8),
                       Text(
-                        'Hapus',
+                        ref.tr(context, 'delete'),
                         style: TextStyle(color: Colors.red),
                       ),
                     ],

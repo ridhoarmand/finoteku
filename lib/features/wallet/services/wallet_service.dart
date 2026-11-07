@@ -131,50 +131,7 @@ class WalletService {
     }
   }
 
-  Future<void> safeDeleteWallet(
-    String walletId,
-    String userId, {
-    String? transferToWalletId,
-  }) async {
-    if (transferToWalletId != null) {
-      throw ValidationFailure('Transfer transaksi antar wallet belum tersedia');
-    }
-    await deleteWallet(walletId, userId);
-  }
-
-  Future<bool> canDeleteWallet(String walletId, String userId) async => true;
-  Future<int> getWalletTransactionCount(String walletId, String userId) async =>
-      0;
-  Future<int> transferTransactionsToWallet(
-    String fromWalletId,
-    String toWalletId,
-    String userId,
-  ) async => throw Exception('Belum didukung');
-  Future<void> recalculateWalletBalance(String walletId, String userId) async {}
-
   // Legacy offline sync methods removed.
-
-  Future<Wallet> updateWalletBalance(
-    String walletId,
-    String userId,
-    double newBalance,
-  ) async {
-    return updateWallet(
-      walletId,
-      userId,
-      UpdateWalletRequest(balance: newBalance),
-    );
-  }
-
-  Future<Wallet> adjustWalletBalance(
-    String walletId,
-    String userId,
-    double amount,
-  ) async {
-    final wallet = await getWalletById(walletId, userId: userId);
-    if (wallet == null) throw NotFoundFailure('Wallet tidak ditemukan');
-    return updateWalletBalance(walletId, userId, wallet.balance + amount);
-  }
 
   // Convert dari format Supabase ke format aplikasi
   Map<String, dynamic> _convertFromSupabase(Map<String, dynamic> data) {

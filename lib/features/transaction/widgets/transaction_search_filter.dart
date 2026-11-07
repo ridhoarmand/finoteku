@@ -4,6 +4,7 @@ import '../../../models/category.dart';
 import '../../../utils/category_icon_helper.dart';
 import '../../../utils/monday_first_date_picker.dart';
 import '../../category/screens/category_selection_screen.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class TransactionSearchFilter extends ConsumerWidget {
   final TextEditingController searchController;
@@ -57,24 +58,31 @@ class TransactionSearchFilter extends ConsumerWidget {
           Row(
             children: [
               // Search field (70% width)
-              Expanded(flex: 7, child: _buildSearchSection(theme)),
+              Expanded(
+                flex: 7,
+                child: _buildSearchSection(context, ref, theme),
+              ),
               const SizedBox(width: 8),
               // Filter button (30% width)
-              Expanded(flex: 3, child: _buildFilterToggle(theme)),
+              Expanded(flex: 3, child: _buildFilterToggle(context, ref, theme)),
             ],
           ),
 
           // Filter content (collapsible)
           if (showFilters) ...[
             const SizedBox(height: 8),
-            _buildFilterContent(context, theme),
+            _buildFilterContent(context, ref, theme),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildSearchSection(ThemeData theme) {
+  Widget _buildSearchSection(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+  ) {
     return Container(
       height: 42, // Fixed height untuk consistency dengan filter button
       decoration: BoxDecoration(
@@ -94,7 +102,7 @@ class TransactionSearchFilter extends ConsumerWidget {
         onChanged: onSearchChanged,
         style: TextStyle(color: theme.colorScheme.onSurface),
         decoration: InputDecoration(
-          hintText: 'Cari transaksi...',
+          hintText: ref.tr(context, 'search_transactions'),
           hintStyle: TextStyle(
             color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             fontSize: 13,
@@ -106,6 +114,7 @@ class TransactionSearchFilter extends ConsumerWidget {
           ),
           suffixIcon: searchQuery.isNotEmpty
               ? IconButton(
+                  tooltip: ref.tr(context, 'clear'),
                   icon: Icon(
                     Icons.clear,
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
@@ -129,7 +138,11 @@ class TransactionSearchFilter extends ConsumerWidget {
     );
   }
 
-  Widget _buildFilterToggle(ThemeData theme) {
+  Widget _buildFilterToggle(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+  ) {
     final hasActiveFilters = selectedCategoryId != null;
 
     return SizedBox(
@@ -144,7 +157,7 @@ class TransactionSearchFilter extends ConsumerWidget {
               : theme.colorScheme.primary,
         ),
         label: Text(
-          'Filter',
+          ref.tr(context, 'filter'),
           style: TextStyle(
             color: hasActiveFilters
                 ? theme.colorScheme.onPrimary
@@ -171,7 +184,11 @@ class TransactionSearchFilter extends ConsumerWidget {
     );
   }
 
-  Widget _buildFilterContent(BuildContext context, ThemeData theme) {
+  Widget _buildFilterContent(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+  ) {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -195,7 +212,7 @@ class TransactionSearchFilter extends ConsumerWidget {
             Row(
               children: [
                 Text(
-                  'Filter Transaksi',
+                  ref.tr(context, 'filter_title'),
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -206,7 +223,7 @@ class TransactionSearchFilter extends ConsumerWidget {
                 OutlinedButton.icon(
                   onPressed: onResetFilters,
                   icon: const Icon(Icons.restart_alt, size: 13),
-                  label: const Text('Reset'),
+                  label: Text(ref.tr(context, 'reset')),
                   style: OutlinedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                     minimumSize: const Size(0, 32),
@@ -218,11 +235,11 @@ class TransactionSearchFilter extends ConsumerWidget {
             const SizedBox(height: 8),
 
             // Category Filter
-            _buildCategoryFilter(context, theme),
+            _buildCategoryFilter(context, ref, theme),
             const SizedBox(height: 10),
 
             // Date Range Filter
-            _buildDateRangeFilter(context, theme),
+            _buildDateRangeFilter(context, ref, theme),
             const SizedBox(height: 10),
 
             // Close Button
@@ -231,7 +248,7 @@ class TransactionSearchFilter extends ConsumerWidget {
               child: FilledButton.icon(
                 onPressed: onToggleFilters,
                 icon: const Icon(Icons.close, size: 15),
-                label: const Text('Tutup Filter'),
+                label: Text(ref.tr(context, 'filter_close')),
                 style: FilledButton.styleFrom(
                   minimumSize: const Size.fromHeight(36),
                   padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -244,7 +261,11 @@ class TransactionSearchFilter extends ConsumerWidget {
     );
   }
 
-  Widget _buildCategoryFilter(BuildContext context, ThemeData theme) {
+  Widget _buildCategoryFilter(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+  ) {
     return categoriesAsync.when(
       data: (categories) {
         if (categories.isEmpty) return const SizedBox.shrink();
@@ -268,7 +289,7 @@ class TransactionSearchFilter extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Kategori:',
+              ref.tr(context, 'filter_category_label'),
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
@@ -285,7 +306,7 @@ class TransactionSearchFilter extends ConsumerWidget {
                         MaterialPageRoute(
                           builder: (context) => CategorySelectionScreen(
                             userId: userId,
-                            title: 'Pilih Kategori Filter',
+                            title: ref.tr(context, 'filter_pick_category'),
                             selectedCategory: selectedCategory,
                           ),
                         ),
@@ -317,7 +338,7 @@ class TransactionSearchFilter extends ConsumerWidget {
                       ? () => onCategoryChanged(null)
                       : null,
                   icon: const Icon(Icons.clear, size: 14),
-                  label: const Text('Semua Kategori'),
+                  label: Text(ref.tr(context, 'all_categories')),
                   style: OutlinedButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                     minimumSize: const Size(0, 32),
@@ -326,7 +347,7 @@ class TransactionSearchFilter extends ConsumerWidget {
                 ),
                 const Spacer(),
                 FilterChip(
-                  label: const Text('Subkategori'),
+                  label: Text(ref.tr(context, 'subcategories')),
                   selected: includeChildren,
                   onSelected: selectedCategoryId != null
                       ? onIncludeChildrenChanged
@@ -361,7 +382,11 @@ class TransactionSearchFilter extends ConsumerWidget {
     return parts.reversed.join(' > ');
   }
 
-  Widget _buildDateRangeFilter(BuildContext context, ThemeData theme) {
+  Widget _buildDateRangeFilter(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+  ) {
     final startDateLabel = startDate != null
         ? _formatDate(startDate!)
         : 'Mulai';
@@ -371,7 +396,7 @@ class TransactionSearchFilter extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Tanggal:',
+          ref.tr(context, 'filter_date_label'),
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,

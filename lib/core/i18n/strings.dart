@@ -7,13 +7,13 @@ const Map<String, String> coreStringsEn = {
   'nav_transaction': 'Transaction',
   'nav_chart': 'Chart',
   'nav_account': 'Account',
-  
+
   // App actions
   'exit_app_title': 'Exit App',
   'exit_app_message': 'Are you sure you want to exit the app?',
   'exit_cancel': 'Cancel',
   'exit_confirm': 'Exit',
-  
+
   // Common actions
   'save': 'Save',
   'cancel': 'Cancel',
@@ -22,7 +22,7 @@ const Map<String, String> coreStringsEn = {
   'retry': 'Retry',
   'dismiss': 'Dismiss',
   'see_all': 'See all',
-  
+
   // Date & Time
   'day_today': 'Today',
   'day_yesterday': 'Yesterday',
@@ -45,7 +45,7 @@ const Map<String, String> coreStringsEn = {
   'month_october': 'October',
   'month_november': 'November',
   'month_december': 'December',
-  
+
   // Common states
   'loading_ellipsis': 'Loading...',
   'not_available': 'N/A',
@@ -53,12 +53,12 @@ const Map<String, String> coreStringsEn = {
   'uncategorized': 'Uncategorized',
   'error_loading_category': 'Error loading category',
   'pull_down_to_refresh': 'Pull down to refresh',
-  
+
   // Auth states
   'login_required_short': 'Please login first',
   'login_required_balance': 'Please login to see balance',
   'login_required_continue': 'Please login to continue',
-  
+
   // Splash screen states
   'initializing_services': 'Initializing services...',
   'checking_authentication': 'Checking authentication...',
@@ -66,12 +66,25 @@ const Map<String, String> coreStringsEn = {
   'loading_user_data': 'Loading user data...',
   'ready': 'Ready!',
   'something_went_wrong': 'Something went wrong',
-  
+
   // Labels
   'date_label': 'Date',
   'category_label': 'Category',
   'details_title': 'Details',
   'no_notes': 'No notes',
+  'later': 'Later',
+  'add': 'Add',
+  'reset': 'Reset',
+  'all': 'All',
+  'no_connection_title': 'No Connection',
+  'no_connection_body':
+      'This app needs an internet connection. Make sure you are online and try again.',
+  'page_not_found': 'Page not found',
+  'page_not_found_body': 'The page "{path}" does not exist.',
+  'go_home': 'Go Home',
+  'toggle_password_visibility': 'Show or hide password',
+  'clear': 'Clear',
+  'change_photo': 'Change photo',
 };
 
 const Map<String, String> coreStringsId = {
@@ -80,13 +93,13 @@ const Map<String, String> coreStringsId = {
   'nav_transaction': 'Transaksi',
   'nav_chart': 'Grafik',
   'nav_account': 'Akun',
-  
+
   // App actions
   'exit_app_title': 'Keluar Aplikasi',
   'exit_app_message': 'Apakah Anda yakin ingin keluar dari aplikasi?',
   'exit_cancel': 'Batal',
   'exit_confirm': 'Keluar',
-  
+
   // Common actions
   'save': 'Simpan',
   'cancel': 'Batal',
@@ -95,7 +108,7 @@ const Map<String, String> coreStringsId = {
   'retry': 'Coba Lagi',
   'dismiss': 'Tutup',
   'see_all': 'Lihat semua',
-  
+
   // Date & Time
   'day_today': 'Hari ini',
   'day_yesterday': 'Kemarin',
@@ -118,7 +131,7 @@ const Map<String, String> coreStringsId = {
   'month_october': 'Oktober',
   'month_november': 'November',
   'month_december': 'Desember',
-  
+
   // Common states
   'loading_ellipsis': 'Memuat...',
   'not_available': 'Tidak Ada',
@@ -126,12 +139,12 @@ const Map<String, String> coreStringsId = {
   'uncategorized': 'Tanpa Kategori',
   'error_loading_category': 'Gagal memuat kategori',
   'pull_down_to_refresh': 'Tarik ke bawah untuk memuat ulang',
-  
+
   // Auth states
   'login_required_short': 'Silakan login dulu',
   'login_required_balance': 'Silakan login untuk melihat saldo',
   'login_required_continue': 'Silakan login untuk melanjutkan',
-  
+
   // Splash screen states
   'initializing_services': 'Menginisialisasi layanan...',
   'checking_authentication': 'Memeriksa autentikasi...',
@@ -139,10 +152,23 @@ const Map<String, String> coreStringsId = {
   'loading_user_data': 'Memuat data pengguna...',
   'ready': 'Siap!',
   'something_went_wrong': 'Terjadi kesalahan',
-  
+
   // Labels
   'date_label': 'Tanggal',
   'category_label': 'Kategori',
   'details_title': 'Detail',
   'no_notes': 'Tidak ada catatan',
+  'later': 'Nanti',
+  'add': 'Tambah',
+  'reset': 'Reset',
+  'all': 'Semua',
+  'no_connection_title': 'Tidak Ada Koneksi',
+  'no_connection_body':
+      'Aplikasi ini memerlukan koneksi internet untuk berjalan. Pastikan Anda terhubung ke internet dan coba lagi.',
+  'page_not_found': 'Halaman tidak ditemukan',
+  'page_not_found_body': 'Halaman "{path}" tidak ada.',
+  'go_home': 'Ke Beranda',
+  'toggle_password_visibility': 'Tampilkan atau sembunyikan kata sandi',
+  'clear': 'Hapus teks',
+  'change_photo': 'Ganti foto',
 };

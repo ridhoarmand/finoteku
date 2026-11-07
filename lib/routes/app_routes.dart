@@ -31,6 +31,7 @@ import '../features/transaction/screens/wallet_selection_screen.dart';
 import '../features/transaction/screens/add_edit_transaction_screen.dart';
 import '../features/bot/bot_settings_screen.dart';
 import '../widgets/main_shell.dart';
+import '../core/localization/app_localizations.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -298,28 +299,36 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const AddEditTransactionScreen(),
       ),
     ],
-    errorBuilder: (context, state) => Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              'Page not found',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'The page "${state.matchedLocation}" does not exist.',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: () => context.go('/home'),
-              child: const Text('Go Home'),
-            ),
-          ],
+    errorBuilder: (context, state) => Consumer(
+      builder: (context, ref, _) => Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                ref.tr(context, 'page_not_found'),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                ref
+                    .tr(context, 'page_not_found_body')
+                    .replaceAll('{path}', state.matchedLocation),
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () => context.go('/home'),
+                child: Text(ref.tr(context, 'go_home')),
+              ),
+            ],
+          ),
         ),
       ),
     ),

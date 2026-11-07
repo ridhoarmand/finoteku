@@ -93,6 +93,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       appBar: AppBar(
         title: Text(ref.tr(context, 'reset_password_title')),
         leading: IconButton(
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),

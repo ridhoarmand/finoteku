@@ -6,6 +6,7 @@ import '../providers/category_providers.dart';
 import '../screens/add_edit_category_screen.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../utils/category_icon_helper.dart';
+import '../theme/category_theme.dart';
 
 class CategorySelectionScreen extends ConsumerStatefulWidget {
   final String userId;
@@ -47,6 +48,7 @@ class _CategorySelectionScreenState
       appBar: AppBar(
         title: Text(widget.title),
         leading: IconButton(
+          tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
           icon: const Icon(Icons.close),
           onPressed: () => context.pop(),
         ),
@@ -158,7 +160,10 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(
-      categoriesByTypeProvider((userId: widget.userId, type: widget.categoryType)),
+      categoriesByTypeProvider((
+        userId: widget.userId,
+        type: widget.categoryType,
+      )),
     );
 
     return categoriesAsync.when(
@@ -176,6 +181,7 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
                   prefixIcon: const Icon(Icons.search),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
+                          tooltip: ref.tr(context, 'clear'),
                           icon: const Icon(Icons.clear),
                           onPressed: () {
                             _searchController.clear();
@@ -185,7 +191,10 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
                           },
                         )
                       : null,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 0,
+                    horizontal: 16,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -296,9 +305,7 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
     );
 
     // Use standardized color by type
-    final Color color = widget.categoryType == CategoryType.expense
-        ? Colors.red
-        : Colors.green;
+    final Color color = CategoryTheme.forType(widget.categoryType);
 
     // Different styling based on hierarchy level
     Widget leadingWidget;

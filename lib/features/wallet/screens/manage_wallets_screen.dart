@@ -21,6 +21,7 @@ class ManageWalletsScreen extends ConsumerWidget {
         actions: [
           // Sync status indicator removed (online-only architecture)
           IconButton(
+            tooltip: ref.tr(context, 'add'),
             icon: const Icon(Icons.add),
             onPressed: () {
               // Check if user is authenticated before showing dialog

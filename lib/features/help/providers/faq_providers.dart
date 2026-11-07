@@ -39,31 +39,3 @@ final selectedFAQCategoryProvider =
     NotifierProvider<SelectedFAQCategoryNotifier, FAQCategory?>(
       SelectedFAQCategoryNotifier.new,
     );
-
-// Filtered FAQ provider berdasarkan search dan category
-final filteredFAQProvider = Provider<List<FAQItem>>((ref) {
-  final allFAQs = ref.watch(faqDataProvider);
-  final searchQuery = ref.watch(faqSearchProvider);
-  final selectedCategory = ref.watch(selectedFAQCategoryProvider);
-
-  List<FAQItem> filteredItems = [];
-
-  // Collect all items
-  for (final section in allFAQs) {
-    if (selectedCategory == null || section.category == selectedCategory) {
-      filteredItems.addAll(section.items);
-    }
-  }
-
-  // Apply search filter
-  if (searchQuery.isNotEmpty) {
-    filteredItems = filteredItems
-        .where((item) => item.matchesSearch(searchQuery))
-        .toList();
-
-    // Sort by priority
-    filteredItems.sort((a, b) => b.priority.compareTo(a.priority));
-  }
-
-  return filteredItems;
-});

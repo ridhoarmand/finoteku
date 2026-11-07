@@ -12,6 +12,8 @@ import '../../features/account/i18n/strings.dart' as account_i18n;
 import '../../features/report/i18n/strings.dart' as reports_i18n;
 import '../../features/onboarding/i18n/strings.dart' as onboarding_i18n;
 import '../i18n/strings.dart' as core_i18n;
+import '../../features/bot/i18n/strings.dart' as bot_i18n;
+import '../../features/notification/i18n/strings.dart' as notification_i18n;
 
 typedef StrMap = Map<String, String>;
 
@@ -28,6 +30,8 @@ final Map<String, StrMap> _strings = {
     ...account_i18n.accountStringsEn,
     ...reports_i18n.reportStringsEn,
     ...onboarding_i18n.onboardingStringsEn,
+    ...bot_i18n.botStringsEn,
+    ...notification_i18n.notificationStringsEn,
   },
   'id': {
     // Merge all feature strings (ID)
@@ -41,6 +45,8 @@ final Map<String, StrMap> _strings = {
     ...account_i18n.accountStringsId,
     ...reports_i18n.reportStringsId,
     ...onboarding_i18n.onboardingStringsId,
+    ...bot_i18n.botStringsId,
+    ...notification_i18n.notificationStringsId,
   },
 };
 

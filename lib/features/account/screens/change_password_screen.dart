@@ -115,6 +115,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
       appBar: AppBar(
         title: Text(ref.tr(context, 'change_password_title')),
         leading: IconButton(
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -157,6 +158,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                     labelText: ref.tr(context, 'current_password'),
                     prefixIcon: const Icon(Icons.lock_clock_outlined),
                     suffixIcon: IconButton(
+                      tooltip: ref.tr(context, 'toggle_password_visibility'),
                       icon: Icon(
                         _obscureCurrentPassword
                             ? Icons.visibility
@@ -186,6 +188,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                     labelText: ref.tr(context, 'new_password'),
                     prefixIcon: const Icon(Icons.lock),
                     suffixIcon: IconButton(
+                      tooltip: ref.tr(context, 'toggle_password_visibility'),
                       icon: Icon(
                         _obscureNewPassword
                             ? Icons.visibility
@@ -221,6 +224,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                     labelText: ref.tr(context, 'confirm_new_password'),
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
+                      tooltip: ref.tr(context, 'toggle_password_visibility'),
                       icon: Icon(
                         _obscureConfirmPassword
                             ? Icons.visibility

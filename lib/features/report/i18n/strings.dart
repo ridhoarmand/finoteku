@@ -28,6 +28,10 @@ const Map<String, String> reportStringsEn = {
   'increase': 'Increase',
   'decrease': 'Decrease',
   'no_change': 'No change',
+  'report_load_failed': 'Failed to load report',
+  'report_subcategory_of': 'Subcategories of {name}',
+  'report_subcategory_detail': 'Subcategory breakdown',
+  'report_other_category_detail': 'Other category details',
 };
 
 const Map<String, String> reportStringsId = {
@@ -60,4 +64,8 @@ const Map<String, String> reportStringsId = {
   'increase': 'Naik',
   'decrease': 'Turun',
   'no_change': 'Tidak berubah',
+  'report_load_failed': 'Gagal memuat data laporan',
+  'report_subcategory_of': 'Subkategori {name}',
+  'report_subcategory_detail': 'Rincian Subkategori',
+  'report_other_category_detail': 'Detail Kategori Lainnya',
 };

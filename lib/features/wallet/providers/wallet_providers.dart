@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
 import '../../../models/wallet.dart';
 import '../services/wallet_service.dart';
 import '../../../core/logging/logger.dart';
@@ -18,19 +17,11 @@ final walletsProvider = FutureProvider.family<List<Wallet>, String>((
   ref,
   userId,
 ) async {
-  try {
-    // Watch refresh trigger untuk auto-refresh saat ada perubahan
-    ref.watch(walletRefreshTriggerProvider);
+  // Watch refresh trigger untuk auto-refresh saat ada perubahan
+  ref.watch(walletRefreshTriggerProvider);
 
-    final repo = ref.watch(walletRepositoryProvider);
-    return await repo.getWallets(userId);
-  } catch (e) {
-    if (kDebugMode) {
-      print('❌ Error in walletsProvider for user $userId: $e');
-    }
-    // Return empty list instead of throwing to prevent crashes
-    return <Wallet>[];
-  }
+  final repo = ref.watch(walletRepositoryProvider);
+  return await repo.getWallets(userId);
 });
 
 // Provider untuk wallet by ID
@@ -48,20 +39,12 @@ final activeWalletsProvider = FutureProvider.family<List<Wallet>, String>((
   ref,
   userId,
 ) async {
-  try {
-    // Watch refresh trigger untuk auto-refresh saat ada perubahan
-    ref.watch(walletRefreshTriggerProvider);
+  // Watch refresh trigger untuk auto-refresh saat ada perubahan
+  ref.watch(walletRefreshTriggerProvider);
 
-    final repo = ref.watch(walletRepositoryProvider);
-    final wallets = await repo.getWallets(userId);
-    return wallets.where((wallet) => !wallet.isHidden).toList();
-  } catch (e) {
-    if (kDebugMode) {
-      print('❌ Error in activeWalletsProvider for user $userId: $e');
-    }
-    // Return empty list instead of throwing to prevent crashes
-    return <Wallet>[];
-  }
+  final repo = ref.watch(walletRepositoryProvider);
+  final wallets = await repo.getWallets(userId);
+  return wallets.where((wallet) => !wallet.isHidden).toList();
 });
 
 // Provider untuk hidden wallets saja
@@ -69,20 +52,12 @@ final hiddenWalletsProvider = FutureProvider.family<List<Wallet>, String>((
   ref,
   userId,
 ) async {
-  try {
-    // Watch refresh trigger untuk auto-refresh saat ada perubahan
-    ref.watch(walletRefreshTriggerProvider);
+  // Watch refresh trigger untuk auto-refresh saat ada perubahan
+  ref.watch(walletRefreshTriggerProvider);
 
-    final repo = ref.watch(walletRepositoryProvider);
-    final wallets = await repo.getWallets(userId);
-    return wallets.where((wallet) => wallet.isHidden).toList();
-  } catch (e) {
-    if (kDebugMode) {
-      print('❌ Error in hiddenWalletsProvider for user $userId: $e');
-    }
-    // Return empty list instead of throwing to prevent crashes
-    return <Wallet>[];
-  }
+  final repo = ref.watch(walletRepositoryProvider);
+  final wallets = await repo.getWallets(userId);
+  return wallets.where((wallet) => wallet.isHidden).toList();
 });
 
 // Provider untuk total balance dari semua active wallets
@@ -90,23 +65,15 @@ final totalBalanceProvider = FutureProvider.family<double, String>((
   ref,
   userId,
 ) async {
-  try {
-    // Watch refresh trigger untuk auto-refresh saat ada perubahan
-    ref.watch(walletRefreshTriggerProvider);
+  // Watch refresh trigger untuk auto-refresh saat ada perubahan
+  ref.watch(walletRefreshTriggerProvider);
 
-    final activeWallets = await ref.watch(activeWalletsProvider(userId).future);
-    double total = 0.0;
-    for (final wallet in activeWallets) {
-      total += wallet.balance;
-    }
-    return total;
-  } catch (e) {
-    if (kDebugMode) {
-      print('❌ Error in totalBalanceProvider for user $userId: $e');
-    }
-    // Return 0.0 instead of throwing to prevent crashes
-    return 0.0;
+  final activeWallets = await ref.watch(activeWalletsProvider(userId).future);
+  double total = 0.0;
+  for (final wallet in activeWallets) {
+    total += wallet.balance;
   }
+  return total;
 });
 
 // Helper function untuk refresh semua wallet providers

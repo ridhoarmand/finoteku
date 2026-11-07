@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/localization/app_localizations.dart';
 
 import '../models/daily_notification.dart';
 
-class NotificationDialog extends StatefulWidget {
+class NotificationDialog extends ConsumerStatefulWidget {
   final DailyNotification? notification;
   final Function(String title, String body, TimeOfDay time) onSave;
 
@@ -13,10 +15,10 @@ class NotificationDialog extends StatefulWidget {
   });
 
   @override
-  State<NotificationDialog> createState() => _NotificationDialogState();
+  ConsumerState<NotificationDialog> createState() => _NotificationDialogState();
 }
 
-class _NotificationDialogState extends State<NotificationDialog> {
+class _NotificationDialogState extends ConsumerState<NotificationDialog> {
   late final TextEditingController _titleController;
   late final TextEditingController _bodyController;
   late TimeOfDay _selectedTime;
@@ -63,9 +65,9 @@ class _NotificationDialogState extends State<NotificationDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Batal'),
+          child: Text(ref.tr(context, 'cancel')),
         ),
-        FilledButton(onPressed: _save, child: const Text('Simpan')),
+        FilledButton(onPressed: _save, child: Text(ref.tr(context, 'save'))),
       ],
     );
   }
@@ -73,9 +75,9 @@ class _NotificationDialogState extends State<NotificationDialog> {
   Widget _buildTitleField() {
     return TextField(
       controller: _titleController,
-      decoration: const InputDecoration(
-        labelText: 'Judul',
-        hintText: 'Contoh: Pengingat Harian',
+      decoration: InputDecoration(
+        labelText: ref.tr(context, 'notif_field_title'),
+        hintText: ref.tr(context, 'notif_field_title_hint'),
         border: OutlineInputBorder(),
         prefixIcon: Icon(Icons.title),
       ),
@@ -85,9 +87,9 @@ class _NotificationDialogState extends State<NotificationDialog> {
   Widget _buildBodyField() {
     return TextField(
       controller: _bodyController,
-      decoration: const InputDecoration(
-        labelText: 'Pesan',
-        hintText: 'Contoh: Jangan lupa catat pengeluaran!',
+      decoration: InputDecoration(
+        labelText: ref.tr(context, 'notif_field_message'),
+        hintText: ref.tr(context, 'notif_field_message_hint'),
         border: OutlineInputBorder(),
         prefixIcon: Icon(Icons.message),
       ),
@@ -113,8 +115,8 @@ class _NotificationDialogState extends State<NotificationDialog> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Waktu Notifikasi',
+                Text(
+                  ref.tr(context, 'notif_time'),
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
                 Text(
@@ -162,8 +164,8 @@ class _NotificationDialogState extends State<NotificationDialog> {
 
     if (title.isEmpty || body.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Judul dan pesan tidak boleh kosong'),
+        SnackBar(
+          content: Text(ref.tr(context, 'notif_required_fields')),
           backgroundColor: Colors.red,
         ),
       );

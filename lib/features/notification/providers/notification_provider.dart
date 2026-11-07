@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/daily_notification.dart';
 import '../services/notification_service.dart';
 import '../services/notification_sync_service.dart';
+
 // Note: We access the Supabase client through the NotificationSyncService to get currentUser
 
 // Provider untuk list notifications
@@ -133,11 +134,3 @@ class NotificationListNotifier extends Notifier<List<DailyNotification>> {
     }
   }
 }
-
-// Provider untuk sending test notification
-final testNotificationProvider = FutureProvider.autoDispose.family<void, void>((
-  ref,
-  _,
-) async {
-  await NotificationService.sendTestNotification();
-});

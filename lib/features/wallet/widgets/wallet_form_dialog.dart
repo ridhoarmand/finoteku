@@ -276,7 +276,9 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
       if (widget.initialData != null) {
         final request = UpdateWalletRequest(
           name: _nameController.text.trim(),
-          balance: balance,
+          // Only on a real edit: the shown value may be stale, and writing it back
+          // would erase transactions recorded meanwhile (e.g. by the bot).
+          balance: balance != widget.initialData!.balance ? balance : null,
           currency: _selectedCurrency,
           icon: _selectedIcon,
           isHidden: _isHidden,

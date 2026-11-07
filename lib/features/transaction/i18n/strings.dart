@@ -82,6 +82,14 @@ final StrMap transactionStringsEn = {
       'You have unsaved changes. Are you sure you want to discard them?',
   'discard_button': 'Discard',
   'cancel_button': 'Cancel',
+  'filter': 'Filter',
+  'filter_title': 'Filter Transactions',
+  'filter_close': 'Close Filter',
+  'filter_category_label': 'Category:',
+  'filter_date_label': 'Date:',
+  'filter_pick_category': 'Choose filter category',
+  'all_categories': 'All Categories',
+  'subcategories': 'Subcategories',
 };
 
 final StrMap transactionStringsId = {
@@ -164,4 +172,12 @@ final StrMap transactionStringsId = {
       'Anda memiliki perubahan yang belum disimpan. Yakin ingin membuangnya?',
   'discard_button': 'Buang',
   'cancel_button': 'Batal',
+  'filter': 'Filter',
+  'filter_title': 'Filter Transaksi',
+  'filter_close': 'Tutup Filter',
+  'filter_category_label': 'Kategori:',
+  'filter_date_label': 'Tanggal:',
+  'filter_pick_category': 'Pilih Kategori Filter',
+  'all_categories': 'Semua Kategori',
+  'subcategories': 'Subkategori',
 };

@@ -78,14 +78,26 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     }
 
     final walletsAsync = ref.watch(activeWalletsProvider(user.id));
+    // The selected wallet may have been hidden elsewhere: fall back to "all wallets"
+    // instead of showing another wallet's balance next to the hidden one's list.
+    final activeWallets = walletsAsync.value;
+    final selectedGone = _selectedWalletId != null &&
+        activeWallets != null &&
+        !activeWallets.any((w) => w.id == _selectedWalletId);
+    if (selectedGone) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _selectedWalletId = null);
+      });
+    }
+    final selectedWalletId = selectedGone ? null : _selectedWalletId;
     final allWalletsAsync = ref.watch(walletsProvider(user.id));
-    final categoriesAsync = ref.watch(categoriesProvider(user.id));
+    final categoriesAsync = ref.watch(categoriesAllProvider(user.id));
 
     // Gunakan ledger entries agar transfer juga tampil dalam daftar
     final ledgerAsync = ref.watch(
       ledgerEntriesProvider((
         userId: user.id,
-        walletId: _selectedWalletId,
+        walletId: selectedWalletId,
         startDate: _startDate,
         endDate: _endDate,
       )),
@@ -105,14 +117,14 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
           ref.invalidate(
             ledgerEntriesProvider((
               userId: user.id,
-              walletId: _selectedWalletId,
+              walletId: selectedWalletId,
               startDate: _startDate,
               endDate: _endDate,
             )),
           );
           ref.invalidate(activeWalletsProvider(user.id));
           ref.invalidate(walletsProvider(user.id));
-          ref.invalidate(categoriesProvider(user.id));
+          ref.invalidate(categoriesAllProvider(user.id));
           // Also trigger the global refresh
           ref.read(transactionRefreshTriggerProvider.notifier).bump();
         },
@@ -121,7 +133,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
             // Balance Section - Fixed at top
             TransactionBalanceSection(
               walletsAsync: walletsAsync,
-              selectedWalletId: _selectedWalletId,
+              selectedWalletId: selectedWalletId,
               onWalletChanged: (val) => setState(() => _selectedWalletId = val),
             ),
 
@@ -227,7 +239,6 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
           if (result == true) {
             final user = ref.read(currentUserProvider).value;
             if (user != null) {
-              // filteredTransactionsProvider is a family; rely on refresh triggers
               refreshWalletProviders(ref);
             }
           }
@@ -360,15 +371,9 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
           ),
           const SizedBox(height: 16),
           FilledButton(
-            onPressed: () => ref.invalidate(
-              filteredTransactionsProvider((
-                userId: userId,
-                walletId: _selectedWalletId,
-                categoryId: null,
-                startDate: null,
-                endDate: null,
-              )),
-            ),
+            // the list watches ledgerEntriesProvider, which listens to this token
+            onPressed: () =>
+                ref.read(transactionRefreshTriggerProvider.notifier).bump(),
             child: Text(ref.tr(context, 'retry')),
           ),
         ],

@@ -52,13 +52,6 @@ class TelegramBotLinkNotifier extends AsyncNotifier<BotLink?> {
   }
 }
 
-/// Check if Telegram is connected (has platform_user_id)
-final isTelegramConnectedProvider = Provider<bool>((ref) {
-  final link = ref.watch(telegramBotLinkProvider);
-  // Row exists but check if actually linked (platform_user_id != null)
-  return link.value?.platformUserId != null;
-});
-
 /// State for WhatsApp bot link
 final whatsappBotLinkProvider =
     AsyncNotifierProvider<WhatsAppBotLinkNotifier, BotLink?>(
@@ -105,10 +98,3 @@ class WhatsAppBotLinkNotifier extends AsyncNotifier<BotLink?> {
     state = const AsyncValue.data(null);
   }
 }
-
-/// Check if WhatsApp is connected (has platform_user_id)
-final isWhatsAppConnectedProvider = Provider<bool>((ref) {
-  final link = ref.watch(whatsappBotLinkProvider);
-  // Row exists but check if actually linked (platform_user_id != null)
-  return link.value?.platformUserId != null;
-});

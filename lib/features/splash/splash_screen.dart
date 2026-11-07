@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'dart:async';
 
 import '../notification/services/notification_service.dart';
-import '../../services/user_service.dart';
 import '../../services/connectivity_provider.dart';
 import '../../core/localization/app_localizations.dart';
 import '../auth/services/auth_service.dart';
@@ -228,8 +227,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   // Efficient service initialization
   Future<void> _initializeServices() async {
     try {
-      final userService = ref.read(userServiceProvider);
-      await NotificationService.initialize(userService: userService);
+      await NotificationService.initialize();
     } catch (e) {
       // Ignore notification init errors - non-critical
     }
@@ -244,17 +242,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.wifi_off, color: Colors.red),
-              SizedBox(width: 12),
-              Text('Tidak Ada Koneksi'),
+              Icon(Icons.wifi_off, color: Theme.of(context).colorScheme.error),
+              const SizedBox(width: 12),
+              Text(ref.tr(context, 'no_connection_title')),
             ],
           ),
-          content: const Text(
-            'Aplikasi ini memerlukan koneksi internet untuk berjalan. '
-            'Pastikan Anda terhubung ke internet dan coba lagi.',
-          ),
+          content: Text(ref.tr(context, 'no_connection_body')),
           actions: [
             TextButton(
               onPressed: () {
@@ -265,7 +260,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   _initializeApp();
                 }
               },
-              child: const Text('Coba Lagi'),
+              child: Text(ref.tr(context, 'retry')),
             ),
           ],
         );

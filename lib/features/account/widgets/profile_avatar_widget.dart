@@ -89,6 +89,7 @@ class ProfileAvatarWidget extends ConsumerWidget {
                     ),
                   ),
                   child: IconButton(
+                    tooltip: ref.tr(context, 'change_photo'),
                     icon: Icon(
                       Icons.camera_alt,
                       size: 20,

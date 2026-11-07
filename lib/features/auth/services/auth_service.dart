@@ -2,16 +2,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
 import '../../../services/supabase_service.dart';
-import 'initial_data_service.dart';
 
 /// Authentication service for handling user auth operations
 class AuthService {
   final SupabaseClient _supabase;
-  final Ref _ref;
+  AuthService(this._supabase);
 
-  AuthService(this._supabase, this._ref);
-
-  /// Sign up with email and password + setup initial data
+  /// Sign up with email and password
   Future<AuthResponse> signUp({
     required String email,
     required String password,
@@ -25,16 +22,7 @@ class AuthService {
         data: {'full_name': fullName},
       );
 
-      // If signup successful and user is confirmed, setup initial data
-      if (response.user != null) {
-        try {
-          final initialDataService = _ref.read(initialDataServiceProvider);
-          await initialDataService.setupInitialData(response.user!.id);
-        } catch (e) {
-          // Log error but don't fail signup
-          debugPrint('⚠️ Failed to setup initial data: $e');
-        }
-      }
+      // Default wallet is created by the handle_new_user DB trigger.
 
       return response;
     } on AuthException catch (e) {
@@ -147,10 +135,7 @@ class AuthService {
     try {
       final response = await _supabase.auth.updateUser(
         UserAttributes(
-          data: {
-            'full_name': ?fullName,
-            'avatar_url': ?avatarUrl,
-          },
+          data: {'full_name': ?fullName, 'avatar_url': ?avatarUrl},
         ),
       );
       return response;
@@ -190,23 +175,13 @@ class AuthService {
 /// Provider for AuthService
 final authServiceProvider = Provider<AuthService>((ref) {
   final supabase = ref.watch(supabaseProvider);
-  return AuthService(supabase, ref);
+  return AuthService(supabase);
 });
 
 /// Provider for current auth state
 final authStateProvider = StreamProvider<AuthState>((ref) {
   final authService = ref.watch(authServiceProvider);
   return authService.onAuthStateChange;
-});
-
-/// Provider for current session (synchronous)
-final currentSessionProvider = Provider<Session?>((ref) {
-  final authState = ref.watch(authStateProvider);
-  return authState.when(
-    data: (state) => state.session,
-    loading: () => null,
-    error: (_, stackTrace) => null,
-  );
 });
 
 /// Provider for immediate auth check (synchronous)

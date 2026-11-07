@@ -7,18 +7,6 @@ final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
   return ConnectivityService();
 });
 
-/// Provider untuk stream connection status
-final connectionStatusProvider = StreamProvider<bool>((ref) {
-  final service = ref.watch(connectivityServiceProvider);
-  return service.connectionStatus;
-});
-
-/// Provider untuk current connection state (synchronous)
-final isOnlineProvider = Provider<bool>((ref) {
-  final service = ref.watch(connectivityServiceProvider);
-  return service.isOnline;
-});
-
 /// Notifier untuk manage connectivity state dengan retry logic
 class ConnectivityNotifier extends Notifier<AsyncValue<bool>> {
   @override
@@ -73,9 +61,3 @@ class ConnectivityNotifier extends Notifier<AsyncValue<bool>> {
     }
   }
 }
-
-/// Provider untuk ConnectivityNotifier
-final connectivityNotifierProvider =
-    NotifierProvider<ConnectivityNotifier, AsyncValue<bool>>(
-      ConnectivityNotifier.new,
-    );

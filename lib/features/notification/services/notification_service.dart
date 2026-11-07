@@ -11,7 +11,6 @@ import 'dart:convert';
 import 'package:go_router/go_router.dart';
 
 import '../models/daily_notification.dart';
-import '../../../services/user_service.dart';
 import '../../../core/services/permission_service.dart';
 
 class NotificationService {
@@ -19,53 +18,36 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   static const String _storageKey = 'daily_notifications';
   static List<DailyNotification> _notificationsList = [];
-  static UserService? _userService;
 
   static GlobalKey<NavigatorState>? _navigatorKey;
 
+  /// Schedule reminders in the device's zone (users outside WIB got them hours off).
+  static Future<void> setLocalTimezone() async {
+    tz.initializeTimeZones();
+    tz.setLocalLocation(zoneForOffset(DateTime.now().timeZoneOffset));
+    debugPrint('✅ Timezone set to ${tz.local.name}');
+  }
+
+  /// Picks a tz location with the device's current UTC offset (WIB/WITA/WIT first).
+  /// shortcut: matches offset, not the real zone; a DST zone may be off by an hour
+  /// across a DST change. Upgrade to a native zone lookup if users outside Indonesia matter.
+  static tz.Location zoneForOffset(Duration offset) {
+    final locations = tz.timeZoneDatabase.locations;
+    bool matches(tz.Location l) => l.currentTimeZone.offset == offset;
+    for (final name in ['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura']) {
+      if (matches(locations[name]!)) return locations[name]!;
+    }
+    return locations.values.where(matches).firstOrNull ??
+        locations['Asia/Jakarta']!;
+  }
+
   static Future<void> initialize({
-    UserService? userService,
     GlobalKey<NavigatorState>? navigatorKey,
   }) async {
     try {
-      _userService = userService;
       _navigatorKey = navigatorKey;
 
-      // Initialize timezone
-      try {
-        tz.initializeTimeZones();
-        debugPrint('🌍 Timezones initialized successfully');
-      } catch (e) {
-        debugPrint('❌ Failed to initialize timezones: $e');
-      }
-
-      // Get user timezone or use default
-      String userTimezone = 'Asia/Jakarta'; // Default
-      if (_userService != null) {
-        try {
-          userTimezone = await _userService!.getUserTimezone();
-          debugPrint('👤 User timezone from service: $userTimezone');
-        } catch (e) {
-          debugPrint('⚠️ Failed to get user timezone, using default: $e');
-        }
-      }
-
-      try {
-        final location = tz.getLocation(userTimezone);
-        tz.setLocalLocation(location);
-        debugPrint(
-          '✅ Notification timezone set to: $userTimezone (Offset: ${location.currentTimeZone})',
-        );
-      } catch (e) {
-        debugPrint('❌ Failed to set location for $userTimezone: $e');
-        // Fallback to UTC if Jakarta fails? Or try 'UTC'
-        try {
-          tz.setLocalLocation(tz.getLocation('UTC'));
-          debugPrint('⚠️ Fallback to UTC timezone');
-        } catch (z) {
-          debugPrint('❌ Fatal: Could not set any timezone: $z');
-        }
-      }
+      await setLocalTimezone();
 
       // Initialize notifications with proper notification icon
       const androidSettings = AndroidInitializationSettings(
@@ -426,9 +408,8 @@ class NotificationService {
         final now = tz.TZDateTime.now(tz.local);
         debugPrint('Timezone Valid: ${now.location.name} - $now');
       } catch (e) {
-        debugPrint('⚠️ Timezone not ready, re-initializing to Asia/Jakarta...');
-        tz.initializeTimeZones();
-        tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
+        debugPrint('⚠️ Timezone not ready, re-initializing...');
+        await setLocalTimezone();
       }
 
       final scheduledTime = tz.TZDateTime.now(
@@ -527,14 +508,9 @@ class NotificationService {
   /// Update timezone and reschedule all notifications
   static Future<void> updateTimezone() async {
     try {
-      if (_userService != null) {
-        final userTimezone = await _userService!.getUserTimezone();
-        tz.setLocalLocation(tz.getLocation(userTimezone));
-        debugPrint('Notification timezone updated to: $userTimezone');
-
-        // Reschedule all active notifications with new timezone
-        await rescheduleAllNotifications();
-      }
+      await setLocalTimezone();
+      // Reschedule all active notifications with new timezone
+      await rescheduleAllNotifications();
     } catch (e) {
       debugPrint('Error updating timezone: $e');
     }

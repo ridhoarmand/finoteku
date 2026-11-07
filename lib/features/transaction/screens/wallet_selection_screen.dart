@@ -34,6 +34,7 @@ class _WalletSelectionScreenState extends ConsumerState<WalletSelectionScreen> {
       appBar: AppBar(
         title: Text(widget.title),
         leading: IconButton(
+          tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
           icon: const Icon(Icons.close),
           onPressed: () => context.pop(),
         ),

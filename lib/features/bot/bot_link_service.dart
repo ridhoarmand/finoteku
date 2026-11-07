@@ -82,6 +82,20 @@ class BotLinkService {
     }
   }
 
+  /// One-time link token (15 minutes) for the bot deep link
+  Future<String> createLinkToken(String platform) async {
+    try {
+      final token = await _supabase.rpc(
+        'create_bot_link_token',
+        params: {'p_platform': platform},
+      );
+      return token as String;
+    } catch (e, st) {
+      AppLogger.e('createLinkToken error', error: e, stackTrace: st);
+      throw mapException(e, st);
+    }
+  }
+
   /// Unlink platform
   Future<void> unlinkPlatform(String platform) async {
     try {

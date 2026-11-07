@@ -133,36 +133,24 @@ class _AddEditTransactionScreenState
     }
   }
 
+  // Look up in the lists *including hidden* wallets/categories, and wait for them:
+  // a transaction may belong to a wallet or category the user hid later.
   Future<void> _loadInitialData() async {
     final user = ref.read(currentUserProvider).value;
     if (user == null) return;
 
     final transaction = widget.initialTransaction!;
-
-    // Load categories and find the selected one
-    final categoriesAsync = ref.read(categoriesProvider(user.id));
-    final categories = categoriesAsync.value ?? [];
-    Category? category;
-    try {
-      category = categories.firstWhere((c) => c.id == transaction.categoryId);
-    } catch (e) {
-      // Category not found, keep as null
-    }
-
-    // Load wallets and find the selected one
-    final walletsAsync = ref.read(activeWalletsProvider(user.id));
-    final wallets = walletsAsync.value ?? [];
-    Wallet? wallet;
-    try {
-      wallet = wallets.firstWhere((w) => w.id == transaction.walletId);
-    } catch (e) {
-      // Wallet not found, keep as null
-    }
+    final categories = await ref.read(categoriesAllProvider(user.id).future);
+    final wallets = await ref.read(walletsProvider(user.id).future);
 
     if (mounted) {
       setState(() {
-        _selectedCategory = category;
-        _selectedWallet = wallet;
+        _selectedCategory ??= categories
+            .where((c) => c.id == transaction.categoryId)
+            .firstOrNull;
+        _selectedWallet ??= wallets
+            .where((w) => w.id == transaction.walletId)
+            .firstOrNull;
       });
     }
   }
@@ -171,22 +159,14 @@ class _AddEditTransactionScreenState
     final user = ref.read(currentUserProvider).value;
     if (user == null) return;
     final tr = widget.initialTransfer!;
-
-    final walletsAsync = ref.read(activeWalletsProvider(user.id));
-    final wallets = walletsAsync.value ?? [];
-    Wallet? from;
-    Wallet? to;
-    try {
-      from = wallets.firstWhere((w) => w.id == tr.fromWalletId);
-    } catch (_) {}
-    try {
-      to = wallets.firstWhere((w) => w.id == tr.toWalletId);
-    } catch (_) {}
+    final wallets = await ref.read(walletsProvider(user.id).future);
 
     if (mounted) {
       setState(() {
-        _selectedWallet = from;
-        _toWallet = to;
+        _selectedWallet ??= wallets
+            .where((w) => w.id == tr.fromWalletId)
+            .firstOrNull;
+        _toWallet ??= wallets.where((w) => w.id == tr.toWalletId).firstOrNull;
       });
     }
   }
@@ -283,27 +263,40 @@ class _AddEditTransactionScreenState
 
               // Notes Section
               _buildNotesSection(),
-              // Save Button
-              FilledButton(
-                onPressed: _isLoading ? null : _saveTransaction,
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
+              // Save Button: full-height and aligned with the cards above
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 12, 4, 24),
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(50),
+                    textStyle: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  onPressed: _isLoading ? null : _saveTransaction,
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
+                        )
+                      : Text(
+                          widget.initialTransfer != null
+                              ? ref.tr(context, 'update_transfer_button')
+                              : (widget.initialTransaction != null
+                                    ? ref.tr(
+                                        context,
+                                        'update_transaction_button',
+                                      )
+                                    : ref.tr(
+                                        context,
+                                        'add_transaction_button',
+                                      )),
                         ),
-                      )
-                    : Text(
-                        widget.initialTransfer != null
-                            ? ref.tr(context, 'update_transfer_button')
-                            : (widget.initialTransaction != null
-                                  ? ref.tr(context, 'update_transaction_button')
-                                  : ref.tr(context, 'add_transaction_button')),
-                      ),
+                ),
               ),
             ],
           ),
@@ -536,7 +529,8 @@ class _AddEditTransactionScreenState
 
         if (widget.initialTransaction != null &&
             widget.initialTransaction!.walletId == _selectedWallet!.id) {
-          final categories = ref.read(categoriesProvider(user.id)).value ?? [];
+          final categories =
+              ref.read(categoriesAllProvider(user.id)).value ?? [];
           bool isOldTransactionExpense = false;
 
           // Try to determine based on category
@@ -681,14 +675,6 @@ class _AddEditTransactionScreenState
       // Refresh transactions list and wallet balances
       refreshTransactionProviders(ref);
       ref.invalidate(transactionsProvider(user.id));
-      // filteredTransactionsProvider is a family; rely on refresh trigger to update all instances
-      ref.invalidate(
-        transactionsSummaryProvider((
-          userId: user.id,
-          startDate: null,
-          endDate: null,
-        )),
-      );
       // Refresh wallet data to show updated balance
       refreshWalletProviders(ref);
       if (_selectedWallet != null) {
@@ -906,7 +892,11 @@ class _WalletSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref2) {
     final walletsAsync = ref.watch(activeWalletsProvider(userId));
-    final wallets = walletsAsync.value ?? [];
+    // Keep a hidden wallet pickable while it is the selected one (editing old data).
+    final wallets = [
+      if (selected != null && selected!.isHidden) selected!,
+      ...?walletsAsync.value,
+    ];
     return Card(
       child: Column(
         children: [

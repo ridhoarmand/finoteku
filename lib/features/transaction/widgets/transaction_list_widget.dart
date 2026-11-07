@@ -40,6 +40,8 @@ class TransactionListWidget extends ConsumerWidget {
 
     return ListView.builder(
       controller: scrollController,
+      // room for the floating + button over the last item
+      padding: const EdgeInsets.only(bottom: 88),
       itemCount: items.length + (isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
         // Show loading indicator at the end

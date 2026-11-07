@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../models/transaction.dart';
 import '../models/report_models.dart';
+import '../../category/theme/category_theme.dart';
 
 /// Bottom sheet widget to display transactions for a specific category
 class CategoryTransactionsSheet extends StatelessWidget {
@@ -248,8 +249,8 @@ class _TransactionListItem extends StatelessWidget {
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: isExpense
-                      ? theme.colorScheme.error
-                      : Colors.green.shade600,
+                      ? CategoryTheme.expense
+                      : CategoryTheme.income,
                 ),
               ),
               // Arrow icon

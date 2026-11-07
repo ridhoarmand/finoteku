@@ -4,9 +4,42 @@ echo "🚀 Building optimized Flutter app in release mode..."
 
 # Parse command line arguments
 NO_TREE_SHAKE=false
-if [[ "$1" == "--no-tree-shake-icons" ]]; then
-    NO_TREE_SHAKE=true
-    echo "🌲 Building WITHOUT icon tree-shaking..."
+PLATFORM="android"
+PLATFORM_EXPLICIT=false
+INSTALL=false
+for arg in "$@"; do
+    case "$arg" in
+        --no-tree-shake-icons)
+            NO_TREE_SHAKE=true
+            echo "🌲 Building WITHOUT icon tree-shaking..."
+            ;;
+        --android)
+            PLATFORM="android"
+            PLATFORM_EXPLICIT=true
+            ;;
+        --linux)
+            PLATFORM="linux"
+            PLATFORM_EXPLICIT=true
+            ;;
+        --all)
+            PLATFORM="all"
+            PLATFORM_EXPLICIT=true
+            ;;
+        --install)
+            INSTALL=true
+            echo "📦 Will install the Linux bundle after building..."
+            ;;
+        *)
+            echo "❌ Unknown argument: $arg"
+            echo "💡 Usage: $0 [--android|--linux|--all] [--install] [--no-tree-shake-icons]"
+            exit 1
+            ;;
+    esac
+done
+
+# --install only applies to the Linux bundle
+if [ "$INSTALL" = true ] && [ "$PLATFORM_EXPLICIT" = false ]; then
+    PLATFORM="linux"
 fi
 
 # Check if .env file exists (required for compile-time environment variables)
@@ -81,34 +114,78 @@ echo "🧹 Cleaning previous builds..."
 echo "📦 Getting dependencies..."
 flutter pub get
 
-# Build release APK with size optimization
-echo "🔨 Building optimized release APK..."
-if [ "$NO_TREE_SHAKE" = true ]; then
-    flutter build apk --release --no-tree-shake-icons --shrink --split-per-abi --obfuscate --split-debug-info=build/debug-info --dart-define-from-file=.env
-else
-    flutter build apk --release --tree-shake-icons --shrink --split-per-abi --obfuscate --split-debug-info=build/debug-info --dart-define-from-file=.env
-fi
+# Build release with size optimization
+BUILD_RESULTS=()
 
-# Check if build was successful
-if [ $? -eq 0 ]; then
-    # Mark build as successful so backup is deleted instead of restored
-    BUILD_SUCCESS=true
-    
-    echo "✅ Optimized release build completed successfully!"
-    echo "📱 Main APK: build/app/outputs/flutter-apk/app-release.apk"
-    echo "📱 Split APKs: build/app/outputs/flutter-apk/app-*-release.apk"
-    echo "📊 Debug info: build/debug-info/"
-    
-    # Show APK sizes
+build_android() {
+    echo "🔨 Building optimized release APK..."
+    if [ "$NO_TREE_SHAKE" = true ]; then
+        flutter build apk --release --no-tree-shake-icons --shrink --split-per-abi --obfuscate --split-debug-info=build/debug-info --dart-define-from-file=.env
+    else
+        flutter build apk --release --tree-shake-icons --shrink --split-per-abi --obfuscate --split-debug-info=build/debug-info --dart-define-from-file=.env
+    fi
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    BUILD_RESULTS+=("📱 Main APK: build/app/outputs/flutter-apk/app-release.apk")
+    BUILD_RESULTS+=("📱 Split APKs: build/app/outputs/flutter-apk/app-*-release.apk")
+    BUILD_RESULTS+=("📊 Debug info: build/debug-info/")
+
     echo ""
     echo "📏 APK sizes:"
     ls -lh build/app/outputs/flutter-apk/app-*-release.apk 2>/dev/null || ls -lh build/app/outputs/flutter-apk/app-release.apk
+    return 0
+}
+
+build_linux() {
+    echo "🔨 Building optimized Linux bundle..."
+    flutter build linux --release --dart-define-from-file=.env
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    BUILD_RESULTS+=("🐧 Linux bundle: build/linux/x64/release/bundle/")
+
     echo ""
-    echo "🎉 You can now distribute your optimized APKs!"
+    echo "📏 Linux bundle size:"
+    du -sh build/linux/x64/release/bundle/
+    return 0
+}
+
+FAILED=false
+
+if [ "$PLATFORM" = "android" ] || [ "$PLATFORM" = "all" ]; then
+    build_android || FAILED=true
+fi
+
+if [ "$PLATFORM" = "linux" ] || [ "$PLATFORM" = "all" ]; then
+    build_linux || FAILED=true
+fi
+
+# Check if build was successful
+if [ "$FAILED" = false ]; then
+    # Mark build as successful so backup is deleted instead of restored
+    BUILD_SUCCESS=true
+
+    echo ""
+    echo "✅ Optimized release build completed successfully!"
+    for line in "${BUILD_RESULTS[@]}"; do
+        echo "   $line"
+    done
+    echo ""
+
+    if [ "$INSTALL" = true ]; then
+        ./install_linux.sh || exit 1
+    fi
+
+    echo "🎉 You can now distribute your optimized builds!"
 else
     echo "❌ Release build failed!"
     echo "💡 If you see tree-shake icon errors, try:"
-    echo "   ./build_release.sh --no-tree-shake-icons"
+    echo "   $0 --no-tree-shake-icons"
+    echo "💡 If you see CMake errors about missing glib/gtk paths, run:"
+    echo "   flutter clean && rm -rf linux/flutter/ephemeral && $0 --linux"
     echo "💡 For debugging obfuscation issues, check build/debug-info/"
     exit 1
 fi

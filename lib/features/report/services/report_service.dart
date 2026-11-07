@@ -2,8 +2,8 @@ import '../../../models/transaction.dart';
 import '../../../models/category.dart';
 import '../../../services/supabase_service.dart';
 import '../models/report_models.dart';
+import '../../category/theme/category_theme.dart';
 import '../../../utils/category_icon_helper.dart';
-import 'package:flutter/material.dart';
 
 class ReportService {
   const ReportService();
@@ -20,9 +20,12 @@ class ReportService {
       final dateRange = _getDateRange(period, periodType);
       final previousDateRange = _getPreviousDateRange(period, periodType);
 
+      final categories = await _getCategories(userId);
+
       // Query transactions untuk period saat ini
       final currentTransactions = await _getTransactions(
         userId: userId,
+        categories: categories,
         startDate: dateRange.start,
         endDate: dateRange.end,
         type: type,
@@ -31,13 +34,11 @@ class ReportService {
       // Query transactions untuk period sebelumnya (untuk comparison)
       final previousTransactions = await _getTransactions(
         userId: userId,
+        categories: categories,
         startDate: previousDateRange.start,
         endDate: previousDateRange.end,
         type: type,
       );
-
-      // Get categories
-      final categories = await _getCategories(userId);
 
       // Build category report items
       final categoryItems = await _buildCategoryReportItems(
@@ -78,14 +79,13 @@ class ReportService {
 
   Future<List<Transaction>> _getTransactions({
     required String userId,
+    required List<Category> categories,
     required DateTime startDate,
     required DateTime endDate,
     required ReportType type,
   }) async {
     final client = SupabaseService.client;
 
-    // Get categories first to filter by category type
-    final categories = await _getCategories(userId);
     final targetCategoryType = type == ReportType.income
         ? CategoryType.income
         : CategoryType.expense;
@@ -98,18 +98,19 @@ class ReportService {
       return [];
     }
 
-    final response = await client
-        .from('transactions')
-        .select()
-        .eq('user_id', userId)
-        .gte('date', startDate.toIso8601String())
-        .lte('date', endDate.toIso8601String())
-        .inFilter('category_id', categoryIds)
-        .order('date', ascending: false);
+    final response = await fetchAllRows(
+      client
+          .from('transactions')
+          .select()
+          .eq('user_id', userId)
+          .gte('date', startDate.toIso8601String())
+          .lte('date', endDate.toIso8601String())
+          .inFilter('category_id', categoryIds)
+          .order('date', ascending: false)
+          .order('id'),
+    );
 
-    return (response as List)
-        .map((json) => Transaction.fromJson(json))
-        .toList();
+    return response.map((json) => Transaction.fromJson(json)).toList();
   }
 
   Future<List<Category>> _getCategories(String userId) async {
@@ -118,8 +119,10 @@ class ReportService {
     final response = await client
         .from('categories')
         .select()
-        .eq('user_id', userId)
-        .eq('is_hidden', false)
+        .eq(
+          'user_id',
+          userId,
+        ) // hidden categories included: their transactions still count
         .order('name', ascending: true);
 
     return (response as List).map((json) => Category.fromJson(json)).toList();
@@ -180,9 +183,7 @@ class ReportService {
           : CategoryIconHelper.getIconForCategory(category.name);
 
       // Use theme color for category
-      final color = category.type == CategoryType.income
-          ? Colors.green
-          : Colors.red;
+      final color = CategoryTheme.forType(category.type);
 
       categoryItems.add(
         CategoryReportItem(
@@ -243,9 +244,7 @@ class ReportService {
                 )
               : CategoryIconHelper.getIconForCategory(parentCategory.name);
 
-          final color = parentCategory.type == CategoryType.income
-              ? Colors.green
-              : Colors.red;
+          final color = CategoryTheme.forType(parentCategory.type);
 
           parentItems[item.parentId!] = CategoryReportItem(
             id: parentCategory.id,
@@ -374,18 +373,19 @@ class ReportService {
           .toList();
       final allCategoryIds = [categoryId, ...childIds];
 
-      final response = await client
-          .from('transactions')
-          .select()
-          .eq('user_id', userId)
-          .inFilter('category_id', allCategoryIds)
-          .gte('date', dateRange.start.toIso8601String())
-          .lte('date', dateRange.end.toIso8601String())
-          .order('date', ascending: false);
+      final response = await fetchAllRows(
+        client
+            .from('transactions')
+            .select()
+            .eq('user_id', userId)
+            .inFilter('category_id', allCategoryIds)
+            .gte('date', dateRange.start.toIso8601String())
+            .lte('date', dateRange.end.toIso8601String())
+            .order('date', ascending: false)
+            .order('id'),
+      );
 
-      return (response as List)
-          .map((json) => Transaction.fromJson(json))
-          .toList();
+      return response.map((json) => Transaction.fromJson(json)).toList();
     } catch (e) {
       throw Exception('Failed to get transactions by category: $e');
     }

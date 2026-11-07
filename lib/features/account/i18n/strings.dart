@@ -137,6 +137,10 @@ const Map<String, String> accountStringsEn = {
   'delete_success': 'Account deleted successfully. You have been signed out.',
   'delete_error_incorrect_password': 'Incorrect password. Please try again.',
   'delete_error_failed': 'Failed to delete account. Please try again.',
+  'faq_search_hint': 'Search questions...',
+  'faq_see_more': 'See {count} more FAQs',
+  'faq_no_results': 'No results found',
+  'faq_no_results_hint': 'Try different keywords',
 };
 
 const Map<String, String> accountStringsId = {
@@ -273,4 +277,8 @@ const Map<String, String> accountStringsId = {
   'delete_success': 'Akun berhasil dihapus. Anda telah keluar.',
   'delete_error_incorrect_password': 'Password salah. Silakan coba lagi.',
   'delete_error_failed': 'Gagal menghapus akun. Silakan coba lagi.',
+  'faq_search_hint': 'Cari pertanyaan...',
+  'faq_see_more': 'Lihat {count} FAQ lainnya',
+  'faq_no_results': 'Tidak ada hasil ditemukan',
+  'faq_no_results_hint': 'Coba gunakan kata kunci yang berbeda',
 };

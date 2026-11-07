@@ -15,17 +15,3 @@ final hasLanguagePreferenceProvider = FutureProvider<bool>((ref) async {
     return false;
   }
 });
-
-// Provider to get the current language preference
-final languagePreferenceProvider = FutureProvider<String?>((ref) async {
-  // Keep provider alive to prevent multiple loads
-  ref.keepAlive();
-
-  try {
-    final userService = ref.read(userServiceProvider);
-    return await userService.getLanguagePreference();
-  } catch (e) {
-    // On error, return null
-    return null;
-  }
-});

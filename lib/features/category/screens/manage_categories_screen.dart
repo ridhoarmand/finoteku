@@ -53,6 +53,7 @@ class _ManageCategoriesScreenState extends ConsumerState<ManageCategoriesScreen>
         ),
         actions: [
           IconButton(
+            tooltip: ref.tr(context, 'add'),
             icon: const Icon(Icons.add),
             onPressed: () => _showAddCategoryDialog(context),
           ),
@@ -131,7 +132,7 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
     final userId = SupabaseService.currentUserId;
 
     if (userId == null) {
-      return const Center(child: Text('Please login to see categories'));
+      return Center(child: Text(ref.tr(context, 'login_required_short')));
     }
 
     final categoriesAsync = ref.watch(
@@ -153,6 +154,7 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
                   prefixIcon: const Icon(Icons.search),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
+                          tooltip: ref.tr(context, 'clear'),
                           icon: const Icon(Icons.clear),
                           onPressed: () {
                             _searchController.clear();
@@ -162,7 +164,10 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
                           },
                         )
                       : null,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 0,
+                    horizontal: 16,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -410,7 +415,10 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: isChild
-            ? BorderSide(color: Colors.grey[200]!, width: 0.5)
+            ? BorderSide(
+                color: Theme.of(context).colorScheme.outlineVariant,
+                width: 0.5,
+              )
             : BorderSide.none,
       ),
       child: ListTile(

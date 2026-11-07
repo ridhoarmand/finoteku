@@ -97,13 +97,17 @@ final currentUserProvider = StreamProvider.autoDispose<User?>((ref) {
       });
 });
 
-/// Provider for authentication state (with keepAlive for cold start optimization)
-final isAuthenticatedProvider = Provider.autoDispose<bool>((ref) {
-  ref.keepAlive();
-  final user = ref.watch(currentUserProvider);
-  return user.when(
-    data: (user) => user != null,
-    loading: () => false,
-    error: (_, _) => false,
-  );
-});
+/// PostgREST returns at most 1000 rows per request (server `max_rows`), silently.
+/// Pages through [query] until a short page. [query] must have a unique final
+/// order column (e.g. `.order('id')`) so pages don't overlap or skip rows.
+Future<List<Map<String, dynamic>>> fetchAllRows(
+  PostgrestTransformBuilder<PostgrestList> query, {
+  int pageSize = 1000,
+}) async {
+  final rows = <Map<String, dynamic>>[];
+  for (var from = 0; ; from += pageSize) {
+    final page = await query.range(from, from + pageSize - 1);
+    rows.addAll(page);
+    if (page.length < pageSize) return rows;
+  }
+}

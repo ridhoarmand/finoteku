@@ -6,6 +6,7 @@ import 'dart:io';
 import '../providers/notification_provider.dart';
 import '../services/notification_service.dart';
 import '../widgets/widgets.dart';
+import '../../../core/localization/app_localizations.dart';
 
 class NotificationScreen extends ConsumerStatefulWidget {
   const NotificationScreen({super.key});
@@ -58,30 +59,28 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.notifications_active, color: Colors.orange),
             SizedBox(width: 8),
-            Text('Izin Diperlukan'),
+            Text(ref.tr(context, 'notif_permission_title')),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Untuk notifikasi dapat berjalan dengan baik, aplikasi memerlukan izin berikut:',
-            ),
+            Text(ref.tr(context, 'notif_permission_body')),
             const SizedBox(height: 16),
             _buildPermissionItem(
-              'Notifikasi',
-              'Menampilkan pengingat',
+              ref.tr(context, 'notif_perm_notifications'),
+              ref.tr(context, 'notif_perm_notifications_desc'),
               hasNotif,
             ),
             const SizedBox(height: 8),
             _buildPermissionItem(
-              'Alarm Presisi',
-              'Mengirim tepat waktu',
+              ref.tr(context, 'notif_perm_exact_alarm'),
+              ref.tr(context, 'notif_perm_exact_alarm_desc'),
               hasExactAlarm,
             ),
             const SizedBox(height: 16),
@@ -92,8 +91,8 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                   color: Colors.blue[50],
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text(
-                  'Jika izin tidak muncul otomatis, buka:\nSettings → Apps → Finoteku → Alarms & reminders → Allow',
+                child: Text(
+                  ref.tr(context, 'notif_permission_manual'),
                   style: TextStyle(fontSize: 12),
                 ),
               ),
@@ -102,7 +101,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Nanti'),
+            child: Text(ref.tr(context, 'later')),
           ),
           FilledButton(
             onPressed: () async {
@@ -116,7 +115,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                 await _checkAndRequestPermissions();
               }
             },
-            child: const Text('Berikan Izin'),
+            child: Text(ref.tr(context, 'notif_grant_permission')),
           ),
         ],
       ),
@@ -152,12 +151,12 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifikasi'),
+        title: Text(ref.tr(context, 'notif_title')),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_active),
             onPressed: _showTestNotificationDialog,
-            tooltip: 'Test Notifikasi',
+            tooltip: ref.tr(context, 'notif_test'),
           ),
         ],
       ),
@@ -175,7 +174,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Notifikasi terjadwal mungkin tidak berfungsi di emulator.',
+                      ref.tr(context, 'notif_emulator_warning'),
                       style: TextStyle(fontSize: 11, color: Colors.orange[900]),
                     ),
                   ),
@@ -188,7 +187,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddDialog,
         icon: const Icon(Icons.add),
-        label: const Text('Tambah'),
+        label: Text(ref.tr(context, 'add')),
       ),
     );
   }
