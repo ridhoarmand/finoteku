@@ -23,8 +23,8 @@ jobs:
 
       - name: Deploy Edge Functions
         run: |
-          supabase functions deploy finoteku-agent --project-ref ${{ secrets.SUPABASE_PROJECT_ID }} --no-verify-jwt
-          supabase functions deploy telegram-bot --project-ref ${{ secrets.SUPABASE_PROJECT_ID }} --no-verify-jwt
-          supabase functions deploy whatsapp-bot --project-ref ${{ secrets.SUPABASE_PROJECT_ID }} --no-verify-jwt
+          supabase functions deploy finoteku-agent --project-ref ${{ secrets.SUPABASE_PROJECT_ID }} --no-verify-jwt --yes
+          supabase functions deploy telegram-bot --project-ref ${{ secrets.SUPABASE_PROJECT_ID }} --no-verify-jwt --yes
+          supabase functions deploy whatsapp-bot --project-ref ${{ secrets.SUPABASE_PROJECT_ID }} --no-verify-jwt --yes
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
