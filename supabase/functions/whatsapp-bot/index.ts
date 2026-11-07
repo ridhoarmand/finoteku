@@ -45,7 +45,7 @@ async function verifyWebhookSignature(
   body: string,
   signatureHeader: string | null,
 ): Promise<boolean> {
-  if (!GOWA_WEBHOOK_SECRET) return true; // Skip jika tidak dikonfigurasi
+  if (!GOWA_WEBHOOK_SECRET) return false; // fail closed: unsigned webhooks could impersonate any phone
   if (!signatureHeader) return false;
 
   const receivedSig = signatureHeader.replace('sha256=', '');
@@ -86,9 +86,8 @@ serve(async (req: Request) => {
     // Verifikasi HMAC signature
     const signature = req.headers.get('X-Hub-Signature-256');
     if (!(await verifyWebhookSignature(rawBody, signature))) {
-      console.error('Webhook signature mismatch. Expected sig based on secret but got:', signature);
-      // return new Response('Unauthorized', { status: 401 }); // MATIKAN SEMENTARA UNTUK DEBUGGING
-      console.log('Bypassing signature check for debugging!!!');
+      console.error('Webhook signature mismatch');
+      return new Response('Unauthorized', { status: 401 });
     }
 
     const body = JSON.parse(rawBody);
@@ -109,56 +108,31 @@ serve(async (req: Request) => {
 
       if (command === '/start' || command === '/hubungkan') {
         if (args) {
-          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          // One-time token from the app (create_bot_link_token), valid 15 minutes.
+          const { error } = await supabase.rpc('link_with_token', {
+            p_token: args,
+            p_platform: 'whatsapp',
+            p_platform_user_id: phone,
+            p_metadata: {
+              pushname: waMessage.fromName,
+              linked_at: new Date().toISOString(),
+            },
+          });
 
-          if (uuidRegex.test(args)) {
-            const userId = args;
-
-            const { error } = await supabase.rpc('link_by_user_id', {
-              p_user_id: userId,
-              p_platform: 'whatsapp',
-              p_platform_user_id: phone,
-              p_metadata: {
-                pushname: waMessage.fromName,
-                linked_at: new Date().toISOString(),
-              },
-            });
-
-            if (error) {
-              console.error('Link by user_id error:', error);
-              await send(phone, `❌ *Gagal menghubungkan akun.*\n\nError: ${error.message}`);
-              return new Response('Link Failed', { status: 200 });
-            }
-
+          if (error) {
+            console.error('Link by token error:', error);
             await send(
               phone,
-              `✅ *Akun berhasil terhubung!*\n\nSekarang Anda bisa mencatat transaksi langsung dari WhatsApp.\n\nContoh:\n• makan 50k cash\n• gaji 3jt mandiri\n\nKetik /help untuk panduan.`,
+              `❌ *Gagal menghubungkan akun.*\n\nLink sudah kedaluwarsa atau sudah dipakai. Buka lagi menu Chat Bot di aplikasi Finoteku untuk membuat link baru.`,
             );
-            return new Response('Linked via UUID', { status: 200 });
-          } else {
-            const linkToken = args.startsWith('link_') ? args.replace('link_', '') : args;
-
-            const { error } = await supabase.rpc('link_whatsapp_account', {
-              p_link_token: linkToken,
-              p_whatsapp_id: phone,
-              p_whatsapp_name: waMessage.fromName || null,
-            });
-
-            if (error) {
-              console.error('Link by token error:', error);
-              await send(
-                phone,
-                `❌ *Gagal menghubungkan akun.*\n\nError: ${error.message}\n\nPastikan link belum expired. Coba generate link baru dari aplikasi Finoteku.`,
-              );
-              return new Response('Link Failed', { status: 200 });
-            }
-
-            await send(
-              phone,
-              `✅ *Akun berhasil terhubung!*\n\nSekarang Anda bisa mencatat transaksi langsung dari WhatsApp.\n\nContoh:\n• makan 50k cash\n• gaji 3jt mandiri\n\nKetik /help untuk panduan.`,
-            );
-            return new Response('Linked via Token', { status: 200 });
+            return new Response('Link Failed', { status: 200 });
           }
+
+          await send(
+            phone,
+            `✅ *Akun berhasil terhubung!*\n\nSekarang Anda bisa mencatat transaksi langsung dari WhatsApp.\n\nContoh:\n• makan 50k cash\n• gaji 3jt mandiri\n\nKetik /help untuk panduan.`,
+          );
+          return new Response('Linked', { status: 200 });
         }
 
         await send(
@@ -250,10 +224,8 @@ serve(async (req: Request) => {
       return new Response('Unsupported document', { status: 200 });
     } else if (waMessage.type === 'text') {
       // Handle teks biasa
-      let inputText = waMessage.body;
-
-      // Map numbered reply ke action (karena WA tidak punya inline buttons)
-      inputText = mapNumberedReply(inputText);
+      // Numbered replies ("1", "2", …) are mapped to the offered buttons by the agent
+      const inputText = waMessage.body;
 
       agentInput = {
         type: 'text',
@@ -325,18 +297,6 @@ async function resolveMedia(
     return await downloadGowaMedia(GOWA_URL, msg.mediaUrl, GOWA_DEVICE_ID, GOWA_BASIC_AUTH);
   }
   return null;
-}
-
-/**
- * Map numbered reply ke action intent
- * Karena WhatsApp tidak support inline buttons,
- * user membalas dengan angka (1, 2) untuk memilih opsi
- */
-function mapNumberedReply(text: string): string {
-  const trimmed = text.trim();
-  if (trimmed === '1') return 'ya';
-  if (trimmed === '2') return 'batal';
-  return text;
 }
 
 /**

@@ -6,6 +6,7 @@ import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { BaseTool, type ToolParams } from '../core/base.ts';
 import type { ToolResult } from '../../types.ts';
 import * as transactionData from '../../data/transactions.ts';
+import { monthRange } from '../../nlu/date.ts';
 import type { UserContext } from '../../data/users.ts';
 
 const MONTH_NAMES = [
@@ -65,9 +66,8 @@ export class SummaryTool extends BaseTool {
     }
 
     // Parse target month from text
-    const { year, month } = this.parseMonth(text);
-    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-    const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
+    const { year, month } = this.parseMonth(text, userContext.today);
+    const { start: startDate, end: endDate } = monthRange(year, month);
 
     const { data: transactions } = await transactionData.getByDateRange(
       this.supabase,
@@ -112,16 +112,16 @@ export class SummaryTool extends BaseTool {
     return this.success(summary, this.formatMessage(summary));
   }
 
-  private parseMonth(text: string): { year: number; month: number } {
-    const now = new Date();
-    let targetMonth = now.getMonth() + 1;
-    let targetYear = now.getFullYear();
+  private parseMonth(text: string, today: string): { year: number; month: number } {
+    const [nowYear, nowMonth] = today.split('-').map(Number);
+    let targetMonth = nowMonth;
+    let targetYear = nowYear;
 
     const textLower = text.toLowerCase();
 
     // Check for "bulan lalu"
     if (textLower.includes('bulan lalu') || textLower.includes('last month')) {
-      targetMonth = now.getMonth();
+      targetMonth = nowMonth - 1;
       if (targetMonth === 0) {
         targetMonth = 12;
         targetYear--;
@@ -131,7 +131,7 @@ export class SummaryTool extends BaseTool {
       for (let i = 0; i < MONTH_NAMES.length; i++) {
         if (textLower.includes(MONTH_NAMES[i].toLowerCase())) {
           targetMonth = i + 1;
-          if (targetMonth > now.getMonth() + 1) targetYear--;
+          if (targetMonth > nowMonth) targetYear--;
           break;
         }
       }

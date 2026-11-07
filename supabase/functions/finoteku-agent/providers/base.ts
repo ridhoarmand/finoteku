@@ -7,6 +7,8 @@ export interface GenerateOptions {
   temperature?: number;
   maxTokens?: number;
   systemPrompt?: string;
+  /** JSON schema for the answer (Gemini `response_schema`); keeps output short and parseable. */
+  schema?: Record<string, unknown>;
 }
 
 export interface AIProvider {
@@ -31,40 +33,4 @@ export interface AIProvider {
    * Transkripsi audio ke teks
    */
   transcribeAudio(base64Audio: string, mimeType: string): Promise<string>;
-}
-
-/**
- * AI Provider Registry
- * Mengelola multiple AI provider dan memungkinkan switching
- */
-export class AIProviderRegistry {
-  private providers: Map<string, AIProvider> = new Map();
-  private defaultProviderName: string = 'gemini';
-
-  register(provider: AIProvider): void {
-    this.providers.set(provider.name, provider);
-    console.log(`AI provider terdaftar: ${provider.name}`);
-  }
-
-  get(name?: string): AIProvider {
-    const providerName = name || this.defaultProviderName;
-    const provider = this.providers.get(providerName);
-
-    if (!provider) {
-      throw new Error(`AI Provider tidak ditemukan: ${providerName}`);
-    }
-
-    return provider;
-  }
-
-  setDefault(name: string): void {
-    if (!this.providers.has(name)) {
-      throw new Error(`Tidak dapat set default: Provider ${name} belum terdaftar`);
-    }
-    this.defaultProviderName = name;
-  }
-
-  list(): string[] {
-    return Array.from(this.providers.keys());
-  }
 }

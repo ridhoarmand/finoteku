@@ -40,9 +40,7 @@ export class TrendTool extends BaseTool {
       return this.error('User context required');
     }
 
-    const now = new Date();
-    const thisMonth = now.getMonth() + 1;
-    const thisYear = now.getFullYear();
+    const [thisYear, thisMonth] = userContext.today.split('-').map(Number);
     const lastMonth = thisMonth === 1 ? 12 : thisMonth - 1;
     const lastYear = thisMonth === 1 ? thisYear - 1 : thisYear;
 

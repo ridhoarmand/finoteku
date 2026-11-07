@@ -93,6 +93,7 @@ export class GeminiProvider implements AIProvider {
       },
       {
         response_mime_type: 'application/json',
+        ...(options?.schema ? { response_schema: options.schema } : {}),
       },
     );
 

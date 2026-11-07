@@ -3,6 +3,8 @@
  * Query Supabase untuk transaksi
  */
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { monthRange } from '../nlu/date.ts';
+import type { HistoryRow } from '../nlu/match.ts';
 
 export interface TransactionRecord {
   id: string;
@@ -120,8 +122,7 @@ export async function getMonthlyExpense(
   year: number,
   month: number,
 ): Promise<number> {
-  const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-  const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
+  const { start: startDate, end: endDate } = monthRange(year, month);
 
   const { data } = await supabase.from('transactions').select('amount, categories!inner(type)').eq(
     'user_id',
@@ -137,39 +138,22 @@ export async function getMonthlyExpense(
 }
 
 /**
- * Ambil contoh notes untuk AI learning (few-shot)
- * Mengembalikan notes unik dengan kategorinya
+ * Recent notes with where they were filed: the local parser learns the user's own
+ * words from this (including categories the user corrected before saving).
  */
-export async function getNotesExamples(
+export async function getHistory(
   supabase: SupabaseClient,
   userId: string,
-  limit: number = 10,
-): Promise<{ notes: string; categoryName: string }[]> {
-  const { data } = await supabase.from('transactions').select('notes, categories!inner(name)').eq(
-    'user_id',
-    userId,
-  ).not('notes', 'is', null).order('created_at', { ascending: false }).limit(50);
-
-  if (!data) return [];
-
-  // Deduplikasi notes
-  const seen = new Set<string>();
-  const examples: { notes: string; categoryName: string }[] = [];
-
-  for (const t of data) {
-    // deno-lint-ignore no-explicit-any
-    const notes = (t as any).notes?.trim();
-    // deno-lint-ignore no-explicit-any
-    const categoryName = (t as any).categories?.name;
-
-    if (notes && categoryName && !seen.has(notes.toLowerCase())) {
-      seen.add(notes.toLowerCase());
-      examples.push({ notes, categoryName });
-      if (examples.length >= limit) break;
-    }
-  }
-
-  return examples;
+  limit = 300,
+): Promise<HistoryRow[]> {
+  const { data } = await supabase
+    .from('transactions')
+    .select('notes, category_id, wallet_id')
+    .eq('user_id', userId)
+    .not('notes', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  return (data as HistoryRow[] | null) ?? [];
 }
 
 /**

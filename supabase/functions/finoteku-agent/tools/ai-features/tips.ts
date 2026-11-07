@@ -6,6 +6,7 @@ import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { BaseTool, type ToolParams } from '../core/base.ts';
 import type { ToolResult } from '../../types.ts';
 import * as transactionData from '../../data/transactions.ts';
+import { monthRange } from '../../nlu/date.ts';
 import type { UserContext } from '../../data/users.ts';
 
 function formatCurrency(amount: number): string {
@@ -39,20 +40,19 @@ export class TipsTool extends BaseTool {
       return this.error('User context required');
     }
 
-    const now = new Date();
+    const [year, month, dayOfMonth] = userContext.today.split('-').map(Number);
     const thisMonthExpense = await transactionData.getMonthlyExpense(
       this.supabase,
       userContext.userId,
-      now.getFullYear(),
-      now.getMonth() + 1,
+      year,
+      month,
     );
 
     const tips: SavingTip[] = [];
 
     if (thisMonthExpense > 0) {
-      const dailyBudget = Math.round(thisMonthExpense / now.getDate());
-      const remainingDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() -
-        now.getDate();
+      const dailyBudget = Math.round(thisMonthExpense / dayOfMonth);
+      const remainingDays = Number(monthRange(year, month).end.slice(8)) - dayOfMonth;
       const projectedTotal = thisMonthExpense + dailyBudget * remainingDays;
 
       tips.push({

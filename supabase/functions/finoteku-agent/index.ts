@@ -23,6 +23,14 @@ serve(async (req: Request) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  // Only the bot functions (service-role client) may call the agent: it trusts input.userId.
+  if (req.headers.get('Authorization') !== `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     const body = await req.json();
 

@@ -27,6 +27,8 @@ const corsHeaders = {
 const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN')!;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+// Same value as `secret_token` in setWebhook; Telegram echoes it in every request.
+const TELEGRAM_WEBHOOK_SECRET = Deno.env.get('TELEGRAM_WEBHOOK_SECRET') || '';
 
 // Inisialisasi Supabase client
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -35,6 +37,10 @@ serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
+  }
+
+  if (!TELEGRAM_WEBHOOK_SECRET || req.headers.get('X-Telegram-Bot-Api-Secret-Token') !== TELEGRAM_WEBHOOK_SECRET) {
+    return new Response('Unauthorized', { status: 401 });
   }
 
   try {
@@ -139,70 +145,34 @@ serve(async (req: Request) => {
 
       if (command === '/start') {
         if (args) {
-          console.log('Attempting to link with args:', args);
+          // One-time token from the app (create_bot_link_token), valid 15 minutes.
+          const { error } = await supabase.rpc('link_with_token', {
+            p_token: args,
+            p_platform: 'telegram',
+            p_platform_user_id: telegramId.toString(),
+            p_metadata: {
+              username: telegramUsername,
+              chat_id: chatId.toString(),
+              linked_at: new Date().toISOString(),
+            },
+          });
 
-          // Cek apakah args adalah UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-          if (uuidRegex.test(args)) {
-            // NEW FLOW: Link by UUID (Direct User ID)
-            const userId = args;
-
-            const { error } = await supabase.rpc('link_by_user_id', {
-              p_user_id: userId,
-              p_platform: 'telegram',
-              p_platform_user_id: telegramId.toString(),
-              p_metadata: {
-                username: telegramUsername,
-                chat_id: chatId.toString(),
-                linked_at: new Date().toISOString(),
-              },
-            });
-
-            if (error) {
-              console.error('Link by user_id error:', error);
-              await sendTelegramMessage(
-                TELEGRAM_BOT_TOKEN,
-                chatId,
-                `❌ <b>Gagal menghubungkan akun.</b>\n\nError: ${error.message}`,
-              );
-              return new Response('Link Failed', { status: 200 });
-            }
-
+          if (error) {
+            console.error('Link by token error:', error);
             await sendTelegramMessage(
               TELEGRAM_BOT_TOKEN,
               chatId,
-              `✅ <b>Akun berhasil terhubung!</b>\n\nSekarang Anda bisa mencatat transaksi langsung dari Telegram.\n\nContoh:\n• <code>makan 50k cash</code>\n• <code>gaji 3jt mandiri</code>\n\nKetik /help untuk panduan.`,
+              `❌ <b>Gagal menghubungkan akun.</b>\n\nLink sudah kedaluwarsa atau sudah dipakai. Buka lagi menu Chat Bot di aplikasi Finoteku untuk membuat link baru.`,
             );
-            return new Response('Linked via UUID', { status: 200 });
-          } else {
-            // LEGACY FLOW: Link by Token (Short token or legacy format)
-            // Extract token - hapus prefix "link_" jika ada
-            const linkToken = args.startsWith('link_') ? args.replace('link_', '') : args;
-
-            const { error } = await supabase.rpc('link_telegram_account', {
-              p_link_token: linkToken,
-              p_telegram_id: telegramId.toString(),
-              p_telegram_username: telegramUsername || null,
-            });
-
-            if (error) {
-              console.error('Link by token error:', error);
-              await sendTelegramMessage(
-                TELEGRAM_BOT_TOKEN,
-                chatId,
-                `❌ <b>Gagal menghubungkan akun.</b>\n\nError: ${error.message}\n\nPastikan link belum expired. Coba generate link baru dari aplikasi Finoteku.`,
-              );
-              return new Response('Link Failed', { status: 200 });
-            }
-
-            await sendTelegramMessage(
-              TELEGRAM_BOT_TOKEN,
-              chatId,
-              `✅ <b>Akun berhasil terhubung!</b>\n\nSekarang Anda bisa mencatat transaksi langsung dari Telegram.\n\nContoh:\n• <code>makan 50k cash</code>\n• <code>gaji 3jt mandiri</code>\n\nKetik /help untuk panduan.`,
-            );
-            return new Response('Linked via Token', { status: 200 });
+            return new Response('Link Failed', { status: 200 });
           }
+
+          await sendTelegramMessage(
+            TELEGRAM_BOT_TOKEN,
+            chatId,
+            `✅ <b>Akun berhasil terhubung!</b>\n\nSekarang Anda bisa mencatat transaksi langsung dari Telegram.\n\nContoh:\n• <code>makan 50k cash</code>\n• <code>gaji 3jt mandiri</code>\n\nKetik /help untuk panduan.`,
+          );
+          return new Response('Linked', { status: 200 });
         }
 
         await sendTelegramMessage(

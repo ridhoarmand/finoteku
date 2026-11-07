@@ -1,16 +1,22 @@
 # Finoteku Agent
 
-AI Agent untuk manajemen keuangan pribadi dengan **adaptive learning** yang berjalan di Supabase
-Edge Functions.
+Agent keuangan pribadi untuk Telegram/WhatsApp di Supabase Edge Functions. Mencatat
+transaksi dari chat **tanpa LLM** (aturan + belajar dari riwayat user), dan memakai LLM hanya
+untuk bagian yang ragu, dengan prompt kecil.
 
 ## ✨ Fitur
 
-- 🤖 **Agent-based Architecture** - Plan → Execute → Evaluate loop
-- 🧠 **Adaptive Learning** - Mempelajari preferensi kategori & wallet dari kebiasaan user
-- 📝 **Notes Style Learning** - AI mengikuti gaya penulisan notes user
-- 💬 **Multi-input** - Text, Voice (STT), dan Image (OCR)
-- 📊 **Query Keuangan** - Saldo, ringkasan, tren, tips hemat
-- 🤖 **Telegram Bot** - Integrasi dengan Telegram Bot API
+- 🧩 **Lokal dulu, LLM cadangan**: nominal, tanggal, wallet, tipe, dan kategori dibaca dengan aturan.
+  LLM dipanggil hanya bila kategori ragu (berisi ≤6 kandidat, bukan semua kategori), atau bila
+  nominal tidak terbaca. Mode **RegEx** di aplikasi = tidak pernah memakai LLM.
+- 🧠 **Belajar dari riwayat**: kata di catatan 300 transaksi terakhir → kategori/wallet yang biasa
+  dipakai user. Koreksi yang disimpan otomatis ikut dipelajari, tanpa tabel tambahan.
+- 🧾 **Banyak transaksi per pesan**: `makan 20k, kopi 15k pakai gopay kemarin`.
+- 📅 **Tanggal bebas**: kemarin, lusa, `3 hari lalu`, `senin`, `tgl 5`, `5/11`, di zona waktu user.
+- ✏️ **Ubah sebelum simpan**: `kategorinya Minuman`, `pakai BCA`, `yang kedua 25rb`, `kemarin`.
+- 💬 **Multi-input**: teks, voice note dan foto struk (1 panggilan LLM untuk jadi teks).
+- 📊 **Query keuangan**: saldo, ringkasan, riwayat, tren, tips (tanpa LLM); pertanyaan bebas
+  dijawab dari angka ringkas.
 
 ## 🛠️ Teknologi
 
@@ -23,79 +29,38 @@ Edge Functions.
 ## 📁 Struktur Proyek
 
 ```
-finoteku-agent/
-├── supabase/
-│   ├── schema.sql                      # Database schema (tables, functions, triggers)
-│   └── functions/
-│       ├── finoteku-agent/             # Core AI Agent
-│       │   ├── index.ts                # HTTP endpoint
-│       │   ├── agent.ts                # Orchestrator utama
-│       │   ├── executor.ts             # Loop Plan-Execute-Evaluate
-│       │   ├── reasoning.ts            # Deteksi intent & planning
-│       │   ├── types.ts                # Definisi tipe
-│       │   ├── data/                   # Data Access Layer
-│       │   │   ├── users.ts            # User context
-│       │   │   ├── categories.ts       # Kategori
-│       │   │   ├── wallets.ts          # Wallet & saldo
-│       │   │   ├── transactions.ts     # Transaksi CRUD
-│       │   │   └── pending.ts          # Transaksi pending
-│       │   ├── memory/                 # Learning System
-│       │   │   └── learning.ts         # PreferenceLearner
-│       │   ├── providers/              # AI Providers
-│       │   │   ├── base.ts             # Interface provider
-│       │   │   └── gemini.ts           # Google Gemini
-│       │   └── tools/                  # Agent Tools
-│       │       ├── base.ts             # Tool registry
-│       │       ├── parser/text.ts      # Text parser (with learning)
-│       │       ├── parser/regex.ts     # Regex fallback
-│       │       ├── scanner.ts          # OCR image scanner
-│       │       ├── stt.ts              # Speech-to-text
-│       │       ├── pending.ts          # Handler konfirmasi/batal
-│       │       ├── balance.ts          # Query saldo
-│       │       ├── summary.ts          # Ringkasan bulanan
-│       │       ├── history.ts          # Riwayat transaksi
-│       │       ├── trend.ts            # Tren pengeluaran
-│       │       └── tips.ts             # Tips hemat
-│       └── telegram-bot/               # Telegram webhook
-│           ├── index.ts                # Webhook handler
-│           └── telegram.ts             # Telegram API utils
-└── deno.json                           # Konfigurasi Deno
+supabase/
+├── schema.sql                     # Dump schema (tables, RPC, triggers, RLS)
+├── migrations/                    # Perubahan schema setelah dump (jalankan berurutan)
+├── tests/balance_triggers.sql     # Cek trigger saldo (psql, di-rollback)
+└── functions/
+    ├── finoteku-agent/
+    │   ├── index.ts               # HTTP endpoint (hanya menerima service key)
+    │   ├── agent.ts               # Pilih LLM per user, media → teks, routing
+    │   ├── router.ts              # Intent dengan aturan
+    │   ├── flow/transaction.ts    # Parse → pending → ubah/pilih → simpan
+    │   ├── nlu/                   # Parser lokal: amount, date, match, parse (+ test)
+    │   ├── llm/resolve.ts         # Satu-satunya panggilan LLM untuk transaksi
+    │   ├── data/                  # Akses data Supabase
+    │   ├── providers/             # Gemini, OpenRouter
+    │   └── tools/                 # Query: saldo, ringkasan, riwayat, tren, tips, tanya data
+    ├── telegram-bot/              # Webhook Telegram
+    └── whatsapp-bot/              # Webhook GOWA (WhatsApp)
 ```
 
-## 🧠 Adaptive Learning System
+## 🧠 Cara agent membaca pesan
 
-Agent mempelajari preferensi user dari waktu ke waktu:
+1. `router.ts` menentukan jenis pesan: transaksi, pertanyaan, atau balasan untuk transaksi pending.
+2. `nlu/parse.ts` membaca transaksi dan memberi skor kategori dari riwayat user, nama kategori,
+   dan kamus sinonim (`nlu/match.ts`).
+3. Kalau kategori kurang yakin: mode AI → `llm/resolve.ts` memilih dari kandidat; mode RegEx →
+   user memilih lewat tombol (WhatsApp: balas angka).
+4. Hasil disimpan sebagai pending (`pending_bot_transactions.payload`) sampai user membalas `ya`.
 
-### 1. Category Learning
+### Test
 
-```
-User: "beli kopi 15k"
-→ Agent parse: kategori "Makanan"
-→ User koreksi: "kategorinya Minuman"
-→ Agent belajar: "kopi" → Minuman
-
-Next time: "kopi 20k"
-→ Agent langsung: kategori "Minuman" 🧠
-```
-
-### 2. Wallet Learning
-
-```
-User sering pakai "Cash" untuk jajan
-→ Agent belajar pola
-
-Next time: jajan → suggest "Cash" 🧠
-```
-
-### 3. Notes Style Learning
-
-```
-User punya riwayat:
-- "Indomaret - Susu"
-- "Alfamart - Minyak"
-
-AI akan ikuti gaya "Toko - Item"
-bukan "Beli susu di Indomaret"
+```bash
+bun test supabase/functions/finoteku-agent   # parser + skenario agent (Supabase palsu)
 ```
 
 ## 📋 Prerequisites
@@ -130,6 +95,8 @@ supabase link --project-ref YOUR_PROJECT_REF
 
 ### 4. Setup Database Schema
 
+Jalankan `supabase/schema.sql`, lalu semua file di `supabase/migrations/` berurutan.
+
 File `supabase/schema.sql` berisi semua:
 
 - Tables (users, wallets, categories, transactions, transfers, bot_links, user_preferences, dll)
@@ -154,7 +121,8 @@ supabase db push
 
 ```bash
 supabase secrets set TELEGRAM_BOT_TOKEN=your_telegram_bot_token
-supabase secrets set GEMINI_API_KEY=your_gemini_api_key
+supabase secrets set TELEGRAM_WEBHOOK_SECRET=$(openssl rand -hex 32)
+supabase secrets set GEMINI_API_KEY=your_gemini_api_key   # opsional: tanpa ini hanya mode RegEx
 ```
 
 > **Note**: `SUPABASE_URL` dan `SUPABASE_SERVICE_ROLE_KEY` otomatis tersedia di Supabase Edge
@@ -173,7 +141,7 @@ supabase functions deploy telegram-bot --no-verify-jwt
 # Ganti <YOUR_BOT_TOKEN> dan <YOUR_PROJECT_REF>
 curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook" \
   -H "Content-Type: application/json" \
-  -d '{"url": "https://<YOUR_PROJECT_REF>.supabase.co/functions/v1/telegram-bot"}'
+  -d '{"url": "https://<YOUR_PROJECT_REF>.supabase.co/functions/v1/telegram-bot", "secret_token": "<TELEGRAM_WEBHOOK_SECRET>"}'
 ```
 
 ### 8. Verifikasi Webhook
@@ -210,10 +178,12 @@ curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getWebhookInfo"
 
 ## 🔧 Environment Variables
 
-| Variable             | Description           | Required |
-| -------------------- | --------------------- | -------- |
-| `TELEGRAM_BOT_TOKEN` | Token dari BotFather  | ✅       |
-| `GEMINI_API_KEY`     | Google Gemini API key | ✅       |
+| Variable                  | Description                                                  | Required |
+| ------------------------- | ------------------------------------------------------------ | -------- |
+| `TELEGRAM_BOT_TOKEN`      | Token dari BotFather                                         | ✅       |
+| `TELEGRAM_WEBHOOK_SECRET` | Sama dengan `secret_token` di setWebhook; request lain ditolak | ✅     |
+| `GOWA_WEBHOOK_SECRET`     | Secret HMAC webhook GOWA (WhatsApp); tanpa ini WA menolak semua | WA     |
+| `GEMINI_API_KEY`          | LLM server untuk mode "AI (Server)"                          | Opsional |
 
 ## 🗄️ Database Schema
 

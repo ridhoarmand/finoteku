@@ -5,14 +5,19 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import * as categoryData from './categories.ts';
 import * as walletData from './wallets.ts';
+import { todayIn } from '../nlu/date.ts';
 
 export interface UserContext {
   userId: string;
   categories: categoryData.CategoryRecord[];
   wallets: walletData.WalletRecord[];
-  parserMode: 'server_key' | 'user_key';
+  parserMode: 'regex' | 'server_key' | 'user_key';
   aiProvider: string;
   aiApiKey: string | null;
+  /** IANA zone from users.timezone; the server itself runs in UTC. */
+  timezone: string;
+  /** Today in the user's zone, YYYY-MM-DD. */
+  today: string;
 }
 
 export interface BotLink {
@@ -33,11 +38,18 @@ export async function getContext(
   const [categoriesResult, walletsResult, userResult] = await Promise.all([
     categoryData.getAll(supabase, userId),
     walletData.getBalances(supabase, userId),
-    supabase.from('users').select('parser_mode, ai_provider, ai_api_key').eq('id', userId).single(),
+    supabase.from('users').select('parser_mode, ai_provider, ai_api_key, timezone').eq('id', userId).single(),
   ]);
 
   if (!categoriesResult.data && !walletsResult.data) {
     return null;
+  }
+
+  let timezone = userResult.data?.timezone || 'Asia/Jakarta';
+  try {
+    todayIn(timezone);
+  } catch {
+    timezone = 'Asia/Jakarta'; // unknown zone name in the profile
   }
 
   return {
@@ -47,6 +59,8 @@ export async function getContext(
     parserMode: (userResult.data?.parser_mode as UserContext['parserMode']) || 'regex',
     aiProvider: userResult.data?.ai_provider || 'none',
     aiApiKey: userResult.data?.ai_api_key || null,
+    timezone,
+    today: todayIn(timezone),
   };
 }
 
@@ -65,23 +79,4 @@ export async function getByPlatformId(
 
   if (!data || data.length === 0) return null;
   return data[0].user_id;
-}
-
-/**
- * Hubungkan akun platform ke user
- */
-export async function linkPlatformAccount(
-  supabase: SupabaseClient,
-  linkToken: string,
-  _platform: string,
-  platformUserId: string,
-  platformUsername: string | null,
-): Promise<{ success: boolean; error: Error | null }> {
-  const { error } = await supabase.rpc('link_telegram_account', {
-    p_link_token: linkToken,
-    p_telegram_id: platformUserId,
-    p_telegram_username: platformUsername,
-  });
-
-  return { success: !error, error };
 }
