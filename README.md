@@ -23,7 +23,7 @@ untuk bagian yang ragu, dengan prompt kecil.
 - **Runtime**: Deno
 - **Platform**: Supabase Edge Functions
 - **Database**: Supabase PostgreSQL
-- **AI**: Google Gemini
+- **AI**: 9Router (OpenAI-compatible), opsional
 - **Bot**: Telegram
 
 ## 📁 Struktur Proyek
@@ -42,7 +42,7 @@ supabase/
     │   ├── nlu/                   # Parser lokal: amount, date, match, parse (+ test)
     │   ├── llm/resolve.ts         # Satu-satunya panggilan LLM untuk transaksi
     │   ├── data/                  # Akses data Supabase
-    │   ├── providers/             # Gemini, OpenRouter
+    │   ├── providers/             # 9Router (OpenAI-compatible)
     │   └── tools/                 # Query: saldo, ringkasan, riwayat, tren, tips, tanya data
     ├── telegram-bot/              # Webhook Telegram
     └── whatsapp-bot/              # Webhook GOWA (WhatsApp)
@@ -51,8 +51,8 @@ supabase/
 ## 🧠 Cara agent membaca pesan
 
 1. `router.ts` menentukan jenis pesan: transaksi, pertanyaan, atau balasan untuk transaksi pending.
-2. `nlu/parse.ts` membaca transaksi dan memberi skor kategori dari riwayat user, nama kategori,
-   dan kamus sinonim (`nlu/match.ts`).
+2. `nlu/parse.ts` membaca transaksi (juga format template emoji 📁💳💵📝) dan memberi skor kategori dari
+   contoh pelatihan user (`agent_training`), riwayat user, nama kategori, dan kamus sinonim (`nlu/match.ts`).
 3. Kalau kategori kurang yakin: mode AI → `llm/resolve.ts` memilih dari kandidat; mode RegEx →
    user memilih lewat tombol (WhatsApp: balas angka).
 4. Hasil disimpan sebagai pending (`pending_bot_transactions.payload`) sampai user membalas `ya`.
@@ -69,7 +69,7 @@ bun test supabase/functions/finoteku-agent   # parser + skenario agent (Supabase
 - [Supabase CLI](https://supabase.com/docs/guides/cli) installed
 - Supabase project created
 - Telegram Bot Token dari [@BotFather](https://t.me/botfather)
-- Google Gemini API Key
+- Key 9Router (opsional)
 
 ## 🚀 Setup dari Awal
 
@@ -122,7 +122,7 @@ supabase db push
 ```bash
 supabase secrets set TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 supabase secrets set TELEGRAM_WEBHOOK_SECRET=$(openssl rand -hex 32)
-supabase secrets set GEMINI_API_KEY=your_gemini_api_key   # opsional: tanpa ini hanya mode RegEx
+supabase secrets set AI_API_KEY=your_9router_key   # opsional: tanpa ini hanya mode Tanpa AI
 ```
 
 > **Note**: `SUPABASE_URL` dan `SUPABASE_SERVICE_ROLE_KEY` otomatis tersedia di Supabase Edge
@@ -183,7 +183,8 @@ curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getWebhookInfo"
 | `TELEGRAM_BOT_TOKEN`      | Token dari BotFather                                         | ✅       |
 | `TELEGRAM_WEBHOOK_SECRET` | Sama dengan `secret_token` di setWebhook; request lain ditolak | ✅     |
 | `GOWA_WEBHOOK_SECRET`     | Secret HMAC webhook GOWA (WhatsApp); tanpa ini WA menolak semua | WA     |
-| `GEMINI_API_KEY`          | LLM server untuk mode "AI (Server)"                          | Opsional |
+| `AI_API_KEY`              | Key 9Router (OpenAI-compatible) untuk mode AI; tanpa ini semua user jalan Tanpa AI | Opsional |
+| `AI_BASE_URL` / `AI_MODEL` | Default `https://9router.idho.eu.org/v1` / `my-combo`        | Opsional |
 
 ## 🗄️ Database Schema
 

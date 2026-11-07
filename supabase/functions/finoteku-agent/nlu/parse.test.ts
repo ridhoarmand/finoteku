@@ -159,3 +159,15 @@ describe('multi', () => {
     expect(parseTransactions('halo bot', { categories: CATS, wallets: WALLETS, history: [], today: TODAY })).toEqual([]);
   });
 });
+
+describe('template (copied confirmation)', () => {
+  test('emoji markers', () => {
+    const t = one('💸 Pengeluaran\n📅 Kamis, 5 November 2026\n💳 Gopay\n💵 Rp 25.000\n📁 Transportasi › Bensin\n📝 Isi Bensin Pagi');
+    expect([t.type, t.amount, t.date, t.wallet?.id, t.category?.id, t.notes, t.categorySure])
+      .toEqual(['expense', 25000, '2026-11-05', 'gopay', 'bensin', 'Isi Bensin Pagi', true]);
+  });
+  test('labels', () => {
+    const t = one('Kategori: Gaji\nNominal: 7.500.000\nDompet: BCA');
+    expect([t.type, t.amount, t.category?.id, t.wallet?.id]).toEqual(['income', 7500000, 'gaji', 'bca']);
+  });
+});

@@ -10,7 +10,7 @@ import * as pendingData from '../data/pending.ts';
 import * as transactionData from '../data/transactions.ts';
 import { findAmounts } from '../nlu/amount.ts';
 import { addDays, parseDate } from '../nlu/date.ts';
-import { type Cat, cashWallet, findWallet, scoreCategories } from '../nlu/match.ts';
+import { type Cat, cashWallet, findWallet, type HistoryRow, scoreCategories } from '../nlu/match.ts';
 import { type ParsedTx, parseTransactions } from '../nlu/parse.ts';
 import { normalize } from '../nlu/text.ts';
 import { parseEdit, parseFallback, pickCategories } from '../llm/resolve.ts';
@@ -71,13 +71,14 @@ function missing(item: Item): 'from_wallet' | 'to_wallet' | 'category' | null {
 
 export async function record(text: string, d: FlowDeps): Promise<AgentResponse> {
   const { ctx, ai } = d;
-  const history = await transactionData.getHistory(d.supabase, ctx.userId);
+  const history = [...trainingRows(ctx), ...(await transactionData.getHistory(d.supabase, ctx.userId))];
+  const rules = ctx.agentTraining.systemInstructions;
   const parsed = parseTransactions(text, { categories: ctx.categories, wallets: ctx.wallets, history, today: ctx.today });
   let items = parsed.map(toItem);
 
   if (!items.length && ai) {
     try {
-      items = (await parseFallback(ai, text, ctx.categories, ctx.wallets)).map((t) => fromLlm(t, ctx));
+      items = (await parseFallback(ai, text, ctx.categories, ctx.wallets, rules)).map((t) => fromLlm(t, ctx));
     } catch (e) {
       console.error('[flow] LLM fallback failed:', e);
     }
@@ -97,6 +98,7 @@ export async function record(text: string, d: FlowDeps): Promise<AgentResponse> 
         ai,
         unsure.map(({ t, i }) => ({ i, text: t.source, type: t.type as 'income' | 'expense', candidates: t.candidates })),
         ctx.categories,
+        rules,
       );
       for (const [i, cat] of picked) setCategory(items[i], cat);
     } catch (e) {
@@ -114,6 +116,23 @@ export async function record(text: string, d: FlowDeps): Promise<AgentResponse> 
   }
 
   return await show({ items, choices: [], original_input: text }, d, false);
+}
+
+/**
+ * The user's own examples (app: Chat Bot → Pelatihan) as history rows. Listed first
+ * and three times, so they outweigh ordinary history for the same words.
+ */
+function trainingRows(ctx: UserContext): HistoryRow[] {
+  const rows: HistoryRow[] = [];
+  for (const ex of ctx.agentTraining.fewShotExamples) {
+    const out = ex.expectedOutput as { category?: string; wallet?: string };
+    const cat = out.category ? ctx.categories.find((c) => normalize(c.name) === normalize(out.category!)) : undefined;
+    const wal = out.wallet ? ctx.wallets.find((w) => normalize(w.name) === normalize(out.wallet!)) : undefined;
+    if (!cat && !wal) continue;
+    const row = { notes: ex.sampleInput, category_id: cat?.id ?? null, wallet_id: wal?.id ?? null };
+    rows.push(row, row, row);
+  }
+  return rows;
 }
 
 function fromLlm(t: import('../llm/resolve.ts').LlmTx, ctx: UserContext): Item {

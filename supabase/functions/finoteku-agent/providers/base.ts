@@ -1,36 +1,34 @@
 /**
  * AI Provider Base Interface
- * Interface abstrak untuk berbagai AI provider (Gemini, OpenAI, dll)
+ * Defined interface options and signatures for 9Router provider
  */
 
 export interface GenerateOptions {
   temperature?: number;
   maxTokens?: number;
   systemPrompt?: string;
-  /** JSON schema for the answer (Gemini `response_schema`); keeps output short and parseable. */
-  schema?: Record<string, unknown>;
 }
 
 export interface AIProvider {
   readonly name: string;
 
   /**
-   * Generate response teks dari prompt
+   * Generate text response from prompt
    */
   generateText(prompt: string, options?: GenerateOptions): Promise<string>;
 
   /**
-   * Generate response JSON terstruktur
+   * Generate structured JSON response from prompt
    */
   generateJSON<T>(prompt: string, options?: GenerateOptions): Promise<T>;
 
   /**
-   * Parse image dan ekstrak informasi
+   * Parse image using Vision OCR
    */
   parseImage(base64Image: string, prompt: string): Promise<string>;
 
   /**
-   * Transkripsi audio ke teks
+   * Transcribe audio to text (STT)
    */
   transcribeAudio(base64Audio: string, mimeType: string): Promise<string>;
 }

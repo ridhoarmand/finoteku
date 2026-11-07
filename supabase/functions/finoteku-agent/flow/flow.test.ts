@@ -59,7 +59,7 @@ const CATS = [
 ];
 const WALLETS = [{ id: 'cash', name: 'Cash', balance: 0 }, { id: 'bca', name: 'BCA', balance: 0 }, { id: 'ovo', name: 'OVO', balance: 0 }];
 const ctx = (mode: UserContext['parserMode'] = 'regex'): UserContext => ({
-  userId: 'u1', categories: CATS, wallets: WALLETS, parserMode: mode, aiProvider: 'gemini', aiApiKey: 'k',
+  userId: 'u1', categories: CATS, wallets: WALLETS, parserMode: mode, agentTraining: { systemInstructions: [], fewShotExamples: [] },
   timezone: 'Asia/Jakarta', today: '2026-11-06',
 });
 
@@ -201,4 +201,28 @@ describe('router', async () => {
     ['ya', null, 'confirm'],
   ];
   for (const [text, p, kind] of cases) test(text, () => expect(route(text, p).kind).toBe(kind));
+});
+
+describe('merged upstream features', () => {
+  test('training example (app: Pelatihan) teaches an unknown word', async () => {
+    const c = ctx();
+    c.agentTraining = { systemInstructions: [], fewShotExamples: [{ id: 'x', sampleInput: 'seblak 15rb', expectedOutput: { category: 'Makanan', wallet: 'OVO' }, isActive: true }] };
+    const r = await say('seblak 20rb', c);
+    expect(r.content).toContain('Makanan');
+    expect(r.content).toContain('OVO');
+    expect(r.content).not.toContain('❓');
+  });
+
+  test('9Router json_object answer {items:[...]} is understood, user rules go in the prompt', async () => {
+    const seen: string[] = [];
+    const ai: AIProvider = {
+      name: 'fake', generateText: () => Promise.resolve(''), parseImage: () => Promise.resolve(''), transcribeAudio: () => Promise.resolve(''),
+      generateJSON: <T>(_p: string, o?: GenerateOptions) => (seen.push(o?.systemPrompt ?? ''), Promise.resolve({ items: [{ i: 0, c: 'Belanja' }] } as T)),
+    };
+    const c = ctx('server_key');
+    c.agentTraining = { systemInstructions: ['Galon selalu Belanja'], fewShotExamples: [] };
+    const r = await flow.record('xyzabc 40rb', { supabase: sb as never, ai, ctx: c, platform: 'telegram', conversationId: 'c' });
+    expect(r.content).toContain('Belanja');
+    expect(seen[0]).toContain('Galon selalu Belanja');
+  });
 });

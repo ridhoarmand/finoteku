@@ -15,7 +15,7 @@ const corsHeaders = {
 // Environment
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-// GEMINI_API_KEY is read inside providers/gemini.ts
+// AI_API_KEY / AI_BASE_URL / AI_MODEL (9Router) are read in agent.ts providerFor()
 
 serve(async (req: Request) => {
   // Handle CORS
@@ -53,7 +53,7 @@ serve(async (req: Request) => {
     // Initialize Agent
     const agent = new FinanceAgent({
       supabase,
-      defaultProvider: 'gemini',
+      defaultProvider: '9router',
     });
 
     // Process input

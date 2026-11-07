@@ -105,6 +105,30 @@ export function parseCallbackQuery(body: unknown): TelegramCallbackQuery | null 
 }
 
 /**
+ * Send chat action (typing indicator) to Telegram
+ */
+export async function sendChatAction(
+  botToken: string,
+  chatId: number,
+  action: 'typing' | 'upload_photo' | 'record_voice' = 'typing',
+): Promise<boolean> {
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendChatAction`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        action: action,
+      }),
+    });
+    return response.ok;
+  } catch (error) {
+    console.error('Error sending chat action:', error);
+    return false;
+  }
+}
+
+/**
  * Send a text message reply via Telegram API
  */
 export async function sendTelegramMessage(

@@ -5,26 +5,21 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import * as categoryData from './categories.ts';
 import * as walletData from './wallets.ts';
+import * as trainingData from './training.ts';
 import { todayIn } from '../nlu/date.ts';
 
 export interface UserContext {
   userId: string;
   categories: categoryData.CategoryRecord[];
   wallets: walletData.WalletRecord[];
+  /** 'regex' = "Tanpa AI": never call an LLM. Anything else uses the server LLM. */
   parserMode: 'regex' | 'server_key' | 'user_key';
-  aiProvider: string;
-  aiApiKey: string | null;
+  /** The user's own instructions and examples (app: Chat Bot → Pelatihan). */
+  agentTraining: trainingData.AgentTrainingContext;
   /** IANA zone from users.timezone; the server itself runs in UTC. */
   timezone: string;
   /** Today in the user's zone, YYYY-MM-DD. */
   today: string;
-}
-
-export interface BotLink {
-  user_id: string;
-  parser_mode: string;
-  ai_provider: string;
-  ai_api_key: string | null;
 }
 
 /**
@@ -35,10 +30,11 @@ export async function getContext(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<UserContext | null> {
-  const [categoriesResult, walletsResult, userResult] = await Promise.all([
+  const [categoriesResult, walletsResult, userResult, agentTraining] = await Promise.all([
     categoryData.getAll(supabase, userId),
     walletData.getBalances(supabase, userId),
-    supabase.from('users').select('parser_mode, ai_provider, ai_api_key, timezone').eq('id', userId).single(),
+    supabase.from('users').select('parser_mode, timezone').eq('id', userId).single(),
+    trainingData.getAgentTraining(supabase, userId),
   ]);
 
   if (!categoriesResult.data && !walletsResult.data) {
@@ -56,9 +52,8 @@ export async function getContext(
     userId,
     categories: categoriesResult.data || [],
     wallets: walletsResult.data || [],
-    parserMode: (userResult.data?.parser_mode as UserContext['parserMode']) || 'regex',
-    aiProvider: userResult.data?.ai_provider || 'none',
-    aiApiKey: userResult.data?.ai_api_key || null,
+    parserMode: (userResult.data?.parser_mode as UserContext['parserMode']) || 'server_key',
+    agentTraining,
     timezone,
     today: todayIn(timezone),
   };

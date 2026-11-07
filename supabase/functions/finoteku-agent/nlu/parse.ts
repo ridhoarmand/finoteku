@@ -6,6 +6,7 @@ import {
   isTransferText, scoreCategories, type Wal, walletFromHistory,
 } from './match.ts';
 import { FILLER, normalize, titleCase } from './text.ts';
+import { readTemplate, type TemplateFields } from './template.ts';
 
 export interface ParseContext {
   categories: Cat[];
@@ -61,6 +62,9 @@ function cleanNotes(text: string, strip: string[]): string {
 }
 
 export function parseTransactions(text: string, ctx: ParseContext): ParsedTx[] {
+  const tpl = readTemplate(text, ctx.categories, ctx.wallets, ctx.today);
+  if (tpl?.amount) return [fromTemplate(tpl as TemplateFields & { amount: number }, text, ctx)];
+
   const items = splitItems(text);
   // A wallet/date named once applies to every item ("makan 20k, kopi 15k pakai gopay kemarin")
   const sharedWallet = items.length > 1 ? findWallet(text, ctx.wallets) : null;
@@ -137,6 +141,24 @@ function parseOne(
     candidates,
     categorySure,
     notes: notes || top?.category.name || 'Transaksi',
+    source: text,
+  };
+}
+
+function fromTemplate(t: TemplateFields & { amount: number }, text: string, ctx: ParseContext): ParsedTx {
+  const type = t.category?.type ?? t.type ?? 'expense';
+  const scored = t.category ? [] : scoreCategories(t.notes ?? '', ctx.categories, ctx.history)
+    .filter((s) => s.category.type === type);
+  return {
+    type,
+    amount: t.amount,
+    date: t.date ?? ctx.today,
+    wallet: t.wallet ?? cashWallet(ctx.wallets),
+    toWallet: null,
+    category: t.category ?? scored[0]?.category ?? null,
+    candidates: scored.slice(0, 6).map((s) => s.category),
+    categorySure: !!t.category,
+    notes: t.notes || t.category?.name || 'Transaksi',
     source: text,
   };
 }

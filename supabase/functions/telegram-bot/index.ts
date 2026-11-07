@@ -13,6 +13,7 @@ import {
   parseCallbackQuery,
   parseTelegramUpdate,
   removeMessageButtons,
+  sendChatAction,
   sendTelegramMessage,
   sendTelegramMessageWithButtons,
 } from './telegram.ts';
@@ -215,15 +216,14 @@ serve(async (req: Request) => {
     const linkedUser = Array.isArray(userData) ? userData[0] : userData;
 
     if (!linkedUser) {
-      await sendTelegramMessage(
-        TELEGRAM_BOT_TOKEN,
-        chatId,
-        `⚠️ <b>Akun belum terhubung.</b>\n\nSilakan hubungkan melalui aplikasi Finoteku.`,
-      );
-      return new Response('User not linked', { status: 200 });
+      console.log(`[TelegramBot] Ignoring unlinked user ID: ${telegramId}`);
+      return new Response('Ignored - User not linked', { status: 200 });
     }
 
     const userId = linkedUser.user_id;
+
+    // Tampilkan indikator "sedang mengetik..." di Telegram secara instan
+    sendChatAction(TELEGRAM_BOT_TOKEN, chatId, 'typing').catch((e) => console.error('Typing error:', e));
 
     // 5. Bangun AgentInput berdasarkan tipe pesan
     let agentInput: AgentInput;

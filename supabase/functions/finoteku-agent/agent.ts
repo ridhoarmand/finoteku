@@ -4,8 +4,7 @@
  */
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import type { AIProvider } from './providers/base.ts';
-import { GeminiProvider } from './providers/gemini.ts';
-import { OpenRouterProvider } from './providers/openrouter.ts';
+import { RouterAIProvider } from './providers/router.ts';
 import { BalanceTool, HistoryTool, SummaryTool, TrendTool } from './tools/analytics/index.ts';
 import { DataQueryTool, TipsTool, WebSearchTool } from './tools/ai-features/index.ts';
 import type { BaseTool } from './tools/core/index.ts';
@@ -31,14 +30,16 @@ const HELP = `👋 <b>Finoteku Bot</b>
 
 Setelah konfirmasi muncul, balas <code>ya</code>/<code>batal</code>, atau ubah: <code>kategorinya Minuman</code>, <code>pakai BCA</code>, <code>nominalnya 30rb</code>.`;
 
-/** The LLM for this user, or null: regex mode never uses one. */
+/** The server LLM (9Router, OpenAI-compatible), or null: "Tanpa AI" mode never uses one. */
 export function providerFor(ctx: userData.UserContext): AIProvider | null {
   if (ctx.parserMode === 'regex') return null;
-  if (ctx.parserMode === 'user_key' && ctx.aiApiKey) {
-    return ctx.aiProvider === 'openrouter' ? new OpenRouterProvider(ctx.aiApiKey) : new GeminiProvider(ctx.aiApiKey);
-  }
-  const serverKey = Deno.env.get('GEMINI_API_KEY');
-  return serverKey ? new GeminiProvider(serverKey) : null;
+  const key = Deno.env.get('AI_API_KEY');
+  if (!key) return null; // no LLM configured: everything still works locally
+  return new RouterAIProvider(
+    Deno.env.get('AI_BASE_URL') || 'https://9router.idho.eu.org/v1',
+    key,
+    Deno.env.get('AI_MODEL') || 'my-combo',
+  );
 }
 
 export class FinanceAgent {
@@ -67,7 +68,9 @@ export class FinanceAgent {
           : await ai.parseImage(input.content, 'Baca struk/bukti bayar ini. Balas SATU baris: nama toko atau barang lalu TOTAL bayar dalam angka, mis. "Indomaret belanja 87500". Tanpa penjelasan.');
       } catch (e) {
         console.error('[agent] media to text failed:', e);
-        return { type: 'error', content: '❌ Gagal membaca media. Coba kirim ulang atau ketik transaksinya.' };
+        const msg = (e as Error).message ?? '';
+        // the provider explains unsupported media itself (e.g. a text-only model and a photo)
+        return { type: 'error', content: /belum mendukung/.test(msg) ? `⚠️ ${msg}` : '❌ Gagal membaca media. Coba kirim ulang atau ketik transaksinya.' };
       }
       text = text.trim();
       if (input.caption) text = `${input.caption} ${text}`; // the user's own words win for category/wallet
