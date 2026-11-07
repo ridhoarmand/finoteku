@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../models/category.dart';
@@ -49,18 +50,18 @@ class _CategorySelectionScreenState
         title: Text(widget.title),
         leading: IconButton(
           tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-          icon: const Icon(Icons.close),
+          icon: const Icon(PhRegular.x),
           onPressed: () => context.pop(),
         ),
         bottom: TabBar(
           controller: _tabController,
           tabs: [
             Tab(
-              icon: const Icon(Icons.trending_down),
+              icon: const Icon(PhRegular.trendDown),
               text: ref.tr(context, 'expense'),
             ),
             Tab(
-              icon: const Icon(Icons.trending_up),
+              icon: const Icon(PhRegular.trendUp),
               text: ref.tr(context, 'income'),
             ),
           ],
@@ -68,7 +69,7 @@ class _CategorySelectionScreenState
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddCategoryDialog(),
-        child: const Icon(Icons.add),
+        child: const Icon(PhRegular.plus),
       ),
       body: TabBarView(
         controller: _tabController,
@@ -178,11 +179,11 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
                 controller: _searchController,
                 decoration: InputDecoration(
                   hintText: ref.tr(context, 'search_category'),
-                  prefixIcon: const Icon(Icons.search),
+                  prefixIcon: const Icon(PhRegular.magnifyingGlass),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
                           tooltip: ref.tr(context, 'clear'),
-                          icon: const Icon(Icons.clear),
+                          icon: const Icon(PhRegular.x),
                           onPressed: () {
                             _searchController.clear();
                             setState(() {
@@ -305,7 +306,7 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
     );
 
     // Use standardized color by type
-    final Color color = CategoryTheme.forType(widget.categoryType);
+    final Color color = CategoryTheme.forType(context, widget.categoryType);
 
     // Different styling based on hierarchy level
     Widget leadingWidget;
@@ -319,7 +320,7 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
           SizedBox(
             width: 20,
             child: Icon(
-              Icons.subdirectory_arrow_right,
+              PhRegular.arrowElbowDownRight,
               size: 16,
               color: Colors.grey[400],
             ),
@@ -341,7 +342,7 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
       leadingWidget = Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.warning_amber_rounded, size: 18, color: Colors.orange),
+          Icon(PhRegular.warning, size: 18, color: Colors.orange),
           const SizedBox(width: 8),
           CircleAvatar(
             radius: 14,
@@ -390,7 +391,7 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
         ),
         trailing: isSelected
             ? Icon(
-                Icons.check_circle,
+                PhFill.checkCircle,
                 color: theme.colorScheme.primary,
                 size: 20,
               )
@@ -407,8 +408,8 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
         children: [
           Icon(
             widget.categoryType == CategoryType.expense
-                ? Icons.trending_down
-                : Icons.trending_up,
+                ? PhRegular.trendDown
+                : PhRegular.trendUp,
             size: 64,
             color: Colors.grey[400],
           ),
@@ -444,7 +445,7 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error, size: 64, color: Colors.red),
+                const Icon(PhRegular.warningCircle, size: 64, color: Colors.red),
                 const SizedBox(height: 16),
                 Text('Error: ${error.toString()}'),
                 const SizedBox(height: 16),

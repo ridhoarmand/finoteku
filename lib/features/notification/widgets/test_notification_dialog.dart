@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -109,7 +110,7 @@ class _TestNotificationDialogState extends State<TestNotificationDialog> {
     return AlertDialog(
       title: const Row(
         children: [
-          Icon(Icons.notifications_active, color: Colors.blue),
+          Icon(PhRegular.bellRinging, color: Colors.blue),
           SizedBox(width: 8),
           Text('Test Notifikasi'),
         ],
@@ -135,19 +136,19 @@ class _TestNotificationDialogState extends State<TestNotificationDialog> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 _ActionBtn(
-                  icon: Icons.notifications,
+                  icon: PhRegular.bell,
                   label: 'Instant',
                   onTap: _sendTest,
                   color: Colors.blue,
                 ),
                 _ActionBtn(
-                  icon: Icons.timer,
+                  icon: PhRegular.timer,
                   label: 'Delay 5s',
                   onTap: _sendDelayedTest,
                   color: Colors.orange,
                 ),
                 _ActionBtn(
-                  icon: Icons.schedule,
+                  icon: PhRegular.clock,
                   label: 'Terjadwal',
                   onTap: _sendScheduledTest,
                   color: Colors.purple,
@@ -172,7 +173,7 @@ class _TestNotificationDialogState extends State<TestNotificationDialog> {
               const SizedBox(height: 8),
 
               // Permission Status
-              _SectionHeader(title: 'Permission Status', icon: Icons.lock),
+              _SectionHeader(title: 'Permission Status', icon: PhRegular.lock),
               _StatusRow(
                 label: 'Notifications',
                 isGranted: _isNotificationGranted,
@@ -186,10 +187,10 @@ class _TestNotificationDialogState extends State<TestNotificationDialog> {
                 children: [
                   _SectionHeader(
                     title: 'Pending Schedule ($_pendingCount)',
-                    icon: Icons.playlist_add_check,
+                    icon: PhRegular.listChecks,
                   ),
                   IconButton(
-                    icon: const Icon(Icons.refresh, size: 20),
+                    icon: const Icon(PhRegular.arrowClockwise, size: 20),
                     onPressed: _checkPendingNotifications,
                     tooltip: 'Refresh Pending',
                   ),
@@ -214,7 +215,7 @@ class _TestNotificationDialogState extends State<TestNotificationDialog> {
                     title: Text(n.title ?? 'No Title'),
                     subtitle: Text('ID: ${n.id} • ${n.body}'),
                     leading: const Icon(
-                      Icons.access_time,
+                      PhRegular.clock,
                       color: Colors.purple,
                       size: 20,
                     ),
@@ -225,7 +226,7 @@ class _TestNotificationDialogState extends State<TestNotificationDialog> {
               // Channels
               _SectionHeader(
                 title: 'Active Android Channels',
-                icon: Icons.list,
+                icon: PhRegular.list,
               ),
               if (_channels.isEmpty)
                 const Padding(

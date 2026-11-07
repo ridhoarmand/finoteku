@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../models/app_update_model.dart';
@@ -53,7 +54,7 @@ class AppUpdateDialog extends ConsumerWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    Icons.system_update_rounded,
+                    PhRegular.arrowCircleDown,
                     color: theme.colorScheme.primary,
                     size: 28,
                   ),
@@ -156,7 +157,7 @@ class AppUpdateDialog extends ConsumerWidget {
                         );
                       }
                     },
-                    icon: const Icon(Icons.download_rounded, size: 18),
+                    icon: const Icon(PhRegular.downloadSimple, size: 18),
                     label: const Text('Update Sekarang'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: theme.colorScheme.primary,

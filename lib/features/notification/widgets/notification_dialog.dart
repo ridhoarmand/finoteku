@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/app_localizations.dart';
 
@@ -79,7 +80,7 @@ class _NotificationDialogState extends ConsumerState<NotificationDialog> {
         labelText: ref.tr(context, 'notif_field_title'),
         hintText: ref.tr(context, 'notif_field_title_hint'),
         border: OutlineInputBorder(),
-        prefixIcon: Icon(Icons.title),
+        prefixIcon: Icon(PhRegular.textT),
       ),
     );
   }
@@ -91,7 +92,7 @@ class _NotificationDialogState extends ConsumerState<NotificationDialog> {
         labelText: ref.tr(context, 'notif_field_message'),
         hintText: ref.tr(context, 'notif_field_message_hint'),
         border: OutlineInputBorder(),
-        prefixIcon: Icon(Icons.message),
+        prefixIcon: Icon(PhRegular.chatText),
       ),
       maxLines: 2,
     );
@@ -110,7 +111,7 @@ class _NotificationDialogState extends ConsumerState<NotificationDialog> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.access_time, color: Colors.blue),
+            const Icon(PhRegular.clock, color: Colors.blue),
             const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,7 +130,7 @@ class _NotificationDialogState extends ConsumerState<NotificationDialog> {
               ],
             ),
             const Spacer(),
-            const Icon(Icons.edit, size: 18, color: Colors.grey),
+            const Icon(PhRegular.pencilSimple, size: 18, color: Colors.grey),
           ],
         ),
       ),

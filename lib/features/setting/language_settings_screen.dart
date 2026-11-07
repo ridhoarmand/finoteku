@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/localization/locale_provider.dart';
 import '../../core/localization/app_localizations.dart';
@@ -66,7 +67,7 @@ class _LanguageSettingsScreenState extends ConsumerState<LanguageSettingsScreen>
       child: ListTile(
         onTap: () => setState(() => _selected = code),
         title: Text(label),
-        trailing: selected ? Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary) : null,
+        trailing: selected ? Icon(PhFill.checkCircle, color: Theme.of(context).colorScheme.primary) : null,
       ),
     );
   }

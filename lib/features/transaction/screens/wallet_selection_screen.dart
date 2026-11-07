@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../models/wallet.dart';
@@ -35,14 +36,14 @@ class _WalletSelectionScreenState extends ConsumerState<WalletSelectionScreen> {
         title: Text(widget.title),
         leading: IconButton(
           tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-          icon: const Icon(Icons.close),
+          icon: const Icon(PhRegular.x),
           onPressed: () => context.pop(),
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddWalletDialog(),
         tooltip: ref.tr(context, 'wallet_add'),
-        child: const Icon(Icons.add),
+        child: const Icon(PhRegular.plus),
       ),
       body: Column(
         children: [
@@ -169,7 +170,7 @@ class _WalletSelectionScreenState extends ConsumerState<WalletSelectionScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      Icons.visibility_off,
+                      PhRegular.eyeSlash,
                       size: 12,
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -186,7 +187,7 @@ class _WalletSelectionScreenState extends ConsumerState<WalletSelectionScreen> {
               ),
             if (isSelected)
               Icon(
-                Icons.check_circle,
+                PhFill.checkCircle,
                 color: theme.colorScheme.primary,
                 size: 20,
               ),
@@ -221,7 +222,7 @@ class _WalletSelectionScreenState extends ConsumerState<WalletSelectionScreen> {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.account_balance_wallet_outlined,
+                PhRegular.wallet,
                 size: 48,
                 color: theme.colorScheme.outline,
               ),
@@ -263,7 +264,7 @@ class _WalletSelectionScreenState extends ConsumerState<WalletSelectionScreen> {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.error_outline,
+                PhRegular.warningCircle,
                 size: 48,
                 color: theme.colorScheme.error,
               ),

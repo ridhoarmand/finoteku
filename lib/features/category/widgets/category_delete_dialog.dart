@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/category.dart';
 import '../../../services/supabase_service.dart';
@@ -16,7 +17,7 @@ class CategoryDeleteDialog extends ConsumerWidget {
     return AlertDialog(
       title: Row(
         children: [
-          const Icon(Icons.delete_outline, color: Colors.red, size: 24),
+          const Icon(PhRegular.trash, color: Colors.red, size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Text(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 
 enum FAQCategory {
   gettingStarted,
@@ -37,23 +38,23 @@ enum FAQCategory {
   IconData get icon {
     switch (this) {
       case FAQCategory.gettingStarted:
-        return Icons.rocket_launch;
+        return PhRegular.rocketLaunch;
       case FAQCategory.transactions:
-        return Icons.receipt_long;
+        return PhRegular.receipt;
       case FAQCategory.categories:
-        return Icons.category;
+        return PhRegular.squaresFour;
       case FAQCategory.wallets:
-        return Icons.account_balance_wallet;
+        return PhRegular.wallet;
       case FAQCategory.reports:
-        return Icons.analytics;
+        return PhRegular.chartBar;
       case FAQCategory.transfers:
-        return Icons.swap_horiz;
+        return PhRegular.arrowsLeftRight;
       case FAQCategory.notifications:
-        return Icons.notifications;
+        return PhRegular.bell;
       case FAQCategory.settings:
-        return Icons.settings;
+        return PhRegular.gear;
       case FAQCategory.troubleshooting:
-        return Icons.build;
+        return PhRegular.wrench;
     }
   }
 

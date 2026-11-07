@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/agent_training_model.dart';
@@ -45,8 +46,8 @@ class _AgentTrainingScreenState extends ConsumerState<AgentTrainingScreen>
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(icon: Icon(Icons.psychology), text: 'Instruksi AI'),
-            Tab(icon: Icon(Icons.chat_bubble_outline), text: 'Contoh Chat'),
+            Tab(icon: Icon(PhRegular.brain), text: 'Instruksi AI'),
+            Tab(icon: Icon(PhRegular.chatCircle), text: 'Contoh Chat'),
           ],
         ),
       ),
@@ -68,7 +69,7 @@ class _AgentTrainingScreenState extends ConsumerState<AgentTrainingScreen>
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddExampleDialog(context),
-        icon: const Icon(Icons.add),
+        icon: const Icon(PhRegular.plus),
         label: const Text('Tambah Contoh Chat'),
       ),
     );
@@ -92,7 +93,7 @@ class _AgentTrainingScreenState extends ConsumerState<AgentTrainingScreen>
               children: [
                 Row(
                   children: [
-                    Icon(Icons.lightbulb_outline, color: theme.colorScheme.primary),
+                    Icon(PhRegular.lightbulb, color: theme.colorScheme.primary),
                     const SizedBox(width: 8),
                     Text(
                       'Petunjuk Penggunaan',
@@ -135,7 +136,7 @@ class _AgentTrainingScreenState extends ConsumerState<AgentTrainingScreen>
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
-                  : const Icon(Icons.send),
+                  : const Icon(PhRegular.paperPlaneRight),
             ),
           ],
         ),
@@ -159,7 +160,7 @@ class _AgentTrainingScreenState extends ConsumerState<AgentTrainingScreen>
           ...instructions.map((item) => Card(
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
-                  leading: const Icon(Icons.check_circle_outline, color: Colors.green),
+                  leading: const Icon(PhRegular.checkCircle, color: Colors.green),
                   title: Text(item.instructionText ?? ''),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -169,7 +170,7 @@ class _AgentTrainingScreenState extends ConsumerState<AgentTrainingScreen>
                         onChanged: (val) => _toggleActive(item.id, val),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                        icon: const Icon(PhRegular.trash, color: Colors.red),
                         onPressed: () => _deleteItem(item.id),
                       ),
                     ],
@@ -195,7 +196,7 @@ class _AgentTrainingScreenState extends ConsumerState<AgentTrainingScreen>
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                const Icon(Icons.auto_awesome, color: Colors.blue),
+                const Icon(PhRegular.lightbulb, color: Colors.blue),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -235,7 +236,7 @@ class _AgentTrainingScreenState extends ConsumerState<AgentTrainingScreen>
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.chat_bubble_outline, size: 18, color: Colors.blue),
+                        const Icon(PhRegular.chatCircle, size: 18, color: Colors.blue),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -250,7 +251,7 @@ class _AgentTrainingScreenState extends ConsumerState<AgentTrainingScreen>
                           onChanged: (val) => _toggleActive(item.id, val),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                          icon: const Icon(PhRegular.trash, color: Colors.red, size: 20),
                           onPressed: () => _deleteItem(item.id),
                         ),
                       ],
@@ -262,25 +263,25 @@ class _AgentTrainingScreenState extends ConsumerState<AgentTrainingScreen>
                       children: [
                         if (output['amount'] != null)
                           Chip(
-                            avatar: const Icon(Icons.payments, size: 14),
+                            avatar: const Icon(PhRegular.money, size: 14),
                             label: Text('Rp ${output['amount']}'),
                             visualDensity: VisualDensity.compact,
                           ),
                         if (output['category'] != null)
                           Chip(
-                            avatar: const Icon(Icons.category, size: 14),
+                            avatar: const Icon(PhRegular.squaresFour, size: 14),
                             label: Text('${output['category']}'),
                             visualDensity: VisualDensity.compact,
                           ),
                         if (output['wallet'] != null)
                           Chip(
-                            avatar: const Icon(Icons.account_balance_wallet, size: 14),
+                            avatar: const Icon(PhRegular.wallet, size: 14),
                             label: Text('${output['wallet']}'),
                             visualDensity: VisualDensity.compact,
                           ),
                         if (output['notes'] != null)
                           Chip(
-                            avatar: const Icon(Icons.notes, size: 14),
+                            avatar: const Icon(PhRegular.notepad, size: 14),
                             label: Text('${output['notes']}'),
                             visualDensity: VisualDensity.compact,
                           ),

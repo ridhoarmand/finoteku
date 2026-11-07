@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../services/supabase_service.dart';
@@ -99,7 +100,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           title: Text(ref.tr(context, 'edit_profile')),
           leading: IconButton(
             tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-            icon: const Icon(Icons.close),
+            icon: const Icon(PhRegular.x),
             onPressed: () => _handleBackPress(),
           ),
         ),

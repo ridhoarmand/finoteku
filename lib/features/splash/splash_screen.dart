@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:async';
@@ -244,7 +245,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         return AlertDialog(
           title: Row(
             children: [
-              Icon(Icons.wifi_off, color: Theme.of(context).colorScheme.error),
+              Icon(PhRegular.wifiSlash, color: Theme.of(context).colorScheme.error),
               const SizedBox(width: 12),
               Text(ref.tr(context, 'no_connection_title')),
             ],

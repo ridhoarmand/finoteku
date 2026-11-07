@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../utils/wallet_icon_helper.dart';
+import '../../../theme/app_theme.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../models/transaction.dart';
@@ -19,7 +22,6 @@ import '../../transfer/services/transfer_service.dart';
 import '../../transfer/models/transfer_models.dart';
 import '../../transfer/models/transfer.dart' as transfer_model;
 import '../../transfer/screens/transfer_detail_screen.dart'; // Import untuk transferByIdProvider
-import '../widgets/ledger_transfer_card.dart'; // Import untuk transferDataProvider
 import '../utils/transaction_screen_helpers.dart';
 
 class AddEditTransactionScreen extends ConsumerStatefulWidget {
@@ -239,67 +241,69 @@ class _AddEditTransactionScreenState
         body: Form(
           key: _formKey,
           child: ListView(
-            padding: const EdgeInsets.all(2), // Reduced from 6 to 4
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
-              // Date Section
-              _buildDateSection(),
-              // Amount Section
+              if (widget.initialTransfer == null && widget.initialTransaction == null) ...[
+                _buildModeSwitch(),
+                const SizedBox(height: 20),
+              ],
+              // The amount is the focal point of this screen (DESIGN.md motif)
               _buildAmountSection(),
-              // Transfer Toggle
-              _buildTransferToggle(),
-
-              ...(!_isTransfer
-                  ? [
-                      // Wallet Selection
-                      _buildWalletSection(user.id),
-                      // Category Selection
+              const SizedBox(height: 20),
+              Card(
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    _buildWalletSection(user.id),
+                    const Divider(indent: 56),
+                    if (_isTransfer)
+                      _buildToWalletSection(user.id)
+                    else
                       _buildCategorySection(user.id),
-                    ]
-                  : [
-                      // Source wallet and destination wallet for transfer
-                      _buildWalletSection(user.id),
-                      _buildToWalletSection(user.id),
-                    ]),
-
-              // Notes Section
-              _buildNotesSection(),
-              // Save Button: full-height and aligned with the cards above
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 12, 4, 24),
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(50),
-                    textStyle: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  onPressed: _isLoading ? null : _saveTransaction,
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                          ),
-                        )
-                      : Text(
-                          widget.initialTransfer != null
-                              ? ref.tr(context, 'update_transfer_button')
-                              : (widget.initialTransaction != null
-                                    ? ref.tr(
-                                        context,
-                                        'update_transaction_button',
-                                      )
-                                    : ref.tr(
-                                        context,
-                                        'add_transaction_button',
-                                      )),
-                        ),
+                    const Divider(indent: 56),
+                    _buildDateSection(),
+                  ],
                 ),
               ),
+              const SizedBox(height: 16),
+              _buildNotesSection(),
             ],
           ),
+        ),
+        // Save stays reachable above the keyboard and at the end of long forms
+        bottomNavigationBar: SafeArea(
+          minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(50),
+                      textStyle: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    onPressed: _isLoading ? null : _saveTransaction,
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : Text(
+                            widget.initialTransfer != null
+                                ? ref.tr(context, 'update_transfer_button')
+                                : (widget.initialTransaction != null
+                                      ? ref.tr(
+                                          context,
+                                          'update_transaction_button',
+                                        )
+                                      : ref.tr(
+                                          context,
+                                          'add_transaction_button',
+                                        )),
+                          ),
+                  ),
         ),
       ),
     );
@@ -385,6 +389,7 @@ class _AddEditTransactionScreenState
   );
 
   Widget _buildWalletSection(String userId) => _WalletSection(
+    labelKey: _isTransfer ? 'field_from_wallet' : 'field_wallet',
     userId: userId,
     selected: _selectedWallet,
     onSelect: (w) => setState(() => _selectedWallet = w),
@@ -395,15 +400,16 @@ class _AddEditTransactionScreenState
   Widget _buildNotesSection() =>
       NotesSection(controller: _notesController, onTapOutside: _unfocus);
 
-  Widget _buildTransferToggle() => Card(
-    child: SwitchListTile(
-      title: Text(ref.tr(context, 'transfer_internal_title')),
-      subtitle: Text(ref.tr(context, 'transfer_internal_subtitle')),
-      value: _isTransfer,
-      onChanged: widget.initialTransfer != null
-          ? null // disabled when editing an existing transfer
-          : (v) {
-              setState(() {
+  Widget _buildModeSwitch() => SegmentedButton<bool>(
+    showSelectedIcon: false,
+    segments: [
+      ButtonSegment(value: false, label: Text(ref.tr(context, 'tx_mode_transaction')), icon: const Icon(PhRegular.receipt)),
+      ButtonSegment(value: true, label: Text(ref.tr(context, 'tx_mode_transfer')), icon: const Icon(PhRegular.arrowsLeftRight)),
+    ],
+    selected: {_isTransfer},
+    onSelectionChanged: (sel) {
+      final v = sel.first;
+      setState(() {
                 _isTransfer = v;
                 if (v) {
                   _selectedCategory = null; // hide category in transfer mode
@@ -411,11 +417,11 @@ class _AddEditTransactionScreenState
                   _toWallet = null;
                 }
               });
-            },
-    ),
+    },
   );
 
   Widget _buildToWalletSection(String userId) => _WalletSection(
+    labelKey: 'field_to_wallet',
     userId: userId,
     selected: _toWallet,
     onSelect: (w) => setState(() => _toWallet = w),
@@ -697,13 +703,6 @@ class _AddEditTransactionScreenState
               transferId: widget.initialTransfer!.id,
             )),
           );
-          // Also invalidate transferDataProvider used in LedgerTransferCard
-          ref.invalidate(
-            transferDataProvider((
-              userId: user.id,
-              transferId: widget.initialTransfer!.id,
-            )),
-          );
         }
       }
 
@@ -751,6 +750,56 @@ class _AddEditTransactionScreenState
 
 // --- Extracted Section Widgets ---
 
+/// One row of the details card: icon, small label, value (or a muted "Pilih").
+class _FieldRow extends ConsumerWidget {
+  final Widget leading;
+  final String label;
+  final String? value;
+  final String? detail;
+  final VoidCallback onTap;
+
+  const _FieldRow({required this.leading, required this.label, required this.value, this.detail, required this.onTap});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final muted = context.colors.muted;
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            SizedBox(width: 24, height: 24, child: Center(child: leading)),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: theme.textTheme.labelMedium?.copyWith(color: muted)),
+                  const SizedBox(height: 2),
+                  Text(
+                    value ?? ref.tr(context, 'field_choose'),
+                    style: theme.textTheme.titleSmall?.copyWith(color: value == null ? muted : null),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            if (detail != null) ...[
+              const SizedBox(width: 8),
+              Text(detail!, style: theme.textTheme.bodySmall?.copyWith(color: muted, fontFeatures: tabularFigures)),
+            ],
+            const SizedBox(width: 4),
+            Icon(PhRegular.caretRight, size: 16, color: muted),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _CategorySection extends ConsumerWidget {
   final String userId;
   final Category? selected;
@@ -764,93 +813,21 @@ class _CategorySection extends ConsumerWidget {
     required this.openSheet,
     required this.ref,
   });
+
   @override
   Widget build(BuildContext context, WidgetRef ref2) {
-    final categoriesAsync = ref.watch(categoriesProvider(userId));
-    final cats = categoriesAsync.value ?? [];
-    return Card(
-      child: Column(
-        children: [
-          if (selected == null)
-            ListTile(
-              leading: const Icon(Icons.category),
-              title: Text(ref.tr(context, 'select_category_title')),
-              subtitle: Text(ref.tr(context, 'choose_transaction_category')),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-              onTap: () => openSheet(cats),
-            )
-          else if (selected!.parentId == null)
-            ListTile(
-              leading: Icon(
-                CategoryIconHelper.getIconFromCodePoint(
-                  selected!.iconCodePoint,
-                ),
-                color: selected!.color != null ? Color(selected!.color!) : null,
-              ),
-              title: Text(selected!.name),
-              subtitle: Text(selected!.type.name.toUpperCase()),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-              onTap: () => openSheet(cats),
-            )
-          else
-            ref
-                .watch(
-                  categoryProvider((
-                    categoryId: selected!.parentId!,
-                    userId: userId,
-                  )),
-                )
-                .when(
-                  data: (parentCategory) => ListTile(
-                    leading: Icon(
-                      CategoryIconHelper.getIconFromCodePoint(
-                        selected!.iconCodePoint,
-                      ),
-                      color: selected!.color != null
-                          ? Color(selected!.color!)
-                          : null,
-                    ),
-                    title: Text(
-                      parentCategory != null
-                          ? '${parentCategory.name} > ${selected!.name}'
-                          : selected!.name,
-                    ),
-                    subtitle: Text(selected!.type.name.toUpperCase()),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () => openSheet(cats),
-                  ),
-                  loading: () => ListTile(
-                    leading: Icon(
-                      CategoryIconHelper.getIconFromCodePoint(
-                        selected!.iconCodePoint,
-                      ),
-                      color: selected!.color != null
-                          ? Color(selected!.color!)
-                          : null,
-                    ),
-                    title: Text(selected!.name),
-                    subtitle: Text(selected!.type.name.toUpperCase()),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () => openSheet(cats),
-                  ),
-                  error: (error, stack) => ListTile(
-                    leading: Icon(
-                      CategoryIconHelper.getIconFromCodePoint(
-                        selected!.iconCodePoint,
-                      ),
-                      color: selected!.color != null
-                          ? Color(selected!.color!)
-                          : null,
-                    ),
-                    title: Text(selected!.name),
-                    subtitle: Text(selected!.type.name.toUpperCase()),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () => openSheet(cats),
-                  ),
-                ),
-          if ((selected == null) && (cats.isEmpty)) const SizedBox.shrink(),
-        ],
+    final cats = ref.watch(categoriesProvider(userId)).value ?? [];
+    final all = ref.watch(categoriesAllProvider(userId)).value ?? cats;
+    final c = selected;
+    final parent = c?.parentId == null ? null : all.where((x) => x.id == c!.parentId).firstOrNull;
+    return _FieldRow(
+      leading: Icon(
+        c == null ? PhRegular.squaresFour : CategoryIconHelper.iconFor(codePoint: c.iconCodePoint, name: c.name),
+        color: Theme.of(context).colorScheme.onSurface,
       ),
+      label: ref.tr(context, 'field_category'),
+      value: c == null ? null : (parent != null ? '${parent.name} › ${c.name}' : c.name),
+      onTap: () => openSheet(cats),
     );
   }
 }
@@ -861,33 +838,15 @@ class _WalletSection extends ConsumerWidget {
   final void Function(Wallet?) onSelect;
   final void Function(List<Wallet>) openSheet;
   final WidgetRef ref;
+  final String labelKey;
   const _WalletSection({
     required this.userId,
     required this.selected,
     required this.onSelect,
     required this.openSheet,
     required this.ref,
+    this.labelKey = 'field_wallet',
   });
-  static IconData iconFor(String? icon) {
-    switch (icon) {
-      case 'bca':
-      case 'bni':
-      case 'bri':
-      case 'mandiri':
-      case 'btn':
-      case 'bsi':
-        return Icons.account_balance;
-      case 'dana':
-      case 'gopay':
-      case 'ovo':
-      case 'linkaja':
-      case 'doku':
-      case 'sopay':
-        return Icons.phone_android;
-      default:
-        return Icons.account_balance_wallet;
-    }
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref2) {
@@ -897,30 +856,15 @@ class _WalletSection extends ConsumerWidget {
       if (selected != null && selected!.isHidden) selected!,
       ...?walletsAsync.value,
     ];
-    return Card(
-      child: Column(
-        children: [
-          ListTile(
-            leading: selected != null
-                ? Icon(
-                    iconFor(selected!.icon),
-                    color: Theme.of(context).primaryColor,
-                  )
-                : const Icon(Icons.account_balance_wallet),
-            title: Text(
-              selected?.name ?? ref.tr(context, 'select_wallet_title'),
-            ),
-            subtitle: selected != null
-                ? Text(
-                    '${ref.tr(context, 'wallet_balance_prefix')}${CurrencyFormatter.format(selected!.balance, selected!.currency)}',
-                  )
-                : Text(ref.tr(context, 'choose_wallet_subtitle')),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () => openSheet(wallets),
-          ),
-          if ((selected == null) && wallets.isEmpty) const SizedBox.shrink(),
-        ],
-      ),
+    final w = selected;
+    return _FieldRow(
+      leading: w == null
+          ? Icon(PhRegular.wallet, color: Theme.of(context).colorScheme.onSurface)
+          : WalletIconHelper.buildIcon(w.icon, size: 24),
+      label: ref.tr(context, labelKey),
+      value: w?.name,
+      detail: w == null ? null : CurrencyFormatter.format(w.balance, w.currency),
+      onTap: () => openSheet(wallets),
     );
   }
 }

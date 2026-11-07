@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -17,19 +18,19 @@ class SupportSettingsWidget extends ConsumerWidget {
       title: ref.tr(context, 'support_section'),
       children: [
         SettingsTileWidget(
-          icon: Icons.system_update_rounded,
+          icon: PhRegular.arrowCircleDown,
           title: 'Cek Pembaruan Aplikasi',
           subtitle: 'Periksa versi rilis terbaru Finoteku',
           onTap: () => _checkAppUpdate(context, ref),
         ),
         SettingsTileWidget(
-          icon: Icons.help_outline,
+          icon: PhRegular.question,
           title: ref.tr(context, 'help_faq'),
           subtitle: ref.tr(context, 'help_faq_sub'),
           onTap: () => _showHelpDialog(context, ref),
         ),
         SettingsTileWidget(
-          icon: Icons.info_outline,
+          icon: PhRegular.info,
           title: ref.tr(context, 'about'),
           subtitle: ref.tr(context, 'about_sub'),
           onTap: () => _showAboutDialog(context, ref),
@@ -133,7 +134,7 @@ class SupportSettingsWidget extends ConsumerWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            Icons.code,
+                            PhRegular.code,
                             size: 16,
                             color: theme.colorScheme.primary,
                           ),
@@ -237,7 +238,7 @@ class SupportSettingsWidget extends ConsumerWidget {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.help_outline, color: theme.colorScheme.primary),
+            Icon(PhRegular.question, color: theme.colorScheme.primary),
             const SizedBox(width: 8),
             Text(ref.tr(context, 'help_faq')),
           ],

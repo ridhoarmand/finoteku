@@ -28,6 +28,30 @@ Future<DateTime?> showMondayFirstDatePicker({
   );
 }
 
+/// Date range picker with weeks starting on Monday (same localisation as above).
+Future<DateTimeRange?> showMondayFirstDateRangePicker({
+  required BuildContext context,
+  required DateTime firstDate,
+  required DateTime lastDate,
+  DateTimeRange? initialDateRange,
+  Locale locale = const Locale('id'),
+}) {
+  return showDateRangePicker(
+    context: context,
+    firstDate: firstDate,
+    lastDate: lastDate,
+    initialDateRange: initialDateRange,
+    builder: (dialogContext, child) {
+      return Localizations.override(
+        context: context,
+        locale: locale,
+        delegates: const [_MondayFirstMaterialLocalizationsDelegate()],
+        child: child,
+      );
+    },
+  );
+}
+
 class _MondayFirstMaterialLocalizationsDelegate
     extends LocalizationsDelegate<MaterialLocalizations> {
   const _MondayFirstMaterialLocalizationsDelegate();

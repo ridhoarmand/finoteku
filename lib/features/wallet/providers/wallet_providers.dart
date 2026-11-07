@@ -60,22 +60,6 @@ final hiddenWalletsProvider = FutureProvider.family<List<Wallet>, String>((
   return wallets.where((wallet) => wallet.isHidden).toList();
 });
 
-// Provider untuk total balance dari semua active wallets
-final totalBalanceProvider = FutureProvider.family<double, String>((
-  ref,
-  userId,
-) async {
-  // Watch refresh trigger untuk auto-refresh saat ada perubahan
-  ref.watch(walletRefreshTriggerProvider);
-
-  final activeWallets = await ref.watch(activeWalletsProvider(userId).future);
-  double total = 0.0;
-  for (final wallet in activeWallets) {
-    total += wallet.balance;
-  }
-  return total;
-});
-
 // Helper function untuk refresh semua wallet providers
 void refreshWalletProviders(WidgetRef ref) {
   // Increment refresh trigger untuk memaksa semua wallet providers refresh

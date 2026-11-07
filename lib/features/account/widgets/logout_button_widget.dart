@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -71,7 +72,7 @@ class LogoutButtonWidget extends ConsumerWidget {
             }
           }
         },
-        icon: const Icon(Icons.logout),
+        icon: const Icon(PhRegular.signOut),
         label: Text(ref.tr(context, 'logout')),
         style: FilledButton.styleFrom(
           backgroundColor: Colors.red,

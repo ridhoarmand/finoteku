@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import '../../category/theme/category_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/transaction.dart';
@@ -90,7 +91,7 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+        Icon(PhRegular.warningCircle, size: 64, color: Colors.grey[400]),
         const SizedBox(height: 16),
         Text(
           ref
@@ -132,13 +133,13 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
                   data: (category) {
                     final isIncome = category?.type == CategoryType.income;
                     final color = isIncome
-                        ? CategoryTheme.income
-                        : CategoryTheme.expense;
+                        ? CategoryTheme.income(context)
+                        : CategoryTheme.expense(context);
                     final icon = category?.iconCodePoint != null
                         ? CategoryIconHelper.getIconFromCodePoint(
                             category!.iconCodePoint,
                           )
-                        : (isIncome ? Icons.trending_up : Icons.trending_down);
+                        : (isIncome ? PhRegular.trendUp : PhRegular.trendDown);
                     return Card(
                       child: Padding(
                         padding: const EdgeInsets.all(20.0),
@@ -193,7 +194,7 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
                                 .surfaceContainerHighest
                                 .withValues(alpha: 0.3),
                             child: Icon(
-                              Icons.category,
+                              PhRegular.squaresFour,
                               color: Theme.of(context).colorScheme.primary,
                               size: 28,
                             ),
@@ -232,7 +233,7 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
                                 .surfaceContainerHighest
                                 .withValues(alpha: 0.3),
                             child: Icon(
-                              Icons.category,
+                              PhRegular.squaresFour,
                               color: Theme.of(context).colorScheme.primary,
                               size: 28,
                             ),
@@ -288,7 +289,7 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
                     _buildDetailRow(
                       ref.tr(context, 'date_label'),
                       _formatDate(context, ref, transaction.date),
-                      Icons.calendar_today,
+                      PhRegular.calendarBlank,
                     ),
 
                     const Divider(),
@@ -309,7 +310,7 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
                                   _buildDetailRow(
                                     ref.tr(context, 'category_label'),
                                     ref.tr(context, 'uncategorized'),
-                                    Icons.category,
+                                    PhRegular.squaresFour,
                                   )
                                 else if (category.parentId == null)
                                   _buildDetailRow(
@@ -359,7 +360,7 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
                                 _buildDetailRow(
                                   ref.tr(context, 'category_label'),
                                   ref.tr(context, 'loading_ellipsis'),
-                                  Icons.category,
+                                  PhRegular.squaresFour,
                                 ),
                                 const Divider(),
                               ],
@@ -369,7 +370,7 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
                                 _buildDetailRow(
                                   ref.tr(context, 'category_label'),
                                   ref.tr(context, 'error_loading_category'),
-                                  Icons.category,
+                                  PhRegular.squaresFour,
                                 ),
                                 const Divider(),
                               ],
@@ -381,7 +382,7 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
                           _buildDetailRow(
                             ref.tr(context, 'category_label'),
                             ref.tr(context, 'no_category'),
-                            Icons.category,
+                            PhRegular.squaresFour,
                           ),
                           const Divider(),
                         ],
@@ -412,7 +413,7 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
                               _buildDetailRow(
                                 ref.tr(context, 'wallet_label'),
                                 ref.tr(context, 'loading_ellipsis'),
-                                Icons.account_balance_wallet,
+                                PhRegular.wallet,
                               ),
                               const Divider(),
                             ],
@@ -422,7 +423,7 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
                               _buildDetailRow(
                                 ref.tr(context, 'wallet_label'),
                                 ref.tr(context, 'wallet_loading_error'),
-                                Icons.account_balance_wallet,
+                                PhRegular.wallet,
                               ),
                               const Divider(),
                             ],
@@ -433,7 +434,7 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
                     _buildDetailRow(
                       ref.tr(context, 'wallet_created_label'),
                       _formatDateTime(context, ref, transaction.createdAt),
-                      Icons.access_time,
+                      PhRegular.clock,
                     ),
 
                     if (transaction.updatedAt != transaction.createdAt) ...[
@@ -441,7 +442,7 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
                       _buildDetailRow(
                         ref.tr(context, 'wallet_updated_label'),
                         _formatDateTime(context, ref, transaction.updatedAt),
-                        Icons.update,
+                        PhRegular.clockClockwise,
                       ),
                     ],
 
@@ -451,7 +452,7 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
                     _buildDetailRow(
                       ref.tr(context, 'notes'),
                       transaction.notes ?? ref.tr(context, 'no_notes'),
-                      Icons.note,
+                      PhRegular.note,
                     ),
                   ],
                 ),
@@ -467,7 +468,7 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
                   child: OutlinedButton.icon(
                     onPressed: () =>
                         _editTransaction(context, ref, transaction),
-                    icon: const Icon(Icons.edit),
+                    icon: const Icon(PhRegular.pencilSimple),
                     label: Text(ref.tr(context, 'edit')),
                   ),
                 ),
@@ -476,7 +477,7 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
                   child: FilledButton.icon(
                     onPressed: () =>
                         _showDeleteDialog(context, ref, transaction, userId),
-                    icon: const Icon(Icons.delete),
+                    icon: const Icon(PhRegular.trash),
                     label: Text(ref.tr(context, 'delete')),
                     style: FilledButton.styleFrom(
                       backgroundColor: Colors.red,
@@ -674,16 +675,16 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
       case 'mandiri':
       case 'btn':
       case 'bsi':
-        return Icons.account_balance;
+        return PhRegular.bank;
       case 'dana':
       case 'gopay':
       case 'ovo':
       case 'linkaja':
       case 'doku':
       case 'sopay':
-        return Icons.phone_android;
+        return PhRegular.deviceMobile;
       default:
-        return Icons.account_balance_wallet;
+        return PhRegular.wallet;
     }
   }
 }

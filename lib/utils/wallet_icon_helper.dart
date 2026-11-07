@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 class WalletIconHelper {
@@ -62,7 +63,7 @@ class WalletIconHelper {
     Color? color,
   }) {
     if (iconPath == null || iconPath.isEmpty) {
-      return Icon(Icons.account_balance_wallet, size: size, color: color);
+      return Icon(PhRegular.wallet, size: size, color: color);
     }
 
     // Convert short name to full path if needed
@@ -105,18 +106,18 @@ class WalletIconHelper {
   // Get appropriate Material Icon based on asset path as fallback
   static IconData _getIconDataFromPath(String path) {
     if (path.contains('banks/')) {
-      return Icons.account_balance;
+      return PhRegular.bank;
     } else if (path.contains('ewallets/')) {
       if (path.contains('dana') ||
           path.contains('gopay') ||
           path.contains('ovo')) {
-        return Icons.phone_android;
+        return PhRegular.deviceMobile;
       }
-      return Icons.account_balance_wallet;
+      return PhRegular.wallet;
     } else if (path.contains('cash')) {
-      return Icons.payments;
+      return PhRegular.money;
     }
-    return Icons.account_balance_wallet;
+    return PhRegular.wallet;
   }
 
   // Build icon selection grid

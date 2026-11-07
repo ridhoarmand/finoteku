@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../services/auth_service.dart';
@@ -83,7 +84,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         title: Text(ref.tr(context, 'register_title')),
         leading: IconButton(
           tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(PhRegular.arrowLeft),
           onPressed: () => context.pop(),
         ),
       ),
@@ -118,7 +119,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   controller: _nameController,
                   decoration: InputDecoration(
                     labelText: ref.tr(context, 'full_name_label'),
-                    prefixIcon: const Icon(Icons.person),
+                    prefixIcon: const Icon(PhRegular.user),
                   ),
                   validator: (value) {
                     if (value?.isEmpty ?? true) {
@@ -135,7 +136,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
                     labelText: ref.tr(context, 'email_label'),
-                    prefixIcon: const Icon(Icons.email),
+                    prefixIcon: const Icon(PhRegular.envelopeSimple),
                   ),
                   validator: (value) {
                     if (value?.isEmpty ?? true) {
@@ -157,13 +158,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
                     labelText: ref.tr(context, 'password_label'),
-                    prefixIcon: const Icon(Icons.lock),
+                    prefixIcon: const Icon(PhRegular.lock),
                     suffixIcon: IconButton(
                       tooltip: ref.tr(context, 'toggle_password_visibility'),
                       icon: Icon(
                         _obscurePassword
-                            ? Icons.visibility
-                            : Icons.visibility_off,
+                            ? PhRegular.eye
+                            : PhRegular.eyeSlash,
                       ),
                       onPressed: () {
                         setState(() {
@@ -190,13 +191,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   obscureText: _obscureConfirmPassword,
                   decoration: InputDecoration(
                     labelText: ref.tr(context, 'confirm_password_label'),
-                    prefixIcon: const Icon(Icons.lock_outline),
+                    prefixIcon: const Icon(PhRegular.lock),
                     suffixIcon: IconButton(
                       tooltip: ref.tr(context, 'toggle_password_visibility'),
                       icon: Icon(
                         _obscureConfirmPassword
-                            ? Icons.visibility
-                            : Icons.visibility_off,
+                            ? PhRegular.eye
+                            : PhRegular.eyeSlash,
                       ),
                       onPressed: () {
                         setState(() {

@@ -27,10 +27,18 @@ const Map<String, String> homeStringsEn = {
   'all_wallets': 'All Wallets',
 
   // Recent transactions
-  'recent_transactions': 'Recent Expenses',
+  'recent_transactions': 'Latest',
   'view_all': 'View All',
   'no_recent_transactions': 'No recent transactions',
   'start_by_adding': 'Start by adding your first transaction',
+  'home_in': 'in',
+  'home_out': 'out',
+  'show_balance': 'Show balance',
+  'hide_balance': 'Hide balance',
+  'home_empty_title': 'No transactions in the last 30 days',
+  'home_empty_body': 'Record your first expense or income and it will show up here.',
+  'record_transaction': 'Record a transaction',
+  'choose_wallet': 'Choose wallet',
 };
 
 const Map<String, String> homeStringsId = {
@@ -59,8 +67,16 @@ const Map<String, String> homeStringsId = {
   'all_wallets': 'Semua Dompet',
 
   // Recent transactions
-  'recent_transactions': 'Pengeluaran Terakhir',
+  'recent_transactions': 'Terbaru',
   'view_all': 'Lihat Semua',
   'no_recent_transactions': 'Tidak ada transaksi terbaru',
   'start_by_adding': 'Mulai dengan menambahkan transaksi pertama Anda',
+  'home_in': 'masuk',
+  'home_out': 'keluar',
+  'show_balance': 'Tampilkan saldo',
+  'hide_balance': 'Sembunyikan saldo',
+  'home_empty_title': 'Belum ada transaksi 30 hari terakhir',
+  'home_empty_body': 'Catat pengeluaran atau pemasukan pertamamu, nanti muncul di sini.',
+  'record_transaction': 'Catat transaksi',
+  'choose_wallet': 'Pilih dompet',
 };

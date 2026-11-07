@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../auth/services/auth_service.dart';
@@ -116,7 +117,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
         title: Text(ref.tr(context, 'change_password_title')),
         leading: IconButton(
           tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(PhRegular.arrowLeft),
           onPressed: () => context.pop(),
         ),
       ),
@@ -130,7 +131,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
               children: [
                 // Header
                 Icon(
-                  Icons.lock_reset,
+                  PhRegular.lockKey,
                   size: 80,
                   color: theme.colorScheme.primary,
                 ),
@@ -156,13 +157,13 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                   obscureText: _obscureCurrentPassword,
                   decoration: InputDecoration(
                     labelText: ref.tr(context, 'current_password'),
-                    prefixIcon: const Icon(Icons.lock_clock_outlined),
+                    prefixIcon: const Icon(PhRegular.lockKey),
                     suffixIcon: IconButton(
                       tooltip: ref.tr(context, 'toggle_password_visibility'),
                       icon: Icon(
                         _obscureCurrentPassword
-                            ? Icons.visibility
-                            : Icons.visibility_off,
+                            ? PhRegular.eye
+                            : PhRegular.eyeSlash,
                       ),
                       onPressed: () {
                         setState(() {
@@ -186,13 +187,13 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                   obscureText: _obscureNewPassword,
                   decoration: InputDecoration(
                     labelText: ref.tr(context, 'new_password'),
-                    prefixIcon: const Icon(Icons.lock),
+                    prefixIcon: const Icon(PhRegular.lock),
                     suffixIcon: IconButton(
                       tooltip: ref.tr(context, 'toggle_password_visibility'),
                       icon: Icon(
                         _obscureNewPassword
-                            ? Icons.visibility
-                            : Icons.visibility_off,
+                            ? PhRegular.eye
+                            : PhRegular.eyeSlash,
                       ),
                       onPressed: () {
                         setState(() {
@@ -222,13 +223,13 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                   obscureText: _obscureConfirmPassword,
                   decoration: InputDecoration(
                     labelText: ref.tr(context, 'confirm_new_password'),
-                    prefixIcon: const Icon(Icons.lock_outline),
+                    prefixIcon: const Icon(PhRegular.lock),
                     suffixIcon: IconButton(
                       tooltip: ref.tr(context, 'toggle_password_visibility'),
                       icon: Icon(
                         _obscureConfirmPassword
-                            ? Icons.visibility
-                            : Icons.visibility_off,
+                            ? PhRegular.eye
+                            : PhRegular.eyeSlash,
                       ),
                       onPressed: () {
                         setState(() {
@@ -275,7 +276,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                       Row(
                         children: [
                           Icon(
-                            Icons.info_outline,
+                            PhRegular.info,
                             size: 20,
                             color: theme.colorScheme.onSurfaceVariant,
                           ),

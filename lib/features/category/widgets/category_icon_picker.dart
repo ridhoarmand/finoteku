@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../models/category.dart';
 import '../theme/category_theme.dart';
+import '../../../utils/category_icon_helper.dart';
 
 class CategoryIconPicker extends ConsumerWidget {
   final IconData? selectedIcon;
@@ -19,7 +20,7 @@ class CategoryIconPicker extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final categoryColor = CategoryTheme.forType(categoryType);
+    final categoryColor = CategoryTheme.forType(context, categoryType);
 
     // Icon options based on category type
     final List<IconData> iconOptions = categoryType == CategoryType.expense
@@ -46,7 +47,9 @@ class CategoryIconPicker extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Icon(
-                  selectedIcon ?? _getDefaultIcon(categoryType),
+                  CategoryIconHelper.glyph(
+                    selectedIcon ?? _getDefaultIcon(categoryType),
+                  ),
                   color: categoryColor,
                   size: 14,
                 ),
@@ -110,7 +113,7 @@ class CategoryIconPicker extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Icon(
-                    icon,
+                    CategoryIconHelper.glyph(icon),
                     color: isSelected
                         ? categoryColor
                         : theme.iconTheme.color?.withValues(alpha: 0.7),

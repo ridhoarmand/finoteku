@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../account/widgets/settings_section_widget.dart';
@@ -14,25 +15,25 @@ class PreferencesSettingsWidget extends ConsumerWidget {
       title: t('preferences'),
       children: [
         SettingsTileWidget(
-          icon: Icons.telegram,
+          icon: PhRegular.telegramLogo,
           title: 'Chat Bot',
           subtitle: 'Catat via WhatsApp/Telegram',
           onTap: () => context.push('/account/bot-settings'),
         ),
         SettingsTileWidget(
-          icon: Icons.dark_mode_outlined,
+          icon: PhRegular.moon,
           title: t('dark_mode'),
           subtitle: t('dark_mode_sub'),
           onTap: () => context.push('/account/theme-settings'),
         ),
         SettingsTileWidget(
-          icon: Icons.notifications_outlined,
+          icon: PhRegular.bell,
           title: t('notifications'),
           subtitle: t('notifications_sub'),
           onTap: () => context.push('/account/notifications'),
         ),
         SettingsTileWidget(
-          icon: Icons.language_outlined,
+          icon: PhRegular.globe,
           title: t('language'),
           subtitle: t('language_sub'),
           onTap: () => context.push('/account/language-settings'),

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../theme/app_theme.dart';
 import '../../../utils/thousand_separator_formatter.dart';
 
+/// The amount as the screen's focal number: large tabular digits, "Rp" small and muted.
 class AmountSection extends ConsumerWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
@@ -18,59 +20,54 @@ class AmountSection extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            ref.tr(context, 'amount_title'),
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 4),
-          TextFormField(
-            focusNode: focusNode,
-            controller: controller,
-            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-            decoration: InputDecoration(
-              border: InputBorder.none,
-              hintText: ref.tr(context, 'amount_hint'),
-              hintStyle: const TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-              ),
-              prefixText: 'Rp ',
-              prefixStyle: const TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final muted = context.colors.muted;
+    final big = theme.textTheme.displaySmall!.copyWith(fontFeatures: tabularFigures);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(ref.tr(context, 'amount_title'), style: theme.textTheme.labelLarge?.copyWith(color: muted)),
+        TextFormField(
+          focusNode: focusNode,
+          controller: controller,
+          style: big,
+          cursorColor: theme.colorScheme.primary,
+          decoration: InputDecoration(
+            filled: false,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(vertical: 4),
+            hintText: '0',
+            hintStyle: big.copyWith(color: muted.withValues(alpha: 0.6)),
+            prefixIcon: Padding(
+              padding: const EdgeInsets.only(right: 8, top: 10),
+              child: Text('Rp', style: theme.textTheme.titleLarge?.copyWith(color: muted)),
             ),
-            keyboardType: TextInputType.number,
-            textInputAction: TextInputAction.done,
-            onFieldSubmitted: (_) => onSubmitted(),
-            onTapOutside: (_) => onTapOutside(),
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              ThousandSeparatorFormatter(),
-            ],
-            validator: (value) {
-              if (value?.isEmpty ?? true) {
-                return ref.tr(context, 'amount_validation_empty');
-              }
-              // Remove thousand separators before parsing
-              final cleanValue = value!.trim().replaceAll('.', '');
-              final amount = double.tryParse(cleanValue);
-              if (amount == null || amount <= 0) {
-                return ref.tr(context, 'amount_validation_invalid');
-              }
-              return null;
-            },
+            prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
           ),
-        ],
-      ),
-    ),
-  );
+          keyboardType: TextInputType.number,
+          textInputAction: TextInputAction.done,
+          onFieldSubmitted: (_) => onSubmitted(),
+          onTapOutside: (_) => onTapOutside(),
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            ThousandSeparatorFormatter(),
+          ],
+          validator: (value) {
+            if (value?.isEmpty ?? true) {
+              return ref.tr(context, 'amount_validation_empty');
+            }
+            final amount = double.tryParse(value!.trim().replaceAll('.', ''));
+            if (amount == null || amount <= 0) {
+              return ref.tr(context, 'amount_validation_invalid');
+            }
+            return null;
+          },
+        ),
+        Divider(color: theme.colorScheme.outlineVariant),
+      ],
+    );
+  }
 }

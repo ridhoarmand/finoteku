@@ -139,12 +139,6 @@ final appUpdateServiceProvider = Provider<AppUpdateService>((ref) {
   return AppUpdateService(supabase);
 });
 
-/// FutureProvider to check update status on-demand or auto-check
-final checkForUpdateProvider = FutureProvider<AppUpdateInfo>((ref) async {
-  final service = ref.watch(appUpdateServiceProvider);
-  return await service.checkForUpdate();
-});
-
 /// True when [latest] (+ optional build) is newer than the installed version.
 /// Names compare part by part ("0.10.0" > "0.9.9"); with equal names the build
 /// number decides. Anything after "+" or "-" in a name is ignored.

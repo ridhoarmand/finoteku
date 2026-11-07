@@ -2,7 +2,6 @@ import '../../../models/transaction.dart';
 import '../../../models/category.dart';
 import '../../../services/supabase_service.dart';
 import '../models/report_models.dart';
-import '../../category/theme/category_theme.dart';
 import '../../../utils/category_icon_helper.dart';
 
 class ReportService {
@@ -182,15 +181,12 @@ class ReportService {
           ? CategoryIconHelper.getIconFromCodePoint(category.iconCodePoint)
           : CategoryIconHelper.getIconForCategory(category.name);
 
-      // Use theme color for category
-      final color = CategoryTheme.forType(category.type);
-
       categoryItems.add(
         CategoryReportItem(
           id: category.id,
           name: category.name,
           icon: icon,
-          color: color,
+          type: category.type,
           amount: categoryAmount,
           percentage: percentage,
           transactionCount: categoryTransactions.length,
@@ -244,13 +240,11 @@ class ReportService {
                 )
               : CategoryIconHelper.getIconForCategory(parentCategory.name);
 
-          final color = CategoryTheme.forType(parentCategory.type);
-
           parentItems[item.parentId!] = CategoryReportItem(
             id: parentCategory.id,
             name: parentCategory.name,
             icon: icon,
-            color: color,
+            type: parentCategory.type,
             amount: 0,
             percentage: 0,
             transactionCount: 0,

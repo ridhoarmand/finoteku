@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../providers/edit_profile_provider.dart';
@@ -35,7 +36,7 @@ class SaveProfileButton extends ConsumerWidget {
                   color: Colors.white,
                 ),
               )
-            : const Icon(Icons.save),
+            : const Icon(PhRegular.floppyDisk),
         label: Text(profileState.isLoading
             ? ref.tr(context, 'saving')
             : ref.tr(context, 'save_changes')),

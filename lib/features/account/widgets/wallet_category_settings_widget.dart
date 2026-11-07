@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../routes/app_routes.dart';
@@ -14,7 +15,7 @@ class WalletCategorySettingsWidget extends ConsumerWidget {
       title: ref.tr(context, 'wallet_categories_section'),
       children: [
         SettingsTileWidget(
-          icon: Icons.account_balance_wallet_outlined,
+          icon: PhRegular.wallet,
           title: ref.tr(context, 'manage_wallets'),
           subtitle: ref.tr(context, 'manage_wallets_sub'),
           onTap: () {
@@ -22,7 +23,7 @@ class WalletCategorySettingsWidget extends ConsumerWidget {
           },
         ),
         SettingsTileWidget(
-          icon: Icons.category_outlined,
+          icon: PhRegular.squaresFour,
           title: ref.tr(context, 'manage_categories'),
           subtitle: ref.tr(context, 'manage_categories_sub'),
           onTap: () {

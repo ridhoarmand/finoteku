@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../models/category.dart';
@@ -42,7 +43,7 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
       _nameController.text = category.name;
       _selectedParentId = category.parentId;
       if (category.iconCodePoint != null) {
-        _selectedIcon = CategoryIconHelper.getIconFromCodePoint(
+        _selectedIcon = CategoryIconHelper.materialFromCodePoint(
           category.iconCodePoint,
         );
       }
@@ -99,7 +100,7 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                   )
                 : FilledButton.icon(
                     onPressed: _saveCategory,
-                    icon: const Icon(Icons.check, size: 18),
+                    icon: const Icon(PhRegular.check, size: 18),
                     label: Text(ref.tr(context, 'save')),
                     style: FilledButton.styleFrom(
                       minimumSize: const Size(80, 36),
@@ -125,8 +126,8 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      CategoryTheme.forType(widget.categoryType),
-                      CategoryTheme.forType(
+                      CategoryTheme.forType(context, widget.categoryType),
+                      CategoryTheme.forType(context, 
                         widget.categoryType,
                       ).withValues(alpha: 0.8),
                     ],
@@ -145,8 +146,8 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                       ),
                       child: Icon(
                         widget.categoryType == CategoryType.expense
-                            ? Icons.trending_down
-                            : Icons.trending_up,
+                            ? PhRegular.trendDown
+                            : PhRegular.trendUp,
                         color: Colors.white,
                         size: 16,
                       ),
@@ -171,7 +172,7 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
               _buildSectionCard(
                 context,
                 title: ref.tr(context, 'category_information'),
-                icon: Icons.info_outline_rounded,
+                icon: PhRegular.info,
                 showHint: true,
                 hintAction: () => _showCategoryExamplesModal(context),
                 child: Column(
@@ -245,7 +246,7 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
               _buildSectionCard(
                 context,
                 title: ref.tr(context, 'select_icon'),
-                icon: Icons.palette_outlined,
+                icon: PhRegular.palette,
                 child: CategoryIconPicker(
                   selectedIcon: _selectedIcon,
                   onIconSelected: (icon) {
@@ -264,7 +265,7 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                 loading: () => _buildSectionCard(
                   context,
                   title: ref.tr(context, 'parent_category'),
-                  icon: Icons.account_tree_outlined,
+                  icon: PhRegular.treeStructure,
                   child: const Center(
                     child: Padding(
                       padding: EdgeInsets.all(20),
@@ -275,7 +276,7 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                 error: (error, stack) => _buildSectionCard(
                   context,
                   title: ref.tr(context, 'parent_category'),
-                  icon: Icons.account_tree_outlined,
+                  icon: PhRegular.treeStructure,
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -285,7 +286,7 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                     child: Row(
                       children: [
                         Icon(
-                          Icons.error_outline,
+                          PhRegular.warningCircle,
                           color: theme.colorScheme.onErrorContainer,
                         ),
                         const SizedBox(width: 12),
@@ -320,7 +321,7 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                   return _buildSectionCard(
                     context,
                     title: ref.tr(context, 'parent_category_optional'),
-                    icon: Icons.account_tree_outlined,
+                    icon: PhRegular.treeStructure,
                     showHint: true,
                     hintAction: () => _showParentCategoryHintModal(context),
                     child: Column(
@@ -359,7 +360,7 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                                 child: Row(
                                   children: [
                                     Icon(
-                                      Icons.clear,
+                                      PhRegular.x,
                                       size: 20,
                                       color: theme.colorScheme.onSurfaceVariant,
                                     ),
@@ -383,7 +384,7 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                                       Container(
                                         padding: const EdgeInsets.all(6),
                                         decoration: BoxDecoration(
-                                          color: CategoryTheme.forType(
+                                          color: CategoryTheme.forType(context, 
                                             widget.categoryType,
                                           ).withValues(alpha: 0.1),
                                           borderRadius: BorderRadius.circular(
@@ -395,9 +396,9 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                                               ? CategoryIconHelper.getIconFromCodePoint(
                                                   category.iconCodePoint!,
                                                 )
-                                              : Icons.category,
+                                              : PhRegular.squaresFour,
                                           size: 18,
-                                          color: CategoryTheme.forType(
+                                          color: CategoryTheme.forType(context, 
                                             widget.categoryType,
                                           ),
                                         ),
@@ -485,7 +486,7 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(2),
                     child: Icon(
-                      Icons.info_outline,
+                      PhRegular.info,
                       size: 14,
                       color: theme.colorScheme.primary,
                     ),
@@ -583,18 +584,18 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
     final theme = Theme.of(context);
     final examples = widget.categoryType == CategoryType.expense
         ? [
-            {'icon': Icons.restaurant, 'name': 'Makanan'},
-            {'icon': Icons.checkroom, 'name': 'Fashion/Pakaian'},
-            {'icon': Icons.school, 'name': 'Pendidikan'},
-            {'icon': Icons.receipt_long, 'name': 'Tagihan'},
-            {'icon': Icons.home, 'name': 'Angsuran'},
+            {'icon': PhRegular.forkKnife, 'name': 'Makanan'},
+            {'icon': PhRegular.tShirt, 'name': 'Fashion/Pakaian'},
+            {'icon': PhRegular.graduationCap, 'name': 'Pendidikan'},
+            {'icon': PhRegular.receipt, 'name': 'Tagihan'},
+            {'icon': PhRegular.house, 'name': 'Angsuran'},
           ]
         : [
-            {'icon': Icons.work, 'name': 'Gaji'},
-            {'icon': Icons.trending_up, 'name': 'Investasi'},
-            {'icon': Icons.card_giftcard, 'name': 'Bonus'},
-            {'icon': Icons.redeem, 'name': 'Hadiah'},
-            {'icon': Icons.business, 'name': 'Bisnis'},
+            {'icon': PhRegular.briefcase, 'name': 'Gaji'},
+            {'icon': PhRegular.trendUp, 'name': 'Investasi'},
+            {'icon': PhRegular.gift, 'name': 'Bonus'},
+            {'icon': PhRegular.gift, 'name': 'Hadiah'},
+            {'icon': PhRegular.buildingOffice, 'name': 'Bisnis'},
           ];
 
     showDialog(
@@ -622,7 +623,7 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                       Icon(
                         example['icon'] as IconData,
                         size: 20,
-                        color: CategoryTheme.forType(widget.categoryType),
+                        color: CategoryTheme.forType(context, widget.categoryType),
                       ),
                       const SizedBox(width: 12),
                       Text(
@@ -680,9 +681,9 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                     Row(
                       children: [
                         Icon(
-                          Icons.school,
+                          PhRegular.graduationCap,
                           size: 18,
-                          color: CategoryTheme.forType(widget.categoryType),
+                          color: CategoryTheme.forType(context, widget.categoryType),
                         ),
                         const SizedBox(width: 8),
                         Text(
@@ -701,7 +702,7 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.subdirectory_arrow_right, size: 14),
+                              Icon(PhRegular.arrowElbowDownRight, size: 14),
                               const SizedBox(width: 4),
                               Text(
                                 'Bayar Sekolah',
@@ -712,7 +713,7 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              Icon(Icons.subdirectory_arrow_right, size: 14),
+                              Icon(PhRegular.arrowElbowDownRight, size: 14),
                               const SizedBox(width: 4),
                               Text(
                                 'Beli Alat Sekolah',

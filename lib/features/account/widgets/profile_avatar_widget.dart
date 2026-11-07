@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -91,7 +92,7 @@ class ProfileAvatarWidget extends ConsumerWidget {
                   child: IconButton(
                     tooltip: ref.tr(context, 'change_photo'),
                     icon: Icon(
-                      Icons.camera_alt,
+                      PhRegular.camera,
                       size: 20,
                       color: theme.colorScheme.onSecondary,
                     ),
@@ -142,19 +143,19 @@ class ProfileAvatarWidget extends ConsumerWidget {
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_camera),
+              leading: const Icon(PhRegular.camera),
               title: Text(ref.trRead('photo_camera')),
               onTap: () => Navigator.of(context).pop(ImageSource.camera),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library),
+              leading: const Icon(PhRegular.images),
               title: Text(ref.trRead('photo_gallery')),
               onTap: () => Navigator.of(context).pop(ImageSource.gallery),
             ),
             if (profileState.imageFile != null ||
                 profileState.avatarUrl != null)
               ListTile(
-                leading: const Icon(Icons.delete, color: Colors.red),
+                leading: const Icon(PhRegular.trash, color: Colors.red),
                 title: Text(
                   ref.trRead('photo_remove'),
                   style: const TextStyle(color: Colors.red),

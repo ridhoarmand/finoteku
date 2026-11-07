@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -88,11 +89,11 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
   IconData get themeIcon {
     switch (state) {
       case ThemeMode.light:
-        return Icons.light_mode;
+        return PhRegular.sun;
       case ThemeMode.dark:
-        return Icons.dark_mode;
+        return PhRegular.moon;
       case ThemeMode.system:
-        return Icons.brightness_auto;
+        return PhRegular.circleHalf;
     }
   }
 }

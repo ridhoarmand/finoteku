@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/app_localizations.dart';
 
@@ -25,8 +26,8 @@ class NotificationListItem extends ConsumerWidget {
       child: ListTile(
         leading: Icon(
           notification.isEnabled
-              ? Icons.notifications_active
-              : Icons.notifications_off,
+              ? PhRegular.bellRinging
+              : PhRegular.bellSlash,
           color: notification.isEnabled
               ? Theme.of(context).primaryColor
               : Colors.grey,
@@ -80,7 +81,7 @@ class NotificationListItem extends ConsumerWidget {
                   value: 'edit',
                   child: Row(
                     children: [
-                      Icon(Icons.edit),
+                      Icon(PhRegular.pencilSimple),
                       SizedBox(width: 8),
                       Text(ref.tr(context, 'edit')),
                     ],
@@ -90,7 +91,7 @@ class NotificationListItem extends ConsumerWidget {
                   value: 'delete',
                   child: Row(
                     children: [
-                      Icon(Icons.delete, color: Colors.red),
+                      Icon(PhRegular.trash, color: Colors.red),
                       SizedBox(width: 8),
                       Text(
                         ref.tr(context, 'delete'),

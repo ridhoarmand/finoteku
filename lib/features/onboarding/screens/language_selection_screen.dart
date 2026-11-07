@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/localization/app_localizations.dart';
@@ -175,7 +176,7 @@ class _LanguageSelectionScreenState
               ),
               if (isSelected)
                 Icon(
-                  Icons.check_circle,
+                  PhFill.checkCircle,
                   color: Theme.of(context).colorScheme.primary,
                   size: 28,
                 ),

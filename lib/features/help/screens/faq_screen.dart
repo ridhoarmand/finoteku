@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/faq_models.dart';
 import '../../../core/localization/app_localizations.dart';
@@ -44,11 +45,11 @@ class _FAQScreenState extends ConsumerState<FAQScreen> {
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: ref.tr(context, 'faq_search_hint'),
-                    prefixIcon: const Icon(Icons.search),
+                    prefixIcon: const Icon(PhRegular.magnifyingGlass),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
                             tooltip: ref.tr(context, 'clear'),
-                            icon: const Icon(Icons.clear),
+                            icon: const Icon(PhRegular.x),
                             onPressed: () {
                               _searchController.clear();
                               setState(() => _searchQuery = '');
@@ -217,7 +218,7 @@ class _FAQScreenState extends ConsumerState<FAQScreen> {
             onPressed: () {
               setState(() => _selectedCategory = section.category);
             },
-            icon: const Icon(Icons.expand_more),
+            icon: const Icon(PhRegular.caretDown),
             label: Text(
               ref
                   .tr(context, 'faq_see_more')
@@ -237,7 +238,7 @@ class _FAQScreenState extends ConsumerState<FAQScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.search_off,
+              PhRegular.magnifyingGlassMinus,
               size: 64,
               color: theme.colorScheme.onSurfaceVariant,
             ),

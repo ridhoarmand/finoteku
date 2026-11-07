@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/wallet.dart';
 import '../../../utils/currency_formatter.dart';
@@ -71,7 +72,7 @@ class WalletCard extends ConsumerWidget {
                 Row(
                   children: [
                     Icon(
-                      Icons.visibility_off,
+                      PhRegular.eyeSlash,
                       size: 10,
                       color: theme.colorScheme.outline,
                     ),
@@ -95,7 +96,7 @@ class WalletCard extends ConsumerWidget {
                 value: 'edit',
                 child: Row(
                   children: [
-                    const Icon(Icons.edit),
+                    const Icon(PhRegular.pencilSimple),
                     const SizedBox(width: 8),
                     Text(ref.tr(context, 'edit')),
                   ],
@@ -107,8 +108,8 @@ class WalletCard extends ConsumerWidget {
                   children: [
                     Icon(
                       !wallet.isHidden
-                          ? Icons.visibility_off
-                          : Icons.visibility,
+                          ? PhRegular.eyeSlash
+                          : PhRegular.eye,
                     ),
                     const SizedBox(width: 8),
                     Text(
@@ -123,7 +124,7 @@ class WalletCard extends ConsumerWidget {
                 value: 'delete',
                 child: Row(
                   children: [
-                    const Icon(Icons.delete, color: Colors.red),
+                    const Icon(PhRegular.trash, color: Colors.red),
                     const SizedBox(width: 8),
                     Text(
                       ref.tr(context, 'delete'),

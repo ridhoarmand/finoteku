@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/wallet.dart';
 import '../providers/wallet_providers.dart';
@@ -22,7 +23,7 @@ class ManageWalletsScreen extends ConsumerWidget {
           // Sync status indicator removed (online-only architecture)
           IconButton(
             tooltip: ref.tr(context, 'add'),
-            icon: const Icon(Icons.add),
+            icon: const Icon(PhRegular.plus),
             onPressed: () {
               // Check if user is authenticated before showing dialog
               final user = currentUser.value;
@@ -83,7 +84,7 @@ class ManageWalletsScreen extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    Icons.error_outline,
+                    PhRegular.warningCircle,
                     size: 64,
                     color: theme.colorScheme.error,
                   ),
@@ -114,7 +115,7 @@ class ManageWalletsScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                Icons.error_outline,
+                PhRegular.warningCircle,
                 size: 64,
                 color: theme.colorScheme.error,
               ),

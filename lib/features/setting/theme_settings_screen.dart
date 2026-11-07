@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/theme_provider.dart';
 import '../../core/localization/app_localizations.dart';
@@ -17,7 +18,7 @@ class ThemeSettingsScreen extends ConsumerWidget {
         title: Text(t('theme_settings')),
         leading: IconButton(
           tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(PhRegular.arrowLeft),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -48,7 +49,7 @@ class ThemeSettingsScreen extends ConsumerWidget {
               theme,
               ThemeMode.light,
               themeMode,
-              Icons.light_mode,
+              PhRegular.sun,
               t('light_mode'),
               t('light_mode_sub'),
               () => ref.read(themeModeProvider.notifier).setLightMode(),
@@ -60,7 +61,7 @@ class ThemeSettingsScreen extends ConsumerWidget {
               theme,
               ThemeMode.dark,
               themeMode,
-              Icons.dark_mode,
+              PhRegular.moon,
               t('dark_mode_full'),
               t('dark_mode_full_sub'),
               () => ref.read(themeModeProvider.notifier).setDarkMode(),
@@ -72,7 +73,7 @@ class ThemeSettingsScreen extends ConsumerWidget {
               theme,
               ThemeMode.system,
               themeMode,
-              Icons.brightness_auto,
+              PhRegular.circleHalf,
               t('system_default'),
               t('system_default_sub'),
               () => ref.read(themeModeProvider.notifier).setSystemMode(),
@@ -147,7 +148,7 @@ class ThemeSettingsScreen extends ConsumerWidget {
               ),
               if (isSelected)
                 Icon(
-                  Icons.check_circle,
+                  PhFill.checkCircle,
                   color: theme.colorScheme.primary,
                   size: 24,
                 ),

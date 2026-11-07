@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'delete_account_dialog.dart';
@@ -25,10 +26,10 @@ class AccountSettingsWidget extends ConsumerWidget {
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.lock_outline),
+              leading: const Icon(PhRegular.lock),
               title: Text(ref.tr(context, 'change_password')),
               subtitle: Text(ref.tr(context, 'change_password_sub')),
-              trailing: const Icon(Icons.chevron_right),
+              trailing: const Icon(PhRegular.caretRight),
               onTap: () {
                 context.go('/account/change-password');
               },
@@ -36,10 +37,10 @@ class AccountSettingsWidget extends ConsumerWidget {
             const Divider(),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.delete_outline),
+              leading: const Icon(PhRegular.trash),
               title: Text(ref.tr(context, 'delete_account')),
               subtitle: Text(ref.tr(context, 'delete_account_sub')),
-              trailing: const Icon(Icons.chevron_right),
+              trailing: const Icon(PhRegular.caretRight),
               onTap: () => _showDeleteAccountDialog(context),
             ),
           ],

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
 
@@ -61,7 +62,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       builder: (dialogContext) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.notifications_active, color: Colors.orange),
+            Icon(PhRegular.bellRinging, color: Colors.orange),
             SizedBox(width: 8),
             Text(ref.tr(context, 'notif_permission_title')),
           ],
@@ -126,7 +127,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     return Row(
       children: [
         Icon(
-          granted ? Icons.check_circle : Icons.cancel,
+          granted ? PhFill.checkCircle : PhRegular.xCircle,
           color: granted ? Colors.green : Colors.red,
           size: 20,
         ),
@@ -154,7 +155,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         title: Text(ref.tr(context, 'notif_title')),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_active),
+            icon: const Icon(PhRegular.bellRinging),
             onPressed: _showTestNotificationDialog,
             tooltip: ref.tr(context, 'notif_test'),
           ),
@@ -170,7 +171,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
               color: Colors.orange[100],
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, size: 18, color: Colors.orange[800]),
+                  Icon(PhRegular.info, size: 18, color: Colors.orange[800]),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -186,7 +187,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddDialog,
-        icon: const Icon(Icons.add),
+        icon: const Icon(PhRegular.plus),
         label: Text(ref.tr(context, 'add')),
       ),
     );

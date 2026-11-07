@@ -1,15 +1,303 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 
 class CategoryIconHelper {
+  // Display only: categories store Material code points (DB + older app versions),
+  // the UI draws the matching Phosphor glyph (DESIGN.md "Icons").
+  static final Map<int, IconData> _phosphor = {
+    Icons.mic.codePoint: PhRegular.microphone,
+    Icons.trending_down.codePoint: PhRegular.trendDown,
+    Icons.content_copy.codePoint: PhRegular.copy,
+    Icons.edit.codePoint: PhRegular.pencilSimple,
+    Icons.ac_unit.codePoint: PhRegular.snowflake,
+    Icons.access_time.codePoint: PhRegular.clock,
+    Icons.accessible.codePoint: PhRegular.wheelchair,
+    Icons.account_balance.codePoint: PhRegular.bank,
+    Icons.account_balance_wallet.codePoint: PhRegular.wallet,
+    Icons.agriculture.codePoint: PhRegular.tractor,
+    Icons.airplane_ticket.codePoint: PhRegular.ticket,
+    Icons.airport_shuttle.codePoint: PhRegular.van,
+    Icons.analytics.codePoint: PhRegular.chartBar,
+    Icons.apartment.codePoint: PhRegular.buildings,
+    Icons.api.codePoint: PhRegular.plugs,
+    Icons.apple.codePoint: PhRegular.appleLogo,
+    Icons.architecture.codePoint: PhRegular.compass,
+    Icons.assessment.codePoint: PhRegular.chartBar,
+    Icons.attach_money.codePoint: PhRegular.currencyDollar,
+    Icons.audiotrack.codePoint: PhRegular.musicNotes,
+    Icons.auto_graph.codePoint: PhRegular.chartLineUp,
+    Icons.auto_stories.codePoint: PhRegular.bookOpenText,
+    Icons.autorenew.codePoint: PhRegular.arrowsClockwise,
+    Icons.baby_changing_station.codePoint: PhRegular.baby,
+    Icons.badge.codePoint: PhRegular.identificationBadge,
+    Icons.bakery_dining.codePoint: PhRegular.bread,
+    Icons.bar_chart.codePoint: PhRegular.chartBar,
+    Icons.beach_access.codePoint: PhRegular.umbrella,
+    Icons.book.codePoint: PhRegular.book,
+    Icons.breakfast_dining.codePoint: PhRegular.bread,
+    Icons.brush.codePoint: PhRegular.paintBrush,
+    Icons.build.codePoint: PhRegular.wrench,
+    Icons.business.codePoint: PhRegular.buildingOffice,
+    Icons.business_center.codePoint: PhRegular.briefcase,
+    Icons.cable.codePoint: PhRegular.plug,
+    Icons.cake.codePoint: PhRegular.cake,
+    Icons.calculate.codePoint: PhRegular.calculator,
+    Icons.camera_alt.codePoint: PhRegular.camera,
+    Icons.campaign.codePoint: PhRegular.megaphone,
+    Icons.car_rental.codePoint: PhRegular.car,
+    Icons.card_giftcard.codePoint: PhRegular.gift,
+    Icons.casino.codePoint: PhRegular.diceFive,
+    Icons.category.codePoint: PhRegular.squaresFour,
+    Icons.celebration.codePoint: PhRegular.confetti,
+    Icons.checklist.codePoint: PhRegular.listChecks,
+    Icons.checkroom.codePoint: PhRegular.tShirt,
+    Icons.child_care.codePoint: PhRegular.baby,
+    Icons.child_friendly.codePoint: PhRegular.baby,
+    Icons.class_.codePoint: PhRegular.chalkboardTeacher,
+    Icons.cleaning_services.codePoint: PhRegular.broom,
+    Icons.cloud.codePoint: PhRegular.cloud,
+    Icons.code.codePoint: PhRegular.code,
+    Icons.coffee.codePoint: PhRegular.coffee,
+    Icons.commute.codePoint: PhRegular.trainSimple,
+    Icons.computer.codePoint: PhRegular.desktop,
+    Icons.construction.codePoint: PhRegular.hammer,
+    Icons.content_cut.codePoint: PhRegular.scissors,
+    Icons.cottage.codePoint: PhRegular.houseLine,
+    Icons.credit_card.codePoint: PhRegular.creditCard,
+    Icons.currency_exchange.codePoint: PhRegular.arrowsLeftRight,
+    Icons.currency_pound.codePoint: PhRegular.currencyGbp,
+    Icons.currency_yen.codePoint: PhRegular.currencyJpy,
+    Icons.cut.codePoint: PhRegular.scissors,
+    Icons.delivery_dining.codePoint: PhRegular.moped,
+    Icons.design_services.codePoint: PhRegular.pencilRuler,
+    Icons.desktop_mac.codePoint: PhRegular.desktop,
+    Icons.developer_mode.codePoint: PhRegular.code,
+    Icons.diamond.codePoint: PhRegular.diamond,
+    Icons.dinner_dining.codePoint: PhRegular.bowlFood,
+    Icons.directions_bus.codePoint: PhRegular.bus,
+    Icons.directions_car.codePoint: PhRegular.car,
+    Icons.directions_subway.codePoint: PhRegular.subway,
+    Icons.downhill_skiing.codePoint: PhRegular.snowflake,
+    Icons.dry_cleaning.codePoint: PhRegular.tShirt,
+    Icons.eco.codePoint: PhRegular.leaf,
+    Icons.elderly.codePoint: PhRegular.personSimpleWalk,
+    Icons.electric_bolt.codePoint: PhRegular.lightning,
+    Icons.electric_car.codePoint: PhRegular.carProfile,
+    Icons.electrical_services.codePoint: PhRegular.plug,
+    Icons.emergency.codePoint: PhRegular.firstAid,
+    Icons.emoji_events.codePoint: PhRegular.trophy,
+    Icons.engineering.codePoint: PhRegular.hardHat,
+    Icons.euro_symbol.codePoint: PhRegular.currencyEur,
+    Icons.event.codePoint: PhRegular.calendarBlank,
+    Icons.extension.codePoint: PhRegular.puzzlePiece,
+    Icons.face.codePoint: PhRegular.smiley,
+    Icons.fastfood.codePoint: PhRegular.hamburger,
+    Icons.favorite.codePoint: PhRegular.heart,
+    Icons.fitness_center.codePoint: PhRegular.barbell,
+    Icons.flight.codePoint: PhRegular.airplane,
+    Icons.forest.codePoint: PhRegular.tree,
+    Icons.format_list_numbered.codePoint: PhRegular.listNumbers,
+    Icons.format_paint.codePoint: PhRegular.paintRoller,
+    Icons.foundation.codePoint: PhRegular.buildings,
+    Icons.free_breakfast.codePoint: PhRegular.coffee,
+    Icons.games.codePoint: PhRegular.gameController,
+    Icons.gas_meter.codePoint: PhRegular.gauge,
+    Icons.gavel.codePoint: PhRegular.gavel,
+    Icons.grass.codePoint: PhRegular.plant,
+    Icons.groups.codePoint: PhRegular.usersThree,
+    Icons.handshake.codePoint: PhRegular.handshake,
+    Icons.handyman.codePoint: PhRegular.wrench,
+    Icons.headphones.codePoint: PhRegular.headphones,
+    Icons.healing.codePoint: PhRegular.bandaids,
+    Icons.health_and_safety.codePoint: PhRegular.shieldPlus,
+    Icons.heat_pump.codePoint: PhRegular.fan,
+    Icons.hiking.codePoint: PhRegular.mountains,
+    Icons.home.codePoint: PhRegular.house,
+    Icons.hotel.codePoint: PhRegular.bed,
+    Icons.house.codePoint: PhRegular.house,
+    Icons.icecream.codePoint: PhRegular.iceCream,
+    Icons.insights.codePoint: PhRegular.chartLineUp,
+    Icons.inventory.codePoint: PhRegular.package,
+    Icons.inventory_2.codePoint: PhRegular.archive,
+    Icons.kayaking.codePoint: PhRegular.waves,
+    Icons.keyboard.codePoint: PhRegular.keyboard,
+    Icons.landscape.codePoint: PhRegular.mountains,
+    Icons.laptop.codePoint: PhRegular.laptop,
+    Icons.library_books.codePoint: PhRegular.books,
+    Icons.lightbulb.codePoint: PhRegular.lightbulb,
+    Icons.local_atm.codePoint: PhRegular.money,
+    Icons.local_dining.codePoint: PhRegular.forkKnife,
+    Icons.local_florist.codePoint: PhRegular.flower,
+    Icons.local_gas_station.codePoint: PhRegular.gasPump,
+    Icons.local_grocery_store.codePoint: PhRegular.shoppingCart,
+    Icons.local_hospital.codePoint: PhRegular.hospital,
+    Icons.local_laundry_service.codePoint: PhRegular.washingMachine,
+    Icons.local_mall.codePoint: PhRegular.shoppingBagOpen,
+    Icons.local_offer.codePoint: PhRegular.tag,
+    Icons.local_parking.codePoint: PhRegular.letterCircleP,
+    Icons.local_pharmacy.codePoint: PhRegular.pill,
+    Icons.local_pizza.codePoint: PhRegular.pizza,
+    Icons.local_shipping.codePoint: PhRegular.truck,
+    Icons.local_taxi.codePoint: PhRegular.taxi,
+    Icons.lunch_dining.codePoint: PhRegular.hamburger,
+    Icons.medical_information.codePoint: PhRegular.stethoscope,
+    Icons.medical_services.codePoint: PhRegular.firstAidKit,
+    Icons.medication.codePoint: PhRegular.pill,
+    Icons.menu_book.codePoint: PhRegular.bookOpen,
+    Icons.military_tech.codePoint: PhRegular.medal,
+    Icons.monetization_on.codePoint: PhRegular.coins,
+    Icons.monitor_heart.codePoint: PhRegular.heartbeat,
+    Icons.more_horiz.codePoint: PhRegular.dotsThree,
+    Icons.motorcycle.codePoint: PhRegular.motorcycle,
+    Icons.mouse.codePoint: PhRegular.mouse,
+    Icons.movie.codePoint: PhRegular.filmSlate,
+    Icons.music_note.codePoint: PhRegular.musicNote,
+    Icons.nature.codePoint: PhRegular.leaf,
+    Icons.ondemand_video.codePoint: PhRegular.monitorPlay,
+    Icons.palette.codePoint: PhRegular.palette,
+    Icons.paragliding.codePoint: PhRegular.parachute,
+    Icons.park.codePoint: PhRegular.tree,
+    Icons.payment.codePoint: PhRegular.creditCard,
+    Icons.pedal_bike.codePoint: PhRegular.bicycle,
+    Icons.personal_injury.codePoint: PhRegular.bandaids,
+    Icons.pets.codePoint: PhRegular.pawPrint,
+    Icons.phone.codePoint: PhRegular.phone,
+    Icons.photo_camera.codePoint: PhRegular.camera,
+    Icons.piano.codePoint: PhRegular.pianoKeys,
+    Icons.pie_chart.codePoint: PhRegular.chartPie,
+    Icons.plumbing.codePoint: PhRegular.pipe,
+    Icons.point_of_sale.codePoint: PhRegular.cashRegister,
+    Icons.pool.codePoint: PhRegular.swimmingPool,
+    Icons.pregnant_woman.codePoint: PhRegular.personSimple,
+    Icons.price_change.codePoint: PhRegular.tag,
+    Icons.price_check.codePoint: PhRegular.tag,
+    Icons.psychology.codePoint: PhRegular.brain,
+    Icons.query_stats.codePoint: PhRegular.chartLineUp,
+    Icons.quiz.codePoint: PhRegular.question,
+    Icons.ramen_dining.codePoint: PhRegular.bowlSteam,
+    Icons.receipt.codePoint: PhRegular.receipt,
+    Icons.receipt_long.codePoint: PhRegular.receipt,
+    Icons.recycling.codePoint: PhRegular.recycle,
+    Icons.redeem.codePoint: PhRegular.gift,
+    Icons.repeat.codePoint: PhRegular.repeat,
+    Icons.restaurant.codePoint: PhRegular.forkKnife,
+    Icons.rice_bowl.codePoint: PhRegular.bowlFood,
+    Icons.router.codePoint: PhRegular.wifiHigh,
+    Icons.sailing.codePoint: PhRegular.sailboat,
+    Icons.savings.codePoint: PhRegular.piggyBank,
+    Icons.schedule.codePoint: PhRegular.clock,
+    Icons.school.codePoint: PhRegular.graduationCap,
+    Icons.school_outlined.codePoint: PhRegular.graduationCap,
+    Icons.science.codePoint: PhRegular.flask,
+    Icons.security.codePoint: PhRegular.shieldCheck,
+    Icons.self_improvement.codePoint: PhRegular.personSimpleTaiChi,
+    Icons.sell.codePoint: PhRegular.tag,
+    Icons.set_meal.codePoint: PhRegular.bowlFood,
+    Icons.shopping_bag.codePoint: PhRegular.shoppingBag,
+    Icons.shopping_basket.codePoint: PhRegular.basket,
+    Icons.shopping_cart.codePoint: PhRegular.shoppingCart,
+    Icons.show_chart.codePoint: PhRegular.chartLine,
+    Icons.smartphone.codePoint: PhRegular.deviceMobile,
+    Icons.snowboarding.codePoint: PhRegular.snowflake,
+    Icons.spa.codePoint: PhRegular.flowerLotus,
+    Icons.speaker.codePoint: PhRegular.speakerHigh,
+    Icons.sports.codePoint: PhRegular.trophy,
+    Icons.sports_baseball.codePoint: PhRegular.baseball,
+    Icons.sports_basketball.codePoint: PhRegular.basketball,
+    Icons.sports_esports.codePoint: PhRegular.gameController,
+    Icons.sports_football.codePoint: PhRegular.football,
+    Icons.sports_golf.codePoint: PhRegular.golf,
+    Icons.sports_handball.codePoint: PhRegular.handGrabbing,
+    Icons.sports_soccer.codePoint: PhRegular.soccerBall,
+    Icons.sports_tennis.codePoint: PhRegular.tennisBall,
+    Icons.sports_volleyball.codePoint: PhRegular.volleyball,
+    Icons.star.codePoint: PhRegular.star,
+    Icons.store.codePoint: PhRegular.storefront,
+    Icons.storefront.codePoint: PhRegular.storefront,
+    Icons.stroller.codePoint: PhRegular.baby,
+    Icons.style.codePoint: PhRegular.sparkle,
+    Icons.subscriptions.codePoint: PhRegular.playCircle,
+    Icons.support_agent.codePoint: PhRegular.headset,
+    Icons.surfing.codePoint: PhRegular.waves,
+    Icons.swap_horiz.codePoint: PhRegular.arrowsLeftRight,
+    Icons.sync.codePoint: PhRegular.arrowsClockwise,
+    Icons.tablet.codePoint: PhRegular.deviceTablet,
+    Icons.tablet_mac.codePoint: PhRegular.deviceTablet,
+    Icons.takeout_dining.codePoint: PhRegular.package,
+    Icons.task_alt.codePoint: PhRegular.checkCircle,
+    Icons.theater_comedy.codePoint: PhRegular.maskHappy,
+    Icons.thermostat.codePoint: PhRegular.thermometer,
+    Icons.timeline.codePoint: PhRegular.chartLine,
+    Icons.toys.codePoint: PhRegular.puzzlePiece,
+    Icons.track_changes.codePoint: PhRegular.target,
+    Icons.train.codePoint: PhRegular.train,
+    Icons.trending_up.codePoint: PhRegular.trendUp,
+    Icons.tv.codePoint: PhRegular.television,
+    Icons.two_wheeler.codePoint: PhRegular.scooter,
+    Icons.update.codePoint: PhRegular.clockClockwise,
+    Icons.vaccines.codePoint: PhRegular.syringe,
+    Icons.videocam.codePoint: PhRegular.videoCamera,
+    Icons.volunteer_activism.codePoint: PhRegular.handHeart,
+    Icons.watch.codePoint: PhRegular.watch,
+    Icons.water_drop.codePoint: PhRegular.drop,
+    Icons.web.codePoint: PhRegular.globe,
+    Icons.wifi.codePoint: PhRegular.wifiHigh,
+    Icons.work.codePoint: PhRegular.briefcase,
+    Icons.work_outline.codePoint: PhRegular.briefcase,
+    Icons.workspace_premium.codePoint: PhRegular.medal,
+    Icons.yard.codePoint: PhRegular.plant,
+  };
+
+  /// The Phosphor glyph to draw for a stored (Material) category icon.
+  static IconData glyph(IconData material) =>
+      _phosphor[material.codePoint] ?? PhRegular.tag;
+
   // Predefined category icons mapping
   static const Map<String, IconData> _categoryIcons = {
+    // Indonesian names (name-based fallback when no icon is stored)
+    'makanan': Icons.restaurant,
+    'makan': Icons.restaurant,
+    'minuman': Icons.coffee,
+    'kopi': Icons.coffee,
+    'jajan': Icons.fastfood,
+    'transportasi': Icons.directions_car,
+    'transport': Icons.directions_car,
+    'bensin': Icons.local_gas_station,
+    'parkir': Icons.local_parking,
+    'belanja': Icons.shopping_cart,
+    'tagihan': Icons.receipt_long,
+    'listrik': Icons.electric_bolt,
+    'air': Icons.water_drop,
+    'internet': Icons.wifi,
+    'pulsa': Icons.smartphone,
+    'kesehatan': Icons.local_hospital,
+    'obat': Icons.medication,
+    'hiburan': Icons.movie,
+    'pendidikan': Icons.school,
+    'sedekah': Icons.volunteer_activism,
+    'donasi': Icons.volunteer_activism,
+    'hadiah': Icons.card_giftcard,
+    'rumah': Icons.home,
+    'sewa': Icons.home,
+    'kos': Icons.home,
+    'cicilan': Icons.credit_card,
+    'gaji': Icons.work,
+    'bonus': Icons.card_giftcard,
+    'penjualan': Icons.storefront,
+    'usaha': Icons.storefront,
+    'investasi': Icons.trending_up,
+    'tabungan': Icons.savings,
+    'pakaian': Icons.checkroom,
+    'olahraga': Icons.fitness_center,
+    'perawatan': Icons.spa,
+    'hewan': Icons.pets,
+    'liburan': Icons.beach_access,
     // Income Categories
     'salary': Icons.work,
     'freelance': Icons.computer,
     'investment': Icons.trending_up,
     'business': Icons.business,
     'gift': Icons.card_giftcard,
-    'bonus': Icons.star,
     'dividend': Icons.account_balance,
     'rental': Icons.home,
     'side_hustle': Icons.handyman,
@@ -94,7 +382,6 @@ class CategoryIconHelper {
     'utilities': Icons.electrical_services,
     'electricity': Icons.electric_bolt,
     'water': Icons.water_drop,
-    'internet': Icons.wifi,
     'phone': Icons.phone,
     'gas': Icons.gas_meter,
     'rent': Icons.home,
@@ -142,7 +429,6 @@ class CategoryIconHelper {
     'sarapan': Icons.breakfast_dining,
     'makan siang': Icons.lunch_dining,
     'makan malam': Icons.dinner_dining,
-    'kopi': Icons.coffee,
     'camilan': Icons.icecream,
     'pesan antar': Icons.delivery_dining,
     'sayur': Icons.grass,
@@ -159,7 +445,6 @@ class CategoryIconHelper {
     'event': Icons.event,
     'salon': Icons.content_cut,
     'grooming': Icons.content_cut,
-    'makanan': Icons.pets,
     'buku': Icons.book,
     'kursus': Icons.school,
     'uang sekolah': Icons.school,
@@ -438,36 +723,32 @@ class CategoryIconHelper {
   ];
 
   // Get icon for category name (auto-detection)
+  /// Glyph to draw for a category without a stored icon, guessed from its name.
   static IconData getIconForCategory(String categoryName) {
     final lowerName = categoryName.toLowerCase();
-
-    // Direct match first
-    if (_categoryIcons.containsKey(lowerName)) {
-      return _categoryIcons[lowerName]!;
-    }
-
-    // Partial match
-    for (final entry in _categoryIcons.entries) {
-      if (lowerName.contains(entry.key)) {
-        return entry.value;
-      }
-    }
-
-    // Default icon
-    return Icons.category;
-  }
-
-  // Inherit icon from parent if child has no explicit icon selection
-  static IconData inheritIcon({
-    required IconData? childIcon,
-    required String parentName,
-  }) {
-    if (childIcon != null) return childIcon;
-    return getIconForCategory(parentName);
+    final material = _categoryIcons[lowerName] ??
+        _categoryIcons.entries
+            .where((e) => lowerName.contains(e.key))
+            .map((e) => e.value)
+            .firstOrNull ??
+        Icons.category;
+    return glyph(material);
   }
 
   // Get icon from stored codePoint (tree-shake friendly)
-  static IconData getIconFromCodePoint(int? codePoint) {
+  /// Glyph to draw for a stored icon code point.
+  static IconData getIconFromCodePoint(int? codePoint) =>
+      glyph(materialFromCodePoint(codePoint));
+
+  /// Glyph for a category: its stored icon when known, otherwise a guess from its name.
+  static IconData iconFor({int? codePoint, required String name}) {
+    final known = codePoint != null && _phosphor.containsKey(codePoint);
+    return known ? _phosphor[codePoint]! : getIconForCategory(name);
+  }
+
+  /// The stored (Material) icon for a code point: use this when the icon is
+  /// edited and saved again, never for drawing.
+  static IconData materialFromCodePoint(int? codePoint) {
     if (codePoint == null) return Icons.category;
 
     // Find matching icon from our predefined list
@@ -488,167 +769,4 @@ class CategoryIconHelper {
     return Icons.category;
   }
 
-  // Convert IconData to codePoint for storage
-  static int getCodePointFromIcon(IconData icon) {
-    return icon.codePoint;
-  }
-
-  // Debug method to check if icon exists in our mappings
-  static bool isIconSupported(int codePoint) {
-    // Check in availableIcons
-    for (final iconData in availableIcons) {
-      if (iconData.codePoint == codePoint) {
-        return true;
-      }
-    }
-
-    // Check in category icons
-    for (final iconData in _categoryIcons.values) {
-      if (iconData.codePoint == codePoint) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  // Get all supported codePoints for debugging
-  static Set<int> getAllSupportedCodePoints() {
-    final Set<int> codePoints = {};
-
-    // Add from availableIcons
-    for (final icon in availableIcons) {
-      codePoints.add(icon.codePoint);
-    }
-
-    // Add from category icons
-    for (final icon in _categoryIcons.values) {
-      codePoints.add(icon.codePoint);
-    }
-
-    return codePoints;
-  }
-
-  // Get icon display name for UI
-  static String getIconName(IconData icon) {
-    // Check in category icons mapping first
-    for (final entry in _categoryIcons.entries) {
-      if (entry.value.codePoint == icon.codePoint) {
-        return entry.key.replaceAll('_', ' ').toUpperCase();
-      }
-    }
-
-    // Check if it's in availableIcons and provide common names
-    final commonIconNames = <int, String>{
-      Icons.coffee.codePoint: 'COFFEE',
-      Icons.fastfood.codePoint: 'FAST FOOD',
-      Icons.local_pizza.codePoint: 'PIZZA',
-      Icons.cake.codePoint: 'CAKE',
-      Icons.directions_bus.codePoint: 'BUS',
-      Icons.train.codePoint: 'TRAIN',
-      Icons.two_wheeler.codePoint: 'MOTORCYCLE',
-      Icons.local_taxi.codePoint: 'TAXI',
-      Icons.store.codePoint: 'STORE',
-      Icons.local_mall.codePoint: 'MALL',
-      Icons.sports_esports.codePoint: 'GAMING',
-      Icons.music_note.codePoint: 'MUSIC',
-      Icons.book.codePoint: 'BOOK',
-      Icons.laptop.codePoint: 'LAPTOP',
-      Icons.smartphone.codePoint: 'SMARTPHONE',
-      Icons.tv.codePoint: 'TV',
-      Icons.sports.codePoint: 'SPORTS',
-      Icons.beach_access.codePoint: 'BEACH',
-      Icons.camera_alt.codePoint: 'CAMERA',
-      Icons.palette.codePoint: 'PALETTE',
-      Icons.brush.codePoint: 'BRUSH',
-      Icons.cut.codePoint: 'CUT',
-      Icons.spa.codePoint: 'SPA',
-      Icons.child_care.codePoint: 'CHILD CARE',
-      Icons.elderly.codePoint: 'ELDERLY',
-      Icons.medical_services.codePoint: 'MEDICAL',
-      Icons.local_pharmacy.codePoint: 'PHARMACY',
-    };
-
-    if (commonIconNames.containsKey(icon.codePoint)) {
-      return commonIconNames[icon.codePoint]!;
-    }
-
-    return 'CUSTOM';
-  }
-
-  // Build icon selection grid widget
-  static Widget buildIconSelectionGrid({
-    required IconData? selectedIcon,
-    required Function(IconData) onIconSelected,
-    double iconSize = 32.0,
-  }) {
-    return Builder(
-      builder: (context) {
-        return SizedBox(
-          height: 180, // Reduced height to prevent overflow
-          child: GridView.builder(
-            padding: const EdgeInsets.all(8),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 6,
-              crossAxisSpacing: 6,
-              mainAxisSpacing: 6,
-              childAspectRatio: 1,
-            ),
-            itemCount: availableIcons.length,
-            itemBuilder: (context, index) {
-              final icon = availableIcons[index];
-              final isSelected = selectedIcon?.codePoint == icon.codePoint;
-
-              return GestureDetector(
-                onTap: () => onIconSelected(icon),
-                child: Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.grey.shade300,
-                      width: isSelected ? 2 : 1,
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                    color: isSelected
-                        ? Theme.of(
-                            context,
-                          ).colorScheme.primary.withValues(alpha: 0.1)
-                        : null,
-                  ),
-                  child: Icon(
-                    icon,
-                    size: iconSize,
-                    color: isSelected
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  // Build icon widget with proper styling
-  static Widget buildCategoryIcon(
-    IconData? icon, {
-    double size = 24.0,
-    Color? color,
-    Color? backgroundColor,
-  }) {
-    final displayIcon = icon ?? Icons.category;
-
-    if (backgroundColor != null) {
-      return CircleAvatar(
-        backgroundColor: backgroundColor,
-        radius: size,
-        child: Icon(displayIcon, size: size * 0.6, color: color),
-      );
-    }
-
-    return Icon(displayIcon, size: size, color: color);
-  }
 }

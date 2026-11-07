@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/app_localizations.dart';
 
@@ -13,7 +14,7 @@ class WalletEmptyState extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.account_balance_wallet_outlined, size: 80, color: theme.colorScheme.onSurfaceVariant),
+          Icon(PhRegular.wallet, size: 80, color: theme.colorScheme.onSurfaceVariant),
           const SizedBox(height: 24),
             Text(ref.tr(context, 'wallet_no_wallets_title'), style: theme.textTheme.headlineSmall),
           const SizedBox(height: 8),
@@ -25,7 +26,7 @@ class WalletEmptyState extends ConsumerWidget {
           const SizedBox(height: 32),
           FilledButton.icon(
             onPressed: onAdd,
-            icon: const Icon(Icons.add),
+            icon: const Icon(PhRegular.plus),
             label: Text(ref.tr(context, 'wallet_add')),
           ),
         ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/edit_profile_provider.dart';
 import '../../../core/localization/app_localizations.dart';
@@ -41,7 +42,7 @@ class ProfileFormWidget extends ConsumerWidget {
             decoration: InputDecoration(
               labelText: ref.tr(context, 'full_name'),
               hintText: ref.tr(context, 'full_name_hint'),
-              prefixIcon: const Icon(Icons.person_outline),
+              prefixIcon: const Icon(PhRegular.user),
               border: const OutlineInputBorder(),
             ),
             textInputAction: TextInputAction.next,
@@ -64,9 +65,9 @@ class ProfileFormWidget extends ConsumerWidget {
             decoration: InputDecoration(
               labelText: ref.tr(context, 'email_address'),
               hintText: ref.tr(context, 'email_address_hint'),
-              prefixIcon: const Icon(Icons.email_outlined),
+              prefixIcon: const Icon(PhRegular.envelopeSimple),
               border: const OutlineInputBorder(),
-              suffixIcon: const Icon(Icons.lock_outline),
+              suffixIcon: const Icon(PhRegular.lock),
             ),
             readOnly: true,
             enabled: false,
@@ -86,7 +87,7 @@ class ProfileFormWidget extends ConsumerWidget {
             decoration: InputDecoration(
               labelText: ref.tr(context, 'phone_number'),
               hintText: ref.tr(context, 'phone_number_hint'),
-              prefixIcon: const Icon(Icons.phone_outlined),
+              prefixIcon: const Icon(PhRegular.phone),
               border: const OutlineInputBorder(),
             ),
             keyboardType: TextInputType.phone,

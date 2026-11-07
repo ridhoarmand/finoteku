@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../services/auth_service.dart';
@@ -94,7 +95,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         title: Text(ref.tr(context, 'reset_password_title')),
         leading: IconButton(
           tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(PhRegular.arrowLeft),
           onPressed: () => context.pop(),
         ),
       ),
@@ -108,7 +109,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               children: [
                 // Header
                 Icon(
-                  Icons.lock_reset,
+                  PhRegular.lockKey,
                   size: 80,
                   color: theme.colorScheme.primary,
                 ),
@@ -139,7 +140,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                     keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
                       labelText: ref.tr(context, 'email_label'),
-                      prefixIcon: const Icon(Icons.email),
+                      prefixIcon: const Icon(PhRegular.envelopeSimple),
                     ),
                     validator: (value) {
                       if (value?.isEmpty ?? true) {
@@ -173,7 +174,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                     onPressed: _cooldownSeconds > 0
                         ? null
                         : _handleResetPassword,
-                    icon: const Icon(Icons.refresh),
+                    icon: const Icon(PhRegular.arrowClockwise),
                     label: Text(
                       _cooldownSeconds > 0
                           ? 'Wait $_cooldownSeconds s'

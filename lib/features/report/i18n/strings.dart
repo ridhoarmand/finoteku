@@ -32,6 +32,15 @@ const Map<String, String> reportStringsEn = {
   'report_subcategory_of': 'Subcategories of {name}',
   'report_subcategory_detail': 'Subcategory breakdown',
   'report_other_category_detail': 'Other category details',
+  'report_tx_count': '{n} transactions',
+  'report_total_expense': 'Total spent',
+  'report_total_income': 'Total received',
+  'report_change_up': '{p}% more than the previous period',
+  'report_change_down': '{p}% less than the previous period',
+  'report_change_same': 'Same as the previous period',
+  'report_no_previous': 'Nothing recorded in the previous period',
+  'report_empty_title': 'No {type} in this period',
+  'report_empty_body': 'Pick another period or record a transaction.',
 };
 
 const Map<String, String> reportStringsId = {
@@ -68,4 +77,13 @@ const Map<String, String> reportStringsId = {
   'report_subcategory_of': 'Subkategori {name}',
   'report_subcategory_detail': 'Rincian Subkategori',
   'report_other_category_detail': 'Detail Kategori Lainnya',
+  'report_tx_count': '{n} transaksi',
+  'report_total_expense': 'Total pengeluaran',
+  'report_total_income': 'Total pemasukan',
+  'report_change_up': '{p}% lebih banyak dari periode lalu',
+  'report_change_down': '{p}% lebih sedikit dari periode lalu',
+  'report_change_same': 'Sama dengan periode lalu',
+  'report_no_previous': 'Periode lalu belum ada catatan',
+  'report_empty_title': 'Belum ada {type} di periode ini',
+  'report_empty_body': 'Pilih periode lain atau catat transaksi.',
 };

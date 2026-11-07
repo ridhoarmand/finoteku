@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import '../core/localization/app_localizations.dart';
 import '../features/settings/widgets/app_update_dialog.dart';
 
@@ -73,51 +74,43 @@ class MainShell extends ConsumerWidget {
         },
         child: Scaffold(
           body: child,
-          bottomNavigationBar: BottomNavigationBar(
-            type: BottomNavigationBarType.fixed,
-            currentIndex: _getCurrentIndex(context),
-            selectedItemColor: theme.colorScheme.primary,
-            unselectedItemColor: theme.colorScheme.onSurfaceVariant,
-            backgroundColor: theme.colorScheme.surface,
-            elevation: 8,
-            onTap: (index) {
-              switch (index) {
-                case 0:
-                  context.go('/home');
-                  break;
-                case 1:
-                  context.go('/transaction');
-                  break;
-                case 2:
-                  context.go('/reports');
-                  break;
-                case 3:
-                  context.go('/account');
-                  break;
-              }
-            },
-            items: [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home_outlined),
-                activeIcon: Icon(Icons.home),
-                label: ref.tr(context, 'nav_home'),
+          // NavigationBar styled by AppTheme; Phosphor Regular → Fill marks the active tab by shape.
+          bottomNavigationBar: DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(
+                  color: theme.dividerTheme.color ?? theme.dividerColor,
+                ),
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.receipt_long_outlined),
-                activeIcon: Icon(Icons.receipt_long),
-                label: ref.tr(context, 'nav_transaction'),
+            ),
+            child: NavigationBar(
+              selectedIndex: _getCurrentIndex(context),
+              onDestinationSelected: (index) => context.go(
+                const ['/home', '/transaction', '/reports', '/account'][index],
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.assessment_outlined),
-                activeIcon: Icon(Icons.assessment),
-                label: ref.tr(context, 'nav_reports'),
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline),
-                activeIcon: Icon(Icons.person),
-                label: ref.tr(context, 'nav_account'),
-              ),
-            ],
+              destinations: [
+                NavigationDestination(
+                  icon: const Icon(PhRegular.house),
+                  selectedIcon: const Icon(PhFill.house),
+                  label: ref.tr(context, 'nav_home'),
+                ),
+                NavigationDestination(
+                  icon: const Icon(PhRegular.receipt),
+                  selectedIcon: const Icon(PhFill.receipt),
+                  label: ref.tr(context, 'nav_transaction'),
+                ),
+                NavigationDestination(
+                  icon: const Icon(PhRegular.chartPieSlice),
+                  selectedIcon: const Icon(PhFill.chartPieSlice),
+                  label: ref.tr(context, 'nav_reports'),
+                ),
+                NavigationDestination(
+                  icon: const Icon(PhRegular.user),
+                  selectedIcon: const Icon(PhFill.user),
+                  label: ref.tr(context, 'nav_account'),
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 
 class SettingsSectionWidget extends StatelessWidget {
   final String title;
@@ -66,7 +67,7 @@ class SettingsTileWidget extends StatelessWidget {
       ),
       title: Text(title),
       subtitle: Text(subtitle),
-      trailing: const Icon(Icons.chevron_right),
+      trailing: const Icon(PhRegular.caretRight),
       onTap: onTap,
     );
   }

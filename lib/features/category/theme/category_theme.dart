@@ -2,21 +2,16 @@ import 'package:flutter/material.dart';
 import '../../../models/category.dart';
 import '../../../theme/app_theme.dart';
 
+/// Money colours, resolved for the current light/dark theme (tokens in AppColors).
 class CategoryTheme {
-  // Single source for money colors; matches the app's iOS palette.
-  static const Color income = AppTheme.iOSSystemGreen;
-  static const Color expense = AppTheme.iOSSystemRed;
-  static const Color transfer = AppTheme.iOSSystemBlue;
+  static Color income(BuildContext context) => context.colors.income;
+  static Color expense(BuildContext context) => context.colors.expense;
+  static Color transfer(BuildContext context) => Theme.of(context).colorScheme.primary;
 
-  static Color forType(CategoryType type) {
-    switch (type) {
-      case CategoryType.income:
-        return income;
-      case CategoryType.expense:
-        return expense;
-    }
-  }
+  static Color forType(BuildContext context, CategoryType type) =>
+      type == CategoryType.income ? income(context) : expense(context);
 
-  // Convenience: resolve by sign, for ledger entries
-  static Color bySign(bool isPositive) => isPositive ? income : expense;
+  /// For ledger entries: positive = income colour.
+  static Color bySign(BuildContext context, bool isPositive) =>
+      isPositive ? income(context) : expense(context);
 }

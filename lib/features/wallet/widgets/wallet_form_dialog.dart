@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/wallet.dart';
@@ -200,7 +201,7 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
                 child: Row(
                   children: [
                     Icon(
-                      Icons.account_balance_wallet_outlined,
+                      PhRegular.wallet,
                       color: Theme.of(context).colorScheme.primary,
                     ),
                     const SizedBox(width: 12),

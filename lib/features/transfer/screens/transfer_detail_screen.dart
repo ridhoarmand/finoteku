@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../services/supabase_service.dart';
@@ -68,7 +69,7 @@ class TransferDetailScreen extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+          Icon(PhRegular.warningCircle, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(ref.tr(context, 'error_loading_transfers')),
           const SizedBox(height: 16),
@@ -109,12 +110,12 @@ class TransferDetailScreen extends ConsumerWidget {
                     children: [
                       CircleAvatar(
                         radius: 30,
-                        backgroundColor: CategoryTheme.transfer.withValues(
+                        backgroundColor: CategoryTheme.transfer(context).withValues(
                           alpha: 0.15,
                         ),
                         child: Icon(
-                          Icons.swap_horiz,
-                          color: CategoryTheme.transfer,
+                          PhRegular.arrowsLeftRight,
+                          color: CategoryTheme.transfer(context),
                           size: 32,
                         ),
                       ),
@@ -132,7 +133,7 @@ class TransferDetailScreen extends ConsumerWidget {
                             Text(
                               CurrencyFormatter.format(transfer.amount, 'IDR'),
                               style: theme.textTheme.headlineSmall?.copyWith(
-                                color: CategoryTheme.transfer,
+                                color: CategoryTheme.transfer(context),
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -164,28 +165,28 @@ class TransferDetailScreen extends ConsumerWidget {
                       _buildDetailRow(
                         ref.tr(context, 'date_label'),
                         _formatDate(context, ref, transfer.date),
-                        Icons.calendar_today,
+                        PhRegular.calendarBlank,
                       ),
                       const Divider(),
 
                       _buildDetailRow(
                         ref.tr(context, 'from_wallet'),
                         walletMap[transfer.fromWalletId]?.name ?? '-',
-                        Icons.call_made,
+                        PhRegular.arrowUpRight,
                       ),
                       const Divider(),
 
                       _buildDetailRow(
                         ref.tr(context, 'to_wallet'),
                         walletMap[transfer.toWalletId]?.name ?? '-',
-                        Icons.call_received,
+                        PhRegular.arrowDownLeft,
                       ),
                       const Divider(),
 
                       _buildDetailRow(
                         ref.tr(context, 'amount'),
                         CurrencyFormatter.format(transfer.amount, 'IDR'),
-                        Icons.currency_exchange,
+                        PhRegular.arrowsLeftRight,
                       ),
 
                       if ((transfer.notes ?? '').trim().isNotEmpty) ...[
@@ -193,7 +194,7 @@ class TransferDetailScreen extends ConsumerWidget {
                         _buildDetailRow(
                           ref.tr(context, 'notes'),
                           transfer.notes!,
-                          Icons.note,
+                          PhRegular.note,
                         ),
                       ],
                     ],
@@ -209,7 +210,7 @@ class TransferDetailScreen extends ConsumerWidget {
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () => _editTransfer(context, ref, transfer),
-                      icon: const Icon(Icons.edit),
+                      icon: const Icon(PhRegular.pencilSimple),
                       label: Text(ref.tr(context, 'edit')),
                     ),
                   ),
@@ -222,7 +223,7 @@ class TransferDetailScreen extends ConsumerWidget {
                         transfer,
                         userId,
                       ),
-                      icon: const Icon(Icons.delete),
+                      icon: const Icon(PhRegular.trash),
                       label: Text(ref.tr(context, 'delete')),
                       style: FilledButton.styleFrom(
                         backgroundColor: Colors.red,

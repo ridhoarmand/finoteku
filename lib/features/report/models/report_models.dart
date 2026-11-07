@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../models/category.dart';
 
 enum ReportType { income, expense }
 
@@ -52,7 +53,7 @@ class CategoryReportItem {
   final String id;
   final String name;
   final IconData icon;
-  final Color color;
+  final CategoryType type; // colour is resolved in the UI for light/dark
   final double amount;
   final double percentage;
   final int transactionCount;
@@ -63,7 +64,7 @@ class CategoryReportItem {
     required this.id,
     required this.name,
     required this.icon,
-    required this.color,
+    required this.type,
     required this.amount,
     required this.percentage,
     required this.transactionCount,
@@ -78,7 +79,7 @@ class CategoryReportItem {
     String? id,
     String? name,
     IconData? icon,
-    Color? color,
+    CategoryType? type,
     double? amount,
     double? percentage,
     int? transactionCount,
@@ -89,7 +90,7 @@ class CategoryReportItem {
       id: id ?? this.id,
       name: name ?? this.name,
       icon: icon ?? this.icon,
-      color: color ?? this.color,
+      type: type ?? this.type,
       amount: amount ?? this.amount,
       percentage: percentage ?? this.percentage,
       transactionCount: transactionCount ?? this.transactionCount,

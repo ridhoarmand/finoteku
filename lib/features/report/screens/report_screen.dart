@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import '../../../widgets/amount_text.dart';
+import '../../../theme/app_theme.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/report_models.dart';
 import '../services/report_service.dart';
 import '../providers/report_providers.dart';
 import '../widgets/report_header.dart';
 import '../widgets/income_expense_toggle.dart';
-import '../widgets/category_pie_chart.dart';
 import '../widgets/category_list_tile.dart';
 import '../widgets/category_transactions_sheet.dart';
 import '../../transaction/screens/transaction_detail_screen.dart';
@@ -66,7 +68,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          Icons.error_outline,
+                          PhRegular.warningCircle,
                           size: 64,
                           color: theme.colorScheme.error,
                         ),
@@ -107,56 +109,50 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
 
   Widget _buildContent(ReportData data, ReportState reportState) {
     final theme = Theme.of(context);
+    final muted = context.colors.muted;
+    final isExpense = data.type == ReportType.expense;
+    String change() {
+      if (data.previousPeriodAmount == 0) return ref.tr(context, 'report_no_previous');
+      final p = data.changePercentage.abs().round();
+      if (p == 0) return ref.tr(context, 'report_change_same');
+      return ref
+          .tr(context, data.changePercentage > 0 ? 'report_change_up' : 'report_change_down')
+          .replaceAll('{p}', '$p');
+    }
 
-    return Column(
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
-        // Chart dan List Section (digabung dengan toggle)
-        Expanded(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: theme.shadowColor.withValues(alpha: 0.1),
-                  spreadRadius: 1,
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
+        const IncomeExpenseToggle(),
+        const SizedBox(height: 24),
+        // The period total is the focal number; the ranked list below explains it.
+        Text(
+          ref.tr(context, isExpense ? 'report_total_expense' : 'report_total_income'),
+          style: theme.textTheme.labelLarge?.copyWith(color: muted),
+        ),
+        AmountText(data.totalAmount, style: theme.textTheme.displaySmall),
+        const SizedBox(height: 4),
+        Text(change(), style: theme.textTheme.bodyMedium?.copyWith(color: muted)),
+        const SizedBox(height: 20),
+        if (data.categories.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40),
             child: Column(
               children: [
-                // Income/Expense Toggle (masuk ke container)
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: IncomeExpenseToggle(),
+                Icon(PhRegular.chartPieSlice, size: 40, color: muted),
+                const SizedBox(height: 12),
+                Text(
+                  ref.tr(context, 'report_empty_title').replaceAll('{type}', ref.tr(context, isExpense ? 'expense' : 'income').toLowerCase()),
+                  style: theme.textTheme.titleMedium,
+                  textAlign: TextAlign.center,
                 ),
-
-                // Pie Chart
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: CategoryPieChart(categories: data.categories),
-                ),
-
-                const SizedBox(height: 6), // Jarak antara chart dan divider
-                // Divider tipis
-                Container(
-                  height: 1,
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  color: theme.colorScheme.outline.withValues(alpha: 0.2),
-                ),
-
-                const SizedBox(height: 6), // Jarak antara divider dan list
-                // Category List (sebagai legend)
-                Expanded(child: _buildCategoryList(data, reportState)),
+                const SizedBox(height: 6),
+                Text(ref.tr(context, 'report_empty_body'), style: theme.textTheme.bodyMedium?.copyWith(color: muted), textAlign: TextAlign.center),
               ],
             ),
-          ),
-        ),
-
-        const SizedBox(height: 16),
+          )
+        else
+          Card(clipBehavior: Clip.antiAlias, child: _buildCategoryList(data, reportState)),
       ],
     );
   }
@@ -171,7 +167,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.pie_chart_outline,
+              PhRegular.chartPieSlice,
               size: 64,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
             ),
@@ -206,18 +202,21 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
       (sum, cat) => sum + cat.amount,
     );
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12.0,
-        vertical: 4.0,
-      ), // Jarak lebih kecil
+    final maxAmount = displayCategories.isEmpty ? 1.0 : displayCategories.first.amount;
+    // lives inside the screen's ListView: no own scrolling
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      separatorBuilder: (_, _) => const Divider(indent: 68),
       itemCount: displayCategories.length + (hasOthers ? 1 : 0),
       itemBuilder: (context, index) {
         if (index < displayCategories.length) {
           final category = displayCategories[index];
           return CategoryListTile(
             category: category,
-            index: index, // Pass index untuk warna yang sama dengan chart
+            index: index,
+            relativeToMax: maxAmount > 0 ? category.amount / maxAmount : 0,
             onTap: () => _handleCategoryTap(category, reportState),
           );
         } else {
@@ -237,8 +236,8 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
             transactionCount: categories
                 .skip(6)
                 .fold<int>(0, (sum, cat) => sum + cat.transactionCount),
-            color: const Color(0xFF9E9E9E), // Better gray color for both themes
-            icon: Icons.more_horiz,
+            type: categories.first.type,
+            icon: PhRegular.dotsThree,
             parentId: null,
             children: [],
           );
@@ -315,7 +314,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                       context,
                     ).closeButtonTooltip,
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
+                    icon: const Icon(PhRegular.x),
                   ),
                 ],
               ),
@@ -334,7 +333,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                       id: parentCategory.id,
                       name: 'Semua ${parentCategory.name}',
                       icon: parentCategory.icon,
-                      color: parentCategory.color,
+                      type: parentCategory.type,
                       amount: parentCategory.amount,
                       percentage: parentCategory.percentage,
                       transactionCount: parentCategory.transactionCount,
@@ -531,7 +530,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                       context,
                     ).closeButtonTooltip,
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
+                    icon: const Icon(PhRegular.x),
                   ),
                 ],
               ),

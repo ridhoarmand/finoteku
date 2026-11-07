@@ -1,153 +1,89 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../models/report_models.dart';
-import '../../../utils/currency_formatter.dart';
+import '../../../theme/app_theme.dart';
+import '../../../widgets/amount_text.dart';
 
-class CategoryListTile extends StatelessWidget {
+/// One ranked category: name and amount, share as a bar in the single accent hue.
+/// One hue on purpose: bars on one baseline compare by length, and colour never
+/// has to follow a category across months (dataviz "ranked horizontal bars").
+class CategoryListTile extends ConsumerWidget {
   final CategoryReportItem category;
   final VoidCallback? onTap;
-  final int? index; // Index untuk menentukan warna pie chart
+  final int? index; // kept for callers; ranking is the list order
+
+  /// Share of the largest category, so the top bar fills the row.
+  final double? relativeToMax;
 
   const CategoryListTile({
     super.key,
     required this.category,
     this.onTap,
     this.index,
+    this.relativeToMax,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final muted = context.colors.muted;
+    final share = (relativeToMax ?? category.percentage / 100).clamp(0.0, 1.0);
 
-    // Warna yang sama dengan pie chart
-    final pieColors = [
-      const Color(0xFF0293EE),
-      const Color(0xFFFF6740),
-      const Color(0xFF13D38E),
-      const Color(0xFFFFD23F),
-      const Color(0xFFFF4081),
-      const Color(0xFF9C27B0),
-      const Color(0xFF00BCD4),
-      const Color(0xFF4CAF50),
-      const Color(0xFFFF9800),
-      const Color(0xFFF44336),
-    ];
-
-    final displayColor = index != null && index! < pieColors.length
-        ? pieColors[index!]
-        : const Color(0xFF9E9E9E); // Consistent gray color for both themes
-
-    return Container(
-      margin: const EdgeInsets.only(
-        bottom: 4.0,
-      ), // Jarak antar item lebih kecil
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: theme.colorScheme.outline.withValues(alpha: 0.1),
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12.0,
-              vertical: 8.0, // Padding vertikal lebih kecil
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: context.colors.sunken,
+                borderRadius: BorderRadius.circular(AppTheme.rControl),
+              ),
+              child: Icon(category.icon, size: 22, color: theme.colorScheme.onSurface),
             ),
-            child: Column(
-              children: [
-                // Header row
-                Row(
-                  children: [
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: category.color.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(category.name, style: theme.textTheme.titleSmall, overflow: TextOverflow.ellipsis),
                       ),
-                      child: Icon(category.icon, color: category.color, size: 20),
-                    ),
-
-                    const SizedBox(width: 10),
-
-                    // Category name dengan jumlah transaksi di bawahnya
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            category.name,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w500,
-                              fontSize: 14,
-                              color: theme.colorScheme.onSurface,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            '${category.transactionCount} transaksi',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: theme.colorScheme.onSurface.withValues(
-                                alpha: 0.6,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Full amount (tidak diringkas)
-                    Text(
-                      CurrencyFormatter.format(category.amount, 'IDR'),
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                    if (onTap != null) ...[
-                      const SizedBox(width: 6),
-                      Icon(
-                        Icons.chevron_right,
-                        size: 16,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                      ),
+                      AmountText(category.amount, style: theme.textTheme.titleSmall),
                     ],
-                  ],
-                ),
-                const SizedBox(height: 8),
-                // Progress bar sebagai subtitle
-                Row(
-                  children: [
-                    Expanded(
-                      child: LinearProgressIndicator(
-                        value: category.percentage / 100,
-                        backgroundColor: theme.colorScheme.outline.withValues(
-                          alpha: 0.2,
-                        ),
-                        valueColor: AlwaysStoppedAnimation<Color>(displayColor),
-                        minHeight: 3,
-                      ),
+                  ),
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: share,
+                      minHeight: 6,
+                      backgroundColor: context.colors.sunken,
+                      color: theme.colorScheme.primary,
+                      semanticsLabel: category.name,
+                      semanticsValue: '${category.percentage.toStringAsFixed(0)}%',
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${category.percentage.toStringAsFixed(1)}%',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${category.percentage.toStringAsFixed(1)}% · ${ref.tr(context, 'report_tx_count').replaceAll('{n}', '${category.transactionCount}')}',
+                    style: theme.textTheme.bodySmall?.copyWith(color: muted, fontFeatures: tabularFigures),
+                  ),
+                ],
+              ),
             ),
-          ),
+            if (onTap != null) ...[
+              const SizedBox(width: 8),
+              Icon(PhRegular.caretRight, size: 16, color: muted),
+            ],
+          ],
         ),
       ),
     );

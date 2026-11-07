@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -103,7 +104,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
               children: [
                 // Header
                 Icon(
-                  Icons.password,
+                  PhRegular.password,
                   size: 80,
                   color: theme.colorScheme.primary,
                 ),
@@ -131,13 +132,13 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                   obscureText: _obscureNewPassword,
                   decoration: InputDecoration(
                     labelText: ref.tr(context, 'new_password_label'),
-                    prefixIcon: const Icon(Icons.lock),
+                    prefixIcon: const Icon(PhRegular.lock),
                     suffixIcon: IconButton(
                       tooltip: ref.tr(context, 'toggle_password_visibility'),
                       icon: Icon(
                         _obscureNewPassword
-                            ? Icons.visibility
-                            : Icons.visibility_off,
+                            ? PhRegular.eye
+                            : PhRegular.eyeSlash,
                       ),
                       onPressed: () {
                         setState(() {
@@ -164,13 +165,13 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                   obscureText: _obscureConfirmPassword,
                   decoration: InputDecoration(
                     labelText: ref.tr(context, 'confirm_password_label'),
-                    prefixIcon: const Icon(Icons.lock_outline),
+                    prefixIcon: const Icon(PhRegular.lock),
                     suffixIcon: IconButton(
                       tooltip: ref.tr(context, 'toggle_password_visibility'),
                       icon: Icon(
                         _obscureConfirmPassword
-                            ? Icons.visibility
-                            : Icons.visibility_off,
+                            ? PhRegular.eye
+                            : PhRegular.eyeSlash,
                       ),
                       onPressed: () {
                         setState(() {

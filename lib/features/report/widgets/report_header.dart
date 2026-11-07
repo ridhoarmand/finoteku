@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/report_providers.dart';
 import '../models/report_models.dart';
@@ -21,7 +22,7 @@ class ReportHeader extends ConsumerWidget {
           // Previous period button
           IconButton(
             onPressed: canGoToPrevious ? () => goToPreviousPeriod(ref) : null,
-            icon: const Icon(Icons.chevron_left),
+            icon: const Icon(PhRegular.caretLeft),
             iconSize: 24,
             tooltip: ref.tr(context, 'previous_period'),
           ),
@@ -43,7 +44,7 @@ class ReportHeader extends ConsumerWidget {
           // Next period button
           IconButton(
             onPressed: canGoToNext ? () => goToNextPeriod(ref) : null,
-            icon: const Icon(Icons.chevron_right),
+            icon: const Icon(PhRegular.caretRight),
             iconSize: 24,
             tooltip: ref.tr(context, 'next_period'),
           ),

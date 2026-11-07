@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/delete_account_provider.dart';
@@ -44,7 +45,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
       title: Row(
         children: [
           Icon(
-            Icons.warning_amber_rounded,
+            PhRegular.warning,
             color: Theme.of(context).colorScheme.error,
             size: 28,
           ),
@@ -75,7 +76,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                   Row(
                     children: [
                       Icon(
-                        Icons.error_outline,
+                        PhRegular.warningCircle,
                         color: Theme.of(context).colorScheme.onErrorContainer,
                         size: 20,
                       ),
@@ -126,7 +127,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                   child: Row(
                     children: [
                       Icon(
-                        Icons.data_usage,
+                        PhRegular.chartDonut,
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                         size: 20,
                       ),
@@ -139,8 +140,8 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                       ),
                       Icon(
                         _showDataSummary
-                            ? Icons.expand_less
-                            : Icons.expand_more,
+                            ? PhRegular.caretUp
+                            : PhRegular.caretDown,
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ],
@@ -163,22 +164,22 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                       _buildDataRow(
                         ref.tr(context, 'delete_wallets'),
                         deleteState.dataSummary!.walletsCount,
-                        Icons.account_balance_wallet,
+                        PhRegular.wallet,
                       ),
                       _buildDataRow(
                         ref.tr(context, 'delete_categories'),
                         deleteState.dataSummary!.categoriesCount,
-                        Icons.category,
+                        PhRegular.squaresFour,
                       ),
                       _buildDataRow(
                         ref.tr(context, 'delete_transactions'),
                         deleteState.dataSummary!.transactionsCount,
-                        Icons.receipt_long,
+                        PhRegular.receipt,
                       ),
                       _buildDataRow(
                         ref.tr(context, 'delete_transfers'),
                         deleteState.dataSummary!.transfersCount,
-                        Icons.swap_horiz,
+                        PhRegular.arrowsLeftRight,
                       ),
                     ],
                   ),
@@ -224,8 +225,8 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
                         tooltip: ref.tr(context, 'toggle_password_visibility'),
                         icon: Icon(
                           _obscurePassword
-                              ? Icons.visibility
-                              : Icons.visibility_off,
+                              ? PhRegular.eye
+                              : PhRegular.eyeSlash,
                         ),
                         onPressed: () {
                           setState(() {

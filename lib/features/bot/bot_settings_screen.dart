@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import '../../core/localization/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -101,7 +102,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
-                    Icons.telegram,
+                    PhRegular.telegramLogo,
                     color: Color(0xFF0088CC),
                     size: 24,
                   ),
@@ -129,7 +130,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                   ),
                 ),
                 Icon(
-                  isConnected ? Icons.check_circle : Icons.circle_outlined,
+                  isConnected ? PhFill.checkCircle : PhRegular.circle,
                   color: isConnected ? Colors.green : Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ],
@@ -145,7 +146,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
             if (isConnected)
               OutlinedButton.icon(
                 onPressed: _confirmDisconnect,
-                icon: const Icon(Icons.link_off),
+                icon: const Icon(PhRegular.linkBreak),
                 label: Text(ref.tr(context, 'bot_disconnect')),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.red,
@@ -155,7 +156,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
             else
               FilledButton.icon(
                 onPressed: _openTelegramBot,
-                icon: const Icon(Icons.link),
+                icon: const Icon(PhRegular.link),
                 label: Text(ref.tr(context, 'bot_connect_telegram')),
               ),
           ],
@@ -182,7 +183,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
-                    Icons.psychology,
+                    PhRegular.brain,
                     color: theme.colorScheme.primary,
                     size: 24,
                   ),
@@ -225,7 +226,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.check_circle_outline, color: theme.colorScheme.primary, size: 20),
+                      Icon(PhRegular.checkCircle, color: theme.colorScheme.primary, size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -249,7 +250,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                     ),
                   );
                 },
-                icon: const Icon(Icons.tune),
+                icon: const Icon(PhRegular.slidersHorizontal),
                 label: Text(ref.tr(context, 'bot_training_button')),
               ),
             ),
@@ -444,7 +445,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                   ),
                 ),
                 Icon(
-                  isConnected ? Icons.check_circle : Icons.circle_outlined,
+                  isConnected ? PhFill.checkCircle : PhRegular.circle,
                   color: isConnected ? Colors.green : Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ],
@@ -460,7 +461,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
             if (isConnected)
               OutlinedButton.icon(
                 onPressed: _confirmDisconnectWhatsApp,
-                icon: const Icon(Icons.link_off),
+                icon: const Icon(PhRegular.linkBreak),
                 label: Text(ref.tr(context, 'bot_disconnect')),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.red,
@@ -470,7 +471,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
             else
               FilledButton.icon(
                 onPressed: _openWhatsAppBot,
-                icon: const Icon(Icons.link),
+                icon: const Icon(PhRegular.link),
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF25D366),
                   foregroundColor: Colors.white,

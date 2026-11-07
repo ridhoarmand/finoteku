@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:intl/intl.dart';
 import '../../../models/transaction.dart';
 import '../models/report_models.dart';
@@ -67,12 +68,12 @@ class CategoryTransactionsSheet extends StatelessWidget {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: category.color.withValues(alpha: 0.15),
+                        color: CategoryTheme.forType(context, category.type).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         category.icon,
-                        color: category.color,
+                        color: CategoryTheme.forType(context, category.type),
                         size: 24,
                       ),
                     ),
@@ -108,7 +109,7 @@ class CategoryTransactionsSheet extends StatelessWidget {
                           currencyFormat.format(category.amount),
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: category.color,
+                            color: CategoryTheme.forType(context, category.type),
                           ),
                         ),
                         Text(
@@ -133,7 +134,7 @@ class CategoryTransactionsSheet extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              Icons.receipt_long_outlined,
+                              PhRegular.receipt,
                               size: 48,
                               color: theme.colorScheme.onSurface.withValues(
                                 alpha: 0.3,
@@ -160,7 +161,7 @@ class CategoryTransactionsSheet extends StatelessWidget {
                           return _TransactionListItem(
                             transaction: transaction,
                             currencyFormat: currencyFormat,
-                            categoryColor: category.color,
+                            categoryColor: CategoryTheme.forType(context, category.type),
                             onTap: onTransactionTap != null
                                 ? () => onTransactionTap!(transaction.id)
                                 : null,
@@ -249,15 +250,15 @@ class _TransactionListItem extends StatelessWidget {
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: isExpense
-                      ? CategoryTheme.expense
-                      : CategoryTheme.income,
+                      ? CategoryTheme.expense(context)
+                      : CategoryTheme.income(context),
                 ),
               ),
               // Arrow icon
               if (onTap != null) ...[
                 const SizedBox(width: 4),
                 Icon(
-                  Icons.chevron_right,
+                  PhRegular.caretRight,
                   size: 20,
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                 ),

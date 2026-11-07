@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../services/supabase_service.dart';
 import '../widgets/profile_section_widget.dart';
@@ -46,7 +47,7 @@ class AccountScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                Icons.error_outline,
+                PhRegular.warningCircle,
                 size: 64,
                 color: theme.colorScheme.error,
               ),

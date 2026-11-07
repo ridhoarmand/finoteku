@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
@@ -237,7 +238,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             controller: _emailController,
                             decoration: InputDecoration(
                               labelText: ref.tr(context, 'email_label'),
-                              prefixIcon: const Icon(Icons.email),
+                              prefixIcon: const Icon(PhRegular.envelopeSimple),
                               border: const OutlineInputBorder(),
                             ),
                             keyboardType: TextInputType.emailAddress,
@@ -261,7 +262,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             controller: _passwordController,
                             decoration: InputDecoration(
                               labelText: ref.tr(context, 'password_label'),
-                              prefixIcon: const Icon(Icons.lock),
+                              prefixIcon: const Icon(PhRegular.lock),
                               suffixIcon: IconButton(
                                 tooltip: ref.tr(
                                   context,
@@ -269,8 +270,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ),
                                 icon: Icon(
                                   _obscurePassword
-                                      ? Icons.visibility
-                                      : Icons.visibility_off,
+                                      ? PhRegular.eye
+                                      : PhRegular.eyeSlash,
                                 ),
                                 onPressed: () {
                                   if (mounted) {
