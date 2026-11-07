@@ -38,11 +38,23 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      # 5. Build Android Release APKs (Universal & Split ABIs)
+      # 5. Compile-time config: the app reads Supabase credentials via --dart-define.
+      #    Without this the APK ships placeholder values and every login fails.
+      - name: Create .env from secrets
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::SUPABASE_URL / SUPABASE_ANON_KEY secrets are missing"; exit 1
+          fi
+          printf 'SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\n' "$SUPABASE_URL" "$SUPABASE_ANON_KEY" > .env
+
+      # 6. Build Android Release APKs (Universal & Split ABIs)
       - name: Build Release APKs
         run: |
-          flutter build apk --release
-          flutter build apk --release --split-per-abi
+          flutter build apk --release --dart-define-from-file=.env
+          flutter build apk --release --split-per-abi --dart-define-from-file=.env
 
       # 6. Extract Tag Name & Prepare Named APK Assets
       - name: Prepare APK Asset Names
