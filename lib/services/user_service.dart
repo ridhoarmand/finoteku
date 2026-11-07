@@ -23,14 +23,6 @@ class UserService {
           .eq('id', userId)
           .single();
 
-      // The raw key never leaves the server; the app only needs to know one is saved.
-      try {
-        response['has_ai_api_key'] =
-            await _supabase.rpc('has_ai_api_key') == true;
-      } catch (_) {
-        response['has_ai_api_key'] =
-            false; // RPC not deployed yet: profile still loads
-      }
       return response;
     } on PostgrestException catch (e) {
       throw Exception('Database error: ${e.message}');

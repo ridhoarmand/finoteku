@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import '../../core/localization/app_localizations.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/bot_link.dart';
+import '../../services/agent_training_service.dart';
 import '../../services/supabase_service.dart';
 import '../../services/user_service.dart';
-import 'bot_link_service.dart';
+import '../../utils/environment.dart';
+import 'agent_training_screen.dart';
 import 'bot_provider.dart';
-
-// Ganti sesuai nomor Whatsapp bot Finoteku yang online
-const String waBotNumber = "6285156897928"; // Placeholder, can be changed later
+import 'bot_link_service.dart';
 
 /// Bot Settings Screen - Configure Telegram, WhatsApp and Parser Mode
 class BotSettingsScreen extends ConsumerStatefulWidget {
@@ -22,19 +21,6 @@ class BotSettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
-  final _apiKeyController = TextEditingController();
-  ParserMode _selectedParserMode = ParserMode.serverKey;
-  AIProvider _selectedAIProvider = AIProvider.gemini;
-  bool _showApiKey = false;
-  bool _isSaving = false;
-  bool _isEditing = false;
-  bool _hasInitialized = false;
-
-  @override
-  void dispose() {
-    _apiKeyController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,8 +51,6 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
     BotLink? telegramBotLink,
     BotLink? whatsappBotLink,
   ) {
-    final userProfileAsync = ref.watch(userProfileProvider);
-
     return RefreshIndicator(
       onRefresh: () async {
         // Invalidate providers to reload data
@@ -87,25 +71,8 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
 
           const SizedBox(height: 24),
 
-          // Parser Configuration (ALWAYS show - stored in users table)
-          userProfileAsync.when(
-            loading: () => const Card(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-            ),
-            error: (e, _) => Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  '${ref.tr(context, 'bot_load_settings_error')}: $e',
-                ),
-              ),
-            ),
-            data: (userProfile) =>
-                _buildParserConfigCard(context, theme, userProfile),
-          ),
+          // Agent Training & Few-Shot Customization
+          _buildAgentTrainingCard(context, theme),
         ],
       ),
     );
@@ -155,9 +122,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                             ? '${ref.tr(context, 'bot_connected')}${botLink?.platformUsername != null ? ' (@${botLink!.platformUsername})' : ''}'
                             : ref.tr(context, 'bot_not_connected'),
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: isConnected
-                              ? Colors.green
-                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: isConnected ? Colors.green : Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -165,9 +130,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                 ),
                 Icon(
                   isConnected ? Icons.check_circle : Icons.circle_outlined,
-                  color: isConnected
-                      ? Colors.green
-                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                  color: isConnected ? Colors.green : Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ],
             ),
@@ -201,29 +164,8 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
     );
   }
 
-  Widget _buildParserConfigCard(
-    BuildContext context,
-    ThemeData theme,
-    Map<String, dynamic>? userProfile,
-  ) {
-    // Initialize state from user profile on first build only
-    if (!_hasInitialized && userProfile != null) {
-      _hasInitialized = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {
-            _selectedParserMode = ParserMode.fromValue(
-              userProfile['parser_mode'] as String? ?? 'server_key',
-            );
-            _selectedAIProvider = AIProvider.fromValue(
-              userProfile['ai_provider'] as String? ?? 'none',
-            );
-          });
-        }
-      });
-    }
-
-    final hasApiKey = userProfile?['has_ai_api_key'] == true;
+  Widget _buildAgentTrainingCard(BuildContext context, ThemeData theme) {
+    final trainingAsync = ref.watch(agentTrainingListProvider);
 
     return Card(
       child: Padding(
@@ -240,7 +182,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
-                    Icons.auto_awesome,
+                    Icons.psychology,
                     color: theme.colorScheme.primary,
                     size: 24,
                   ),
@@ -251,13 +193,13 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        ref.tr(context, 'bot_parser_mode'),
+                        ref.tr(context, 'bot_training_title'),
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        ref.tr(context, 'bot_parser_mode_sub'),
+                        ref.tr(context, 'bot_training_sub'),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: Colors.grey,
                         ),
@@ -268,263 +210,53 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
               ],
             ),
             const SizedBox(height: 16),
+            trainingAsync.when(
+              loading: () => const SizedBox(),
+              error: (e, _) => const SizedBox(),
+              data: (trainingList) {
+                final instructions = trainingList.where((i) => i.isInstruction && i.isActive).length;
+                final examples = trainingList.where((i) => i.isFewShot && i.isActive).length;
 
-            ...ParserMode.values.map(
-              (mode) => _buildParserModeOption(theme, mode),
-            ),
-
-            // Show AI provider and API key input only for user_key mode
-            if (_selectedParserMode == ParserMode.userKey) ...[
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 16),
-
-              // AI Provider dropdown
-              DropdownButtonFormField<AIProvider>(
-                initialValue: _selectedAIProvider,
-                decoration: const InputDecoration(
-                  labelText: 'AI Provider',
-                  border: OutlineInputBorder(),
-                ),
-                items: AIProvider.values.map((provider) {
-                  return DropdownMenuItem(
-                    value: provider,
-                    child: Text(provider.displayName),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedAIProvider = value ?? AIProvider.gemini;
-                  });
-                },
-              ),
-
-              const SizedBox(height: 16),
-
-              // API Key status or input
-              if (hasApiKey && !_isEditing)
-                _buildApiKeyStatus(theme)
-              else
-                _buildApiKeyInput(theme),
-            ],
-
-            const SizedBox(height: 16),
-
-            // Info box based on selected mode
-            _buildInfoBox(theme),
-
-            const SizedBox(height: 16),
-
-            // Save button
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _isSaving ? null : _saveConfig,
-                child: _isSaving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(ref.tr(context, 'save')),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildParserModeOption(ThemeData theme, ParserMode mode) {
-    final isSelected = _selectedParserMode == mode;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            _selectedParserMode = mode;
-            if (mode != ParserMode.userKey) {
-              _isEditing = false;
-            }
-          });
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: isSelected
-                  ? theme.colorScheme.primary
-                  : Theme.of(context).colorScheme.outlineVariant,
-              width: isSelected ? 2 : 1,
-            ),
-            borderRadius: BorderRadius.circular(12),
-            color: isSelected
-                ? theme.colorScheme.primary.withValues(alpha: 0.05)
-                : null,
-          ),
-          child: Row(
-            children: [
-              Icon(
-                isSelected
-                    ? Icons.radio_button_checked
-                    : Icons.radio_button_off,
-                color: isSelected
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      mode.displayName,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
-                    ),
-                    Text(
-                      mode.description,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildApiKeyStatus(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.green.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.green.withValues(alpha: 0.4)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.check_circle, color: Colors.green, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  ref.tr(context, 'bot_api_key_saved'),
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ),
-                Text(
-                  '••••••••',
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontFamily: 'monospace',
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle_outline, color: theme.colorScheme.primary, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          ref.tr(context, 'bot_training_active').replaceAll('{instructions}', '$instructions').replaceAll('{examples}', '$examples'),
+                          style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _isEditing = true;
-                _apiKeyController.clear();
-              });
-            },
-            child: Text(ref.tr(context, 'bot_change')),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildApiKeyInput(ThemeData theme) {
-    return TextFormField(
-      controller: _apiKeyController,
-      obscureText: !_showApiKey,
-      decoration: InputDecoration(
-        labelText: 'API Key',
-        border: const OutlineInputBorder(),
-        helperText: _getApiKeyHelperText(),
-        suffixIcon: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              tooltip: ref.tr(context, 'toggle_password_visibility'),
-              icon: Icon(_showApiKey ? Icons.visibility_off : Icons.visibility),
-              onPressed: () => setState(() => _showApiKey = !_showApiKey),
-            ),
-            IconButton(
-              tooltip: MaterialLocalizations.of(context).pasteButtonLabel,
-              icon: const Icon(Icons.content_paste),
-              onPressed: () async {
-                final data = await Clipboard.getData('text/plain');
-                if (data?.text != null) {
-                  _apiKeyController.text = data!.text!;
-                }
+                );
               },
             ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const AgentTrainingScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.tune),
+                label: Text(ref.tr(context, 'bot_training_button')),
+              ),
+            ),
           ],
         ),
       ),
     );
-  }
-
-  Widget _buildInfoBox(ThemeData theme) {
-    String info;
-    IconData icon;
-    Color color;
-
-    switch (_selectedParserMode) {
-      case ParserMode.serverKey:
-        info = ref.tr(context, 'bot_info_ai_server');
-        icon = Icons.cloud;
-        color = Colors.blue;
-      case ParserMode.userKey:
-        info = ref.tr(context, 'bot_info_ai_own_key');
-        icon = Icons.key;
-        color = theme.colorScheme.primary;
-      case ParserMode.regex:
-        info = ref.tr(context, 'bot_info_regex');
-        icon = Icons.rule;
-        color = Colors.teal;
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: color),
-          const SizedBox(width: 8),
-          Expanded(child: Text(info, style: theme.textTheme.bodySmall)),
-        ],
-      ),
-    );
-  }
-
-  String _getApiKeyHelperText() {
-    switch (_selectedAIProvider) {
-      case AIProvider.gemini:
-        return ref.tr(context, 'bot_key_hint_gemini');
-      case AIProvider.openrouter:
-        return ref.tr(context, 'bot_key_hint_openrouter');
-    }
   }
 
   Future<void> _openTelegramBot() async {
@@ -564,7 +296,9 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(ref.tr(context, 'bot_disconnect_telegram_title')),
-        content: Text(ref.tr(context, 'bot_disconnect_telegram_body')),
+        content: Text(
+          ref.tr(context, 'bot_disconnect_telegram_body'),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -606,7 +340,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
 
     // 3. Konversi menjadi URI skema whatsapp
     final Uri whatsappUri = Uri.parse(
-      "https://wa.me/$waBotNumber?text=${Uri.encodeComponent(message)}",
+      "https://wa.me/${Environment.waBotNumber}?text=${Uri.encodeComponent(message)}",
     );
 
     // 4. Buka aplikasi WhatsApp
@@ -621,7 +355,11 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
       // Tampilkan Alert/Tooltip bila aplikasi WhatsApp tidak terinstal
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ref.tr(context, 'bot_whatsapp_open_failed'))),
+          SnackBar(
+            content: Text(
+              ref.tr(context, 'bot_whatsapp_open_failed'),
+            ),
+          ),
         );
       }
     }
@@ -632,7 +370,9 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(ref.tr(context, 'bot_disconnect_whatsapp_title')),
-        content: Text(ref.tr(context, 'bot_disconnect_whatsapp_body')),
+        content: Text(
+          ref.tr(context, 'bot_disconnect_whatsapp_body'),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -697,9 +437,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                             ? '${ref.tr(context, 'bot_connected')}${botLink?.platformUserId != null ? ' (${botLink!.platformUserId})' : ''}'
                             : ref.tr(context, 'bot_not_connected'),
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: isConnected
-                              ? Colors.green
-                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: isConnected ? Colors.green : Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -707,9 +445,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                 ),
                 Icon(
                   isConnected ? Icons.check_circle : Icons.circle_outlined,
-                  color: isConnected
-                      ? Colors.green
-                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                  color: isConnected ? Colors.green : Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ],
             ),
@@ -745,52 +481,5 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
         ),
       ),
     );
-  }
-
-  Future<void> _saveConfig() async {
-    setState(() => _isSaving = true);
-
-    try {
-      String? apiKey;
-      String aiProvider = 'none';
-
-      if (_selectedParserMode == ParserMode.userKey) {
-        apiKey = _apiKeyController.text.isNotEmpty
-            ? _apiKeyController.text
-            : null;
-        aiProvider = _selectedAIProvider.value;
-      }
-
-      await ref
-          .read(botLinkServiceProvider)
-          .updateParserConfig(
-            parserMode: _selectedParserMode.value,
-            aiProvider: aiProvider,
-            aiApiKey: apiKey,
-          );
-
-      // Refresh user profile to reflect new settings
-      ref.invalidate(userProfileProvider);
-
-      setState(() {
-        _isEditing = false;
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ref.tr(context, 'bot_settings_saved'))),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${ref.tr(context, 'bot_save_failed')}: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
-      }
-    }
   }
 }

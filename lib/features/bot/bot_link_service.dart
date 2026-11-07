@@ -105,25 +105,4 @@ class BotLinkService {
       throw mapException(e, st);
     }
   }
-
-  /// Update parser configuration (stored in users table, not bot_links)
-  Future<void> updateParserConfig({
-    required String parserMode,
-    required String aiProvider,
-    String? aiApiKey,
-  }) async {
-    try {
-      await _supabase.rpc(
-        'update_parser_settings',
-        params: {
-          'p_parser_mode': parserMode,
-          'p_ai_provider': aiProvider,
-          'p_ai_api_key': aiApiKey,
-        },
-      );
-    } catch (e, st) {
-      AppLogger.e('updateParserConfig error', error: e, stackTrace: st);
-      throw mapException(e, st);
-    }
-  }
 }

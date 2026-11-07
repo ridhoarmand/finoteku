@@ -1,0 +1,116 @@
+name: Automated Android Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger ONLY when pushing git tags starting with 'v' (e.g. v0.5.0, v1.0.0)
+
+permissions:
+  contents: write # Gives GITHUB_TOKEN write permissions to create releases & upload assets
+
+jobs:
+  build-and-release:
+    name: Build APK & Publish Release
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout Repository
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 2. Setup Java
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      # 3. Setup Flutter SDK
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      # 4. Install Dependencies
+      - name: Install Dependencies
+        run: flutter pub get
+
+      # 5. Build Android Release APKs (Universal & Split ABIs)
+      - name: Build Release APKs
+        run: |
+          flutter build apk --release
+          flutter build apk --release --split-per-abi
+
+      # 6. Extract Tag Name & Prepare Named APK Assets
+      - name: Prepare APK Asset Names
+        id: tag_name
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          echo "TAG=${TAG}" >> $GITHUB_OUTPUT
+          cd build/app/outputs/flutter-apk
+          cp app-arm64-v8a-release.apk finoteku-${TAG}-arm64-v8a.apk || true
+          cp app-armeabi-v7a-release.apk finoteku-${TAG}-armeabi-v7a.apk || true
+          cp app-x86_64-release.apk finoteku-${TAG}-x86_64.apk || true
+          cp app-release.apk finoteku-${TAG}-universal.apk || true
+          cp app-release.apk finoteku.apk || true
+
+      # 7. Create GitHub Release & Upload All APK Assets
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag_name.outputs.TAG }}
+          name: Finoteku Release ${{ steps.tag_name.outputs.TAG }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          files: |
+            build/app/outputs/flutter-apk/finoteku-*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 8. Upload APK to Supabase Storage & Database (For Private Repo In-App Update)
+      - name: Upload APK to Supabase Storage & Database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_KEY" ]; then
+            TAG=${{ steps.tag_name.outputs.TAG }}
+            CLEAN_VERSION=${TAG#v}
+            APK_NAME="finoteku-${TAG}-arm64-v8a.apk"
+            FILE_PATH="build/app/outputs/flutter-apk/${APK_NAME}"
+
+            if [ ! -f "$FILE_PATH" ]; then
+              APK_NAME="finoteku.apk"
+              FILE_PATH="build/app/outputs/flutter-apk/${APK_NAME}"
+            fi
+
+            echo "Uploading $FILE_PATH to Supabase Storage bucket app_releases..."
+            
+            # Ensure bucket exists
+            curl -s -X POST "${SUPABASE_URL}/storage/v1/bucket" \
+              -H "Authorization: Bearer ${SUPABASE_KEY}" \
+              -H "Content-Type: application/json" \
+              -d '{"id": "app_releases", "name": "app_releases", "public": true}' || true
+
+            # Upload file to Supabase Storage
+            curl -s -X POST "${SUPABASE_URL}/storage/v1/object/app_releases/${APK_NAME}" \
+              -H "Authorization: Bearer ${SUPABASE_KEY}" \
+              -H "x-upsert: true" \
+              -F "file=@${FILE_PATH}" || true
+
+            PUBLIC_APK_URL="${SUPABASE_URL}/storage/v1/object/public/app_releases/${APK_NAME}"
+
+            echo "Recording version ${CLEAN_VERSION} in Supabase app_versions table..."
+            curl -s -X POST "${SUPABASE_URL}/rest/v1/app_versions" \
+              -H "Authorization: Bearer ${SUPABASE_KEY}" \
+              -H "apikey: ${SUPABASE_KEY}" \
+              -H "Content-Type: application/json" \
+              -H "Prefer: resolution=merge-duplicates" \
+              -d "{\"version\": \"${CLEAN_VERSION}\", \"title\": \"Finoteku Release ${TAG}\", \"changelog\": \"Pembaruan aplikasi Finoteku rilis ${TAG} dengan fitur terbaru dan perbaikan bug.\", \"apk_url\": \"${PUBLIC_APK_URL}\"}" || true
+          else
+            echo "Skipping Supabase Upload: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY secret not set in GitHub Repository Secrets."
+          fi
