@@ -62,6 +62,7 @@ final reportDataProvider = FutureProvider.autoDispose
         type: state.type,
         periodType: state.period,
         showDetailCategories: state.showDetailCategories,
+        walletId: state.walletId,
       );
     });
 

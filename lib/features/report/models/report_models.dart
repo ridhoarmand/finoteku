@@ -100,11 +100,14 @@ class CategoryReportItem {
   }
 }
 
+const _keep = Object();
+
 class ReportState {
   final DateTime selectedMonth;
   final ReportPeriod period;
   final ReportType type;
   final bool showDetailCategories;
+  final String? walletId; // null = all wallets
   final bool isLoading;
   final String? error;
 
@@ -113,6 +116,7 @@ class ReportState {
     required this.period,
     required this.type,
     required this.showDetailCategories,
+    this.walletId,
     this.isLoading = false,
     this.error,
   });
@@ -122,6 +126,7 @@ class ReportState {
     ReportPeriod? period,
     ReportType? type,
     bool? showDetailCategories,
+    Object? walletId = _keep,
     bool? isLoading,
     String? error,
   }) {
@@ -130,6 +135,7 @@ class ReportState {
       period: period ?? this.period,
       type: type ?? this.type,
       showDetailCategories: showDetailCategories ?? this.showDetailCategories,
+      walletId: walletId == _keep ? this.walletId : walletId as String?,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
     );

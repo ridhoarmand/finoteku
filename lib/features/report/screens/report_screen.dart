@@ -14,6 +14,9 @@ import '../widgets/income_expense_toggle.dart';
 import '../widgets/category_list_tile.dart';
 import '../widgets/category_transactions_sheet.dart';
 import '../../transaction/screens/transaction_detail_screen.dart';
+import '../../wallet/providers/wallet_providers.dart';
+import '../../wallet/widgets/wallet_picker_sheet.dart';
+import '../../../widgets/filter_chip_button.dart';
 import '../../../core/localization/app_localizations.dart';
 
 class ReportScreen extends ConsumerStatefulWidget {
@@ -145,7 +148,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
         const IncomeExpenseToggle(),
-        const SizedBox(height: 24),
+        const SizedBox(height: 12),
+        Align(alignment: Alignment.centerLeft, child: _WalletFilter(reportState)),
+        const SizedBox(height: 20),
         // The period total is the focal number; the ranked list below explains it.
         Row(
           children: [
@@ -449,6 +454,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
             categoryId: category.id,
             period: state.selectedMonth,
             periodType: state.period,
+            walletId: state.walletId,
           );
 
       if (!mounted) return;
@@ -592,6 +598,34 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Narrows the report to one wallet. Uses [walletsProvider] (hidden wallets included):
+/// their past transactions still belong in a report.
+class _WalletFilter extends ConsumerWidget {
+  final ReportState state;
+  const _WalletFilter(this.state);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userId = ref.watch(currentUserIdProvider);
+    if (userId == null) return const SizedBox.shrink();
+    final wallets = ref.watch(walletsProvider(userId)).value ?? const [];
+    final wallet = wallets.where((w) => w.id == state.walletId).firstOrNull;
+    final n = ref.read(reportStateProvider.notifier);
+    final all = ref.tr(context, 'all_wallets');
+    return FilterChipButton(
+      icon: PhRegular.wallet,
+      label: wallet?.name ?? all,
+      active: wallet != null,
+      onTap: () async {
+        final pick = await showWalletPicker(context, wallets: wallets, selectedId: state.walletId);
+        if (pick != null) n.updateState(ref.read(reportStateProvider).copyWith(walletId: pick.walletId));
+      },
+      onClear: () => n.updateState(ref.read(reportStateProvider).copyWith(walletId: null)),
+      clearTooltip: all,
     );
   }
 }

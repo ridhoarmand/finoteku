@@ -87,6 +87,16 @@ void main() {
     await tapText('Laporan');
     await wait(3000);
     await shot('04_report');
+    if (await tapText('Semua Dompet')) {
+      await wait(1000);
+      await shot('04a_wallet_filter');
+      final rows = find.byType(ListTile);
+      if (rows.evaluate().length > 1) {
+        await tester.tap(rows.at(1));
+        await wait(2500);
+        await shot('04a_report_one_wallet');
+      }
+    }
     if (await tapText('Anggaran')) {
       await wait(2500);
       await shot('04b_budget');

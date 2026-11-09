@@ -13,6 +13,7 @@ class ReportService {
     required ReportType type,
     required ReportPeriod periodType,
     bool showDetailCategories = false,
+    String? walletId,
   }) async {
     try {
       // Tentukan date range berdasarkan period
@@ -28,6 +29,7 @@ class ReportService {
         startDate: dateRange.start,
         endDate: dateRange.end,
         type: type,
+        walletId: walletId,
       );
 
       // Query transactions untuk period sebelumnya (untuk comparison)
@@ -37,6 +39,7 @@ class ReportService {
         startDate: previousDateRange.start,
         endDate: previousDateRange.end,
         type: type,
+        walletId: walletId,
       );
 
       // Build category report items
@@ -82,6 +85,7 @@ class ReportService {
     required DateTime startDate,
     required DateTime endDate,
     required ReportType type,
+    String? walletId,
   }) async {
     final client = SupabaseService.client;
 
@@ -97,11 +101,10 @@ class ReportService {
       return [];
     }
 
+    var query = client.from('transactions').select().eq('user_id', userId);
+    if (walletId != null) query = query.eq('wallet_id', walletId);
     final response = await fetchAllRows(
-      client
-          .from('transactions')
-          .select()
-          .eq('user_id', userId)
+      query
           .gte('date', startDate.toIso8601String())
           .lte('date', endDate.toIso8601String())
           .inFilter('category_id', categoryIds)
@@ -348,6 +351,7 @@ class ReportService {
     required String categoryId,
     required DateTime period,
     required ReportPeriod periodType,
+    String? walletId,
   }) async {
     try {
       final dateRange = _getDateRange(period, periodType);
@@ -361,11 +365,10 @@ class ReportService {
           .toList();
       final allCategoryIds = [categoryId, ...childIds];
 
+      var query = client.from('transactions').select().eq('user_id', userId);
+      if (walletId != null) query = query.eq('wallet_id', walletId);
       final response = await fetchAllRows(
-        client
-            .from('transactions')
-            .select()
-            .eq('user_id', userId)
+        query
             .inFilter('category_id', allCategoryIds)
             .gte('date', dateRange.start.toIso8601String())
             .lte('date', dateRange.end.toIso8601String())

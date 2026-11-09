@@ -32,13 +32,12 @@ class WalletIconHelper {
     return _bySlug[path.split('/').last.replaceAll('.svg', '')];
   }
 
-  /// Logos sit on a light plate in both themes: brand marks are drawn for white,
+  /// Logos (cash included) sit on a light plate in both themes: brand marks are drawn for white,
   /// and many (BCA blue, Mandiri navy) vanish on a dark surface. In dark mode the
   /// plate is a dimmed off-white so it does not glare.
   static Widget buildIcon(String? stored, {double size = 24.0, Color? color}) {
     final path = resolve(stored);
     if (path == null) return Icon(PhRegular.wallet, size: size, color: color);
-    if (path == cashIcon) return SvgPicture.asset(path, width: size, height: size, fit: BoxFit.contain);
     return Builder(
       builder: (context) {
         final dark = Theme.of(context).brightness == Brightness.dark;
