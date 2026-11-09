@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -39,6 +40,16 @@ class AppUpdateService {
     return checkForUpdate();
   }
 
+  /// Phone ABIs, most preferred first (e.g. arm64-v8a, armeabi-v7a); empty off Android.
+  Future<List<String>> _supportedAbis() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return const [];
+    try {
+      return (await DeviceInfoPlugin().androidInfo).supportedAbis;
+    } catch (_) {
+      return const [];
+    }
+  }
+
   /// Check GitHub Releases for a newer version.
   Future<AppUpdateInfo> checkForUpdate() async {
     String currentVersionStr = '0.0.0';
@@ -62,7 +73,7 @@ class AppUpdateService {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
-        final release = AppRelease.fromGitHubJson(data);
+        final release = AppRelease.fromGitHubJson(data, abis: await _supportedAbis());
         final isNewer = isNewerRelease(
           release.tagName,
           release.buildNumber,

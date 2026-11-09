@@ -108,7 +108,7 @@ git tag -a v0.5.5 -m "Finoteku v0.5.5" && git push origin v0.5.5
 [`release.yml`](.github/workflows/release.yml) menolak tag yang tidak sama dengan versi pubspec atau
 tidak lebih tinggi dari rilis sebelumnya, membangun APK yang ditandatangani, memeriksa sertifikat dan
 alamat Supabase di dalamnya, lalu menerbitkan GitHub Release. Aplikasi yang terpasang menemukan
-rilis itu lewat GitHub API dan mengunduh APK universal. Jangan memindahkan tag yang sudah dirilis;
+rilis itu lewat GitHub API dan mengunduh APK sesuai arsitektur HP-nya (arm64, armv7, x86_64; universal sebagai cadangan). Jangan memindahkan tag yang sudah dirilis;
 buat versi baru.
 
 Secret GitHub: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `ANDROID_KEYSTORE_BASE64`,
