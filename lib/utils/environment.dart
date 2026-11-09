@@ -16,9 +16,10 @@ class Environment {
     defaultValue: 'https://your-project-id.supabase.co',
   );
 
+  // new publishable key (sb_publishable_...), or the legacy anon key from older .env files
   static const String supabaseAnonKey = String.fromEnvironment(
-    'SUPABASE_ANON_KEY',
-    defaultValue: 'your-anon-key-here',
+    'SUPABASE_PUBLISHABLE_KEY',
+    defaultValue: String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: 'your-anon-key-here'),
   );
 
   // WhatsApp Configuration
