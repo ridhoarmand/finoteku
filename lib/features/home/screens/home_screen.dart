@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/widgets/icon_tile.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -143,6 +144,9 @@ class _HomeHeader extends ConsumerWidget {
     // hidden wallets are not part of "all wallets" (same as the wallet screen)
     final balance = selected?.balance ?? wallets.where((w) => !w.isHidden).fold<double>(0, (s, w) => s + w.balance);
 
+    final scheme = theme.colorScheme;
+    final onCard = scheme.onPrimary.withValues(alpha: 0.8);
+
     double sum(bool income) => (monthEntries ?? const <LedgerEntry>[])
         .where((e) => e.transferId == null && (e.signedAmount >= 0) == income)
         .fold<double>(0, (s, e) => s + e.amount);
@@ -174,69 +178,125 @@ class _HomeHeader extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          // wallet scope of the number below
-          InkWell(
-            borderRadius: BorderRadius.circular(AppTheme.rControl),
-            onTap: wallets.isEmpty
-                ? null
-                : () async {
-                    final pick = await showWalletPicker(
-                      context,
-                      wallets: wallets.where((w) => !w.isHidden).toList(),
-                      selectedId: selectedWalletId,
-                    );
-                    if (pick == null) return;
-                    final n = ref.read(selectedHomeWalletProvider.notifier);
-                    pick.walletId == null ? n.clear() : n.select(pick.walletId);
-                  },
+          const SizedBox(height: 16),
+          // The balance card is the one block in full accent colour: the number the app is about.
+          Material(
+            color: scheme.primary,
+            borderRadius: BorderRadius.circular(AppTheme.rBlock),
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+              padding: const EdgeInsets.fromLTRB(12, 10, 8, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    selected?.name ?? ref.tr(context, 'total_balance'),
-                    style: theme.textTheme.titleSmall?.copyWith(color: muted),
+                  // wallet scope of the number below
+                  InkWell(
+                    borderRadius: BorderRadius.circular(AppTheme.rControl),
+                    onTap: wallets.isEmpty
+                        ? null
+                        : () async {
+                            final pick = await showWalletPicker(
+                              context,
+                              wallets: wallets.where((w) => !w.isHidden).toList(),
+                              selectedId: selectedWalletId,
+                            );
+                            if (pick == null) return;
+                            final n = ref.read(selectedHomeWalletProvider.notifier);
+                            pick.walletId == null ? n.clear() : n.select(pick.walletId);
+                          },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(PhRegular.wallet, size: 18, color: onCard),
+                          const SizedBox(width: 6),
+                          Text(
+                            selected?.name ?? ref.tr(context, 'total_balance'),
+                            style: theme.textTheme.titleSmall?.copyWith(color: onCard),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(PhRegular.caretDown, size: 16, color: onCard),
+                        ],
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 4),
-                  Icon(PhRegular.caretDown, size: 16, color: muted),
+                  Row(
+                    children: [
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: walletsAsync.isLoading && wallets.isEmpty
+                            ? SizedBox(height: 44, child: Align(alignment: Alignment.centerLeft, child: LinearProgressIndicator(color: scheme.onPrimary)))
+                            : AmountText(balance, hidden: !visible, style: theme.textTheme.displaySmall?.copyWith(color: scheme.onPrimary)),
+                      ),
+                      IconButton(
+                        tooltip: ref.tr(context, visible ? 'hide_balance' : 'show_balance'),
+                        onPressed: () => ref.read(balanceVisibilityProvider.notifier).toggle(),
+                        icon: Icon(visible ? PhRegular.eye : PhRegular.eyeSlash, color: onCard),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
           ),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Flexible(
-                child: walletsAsync.isLoading && wallets.isEmpty
-                    ? const SizedBox(height: 44, child: Align(alignment: Alignment.centerLeft, child: LinearProgressIndicator()))
-                    : AmountText(balance, hidden: !visible, style: theme.textTheme.displaySmall),
-              ),
-              IconButton(
-                tooltip: ref.tr(context, visible ? 'hide_balance' : 'show_balance'),
-                onPressed: () => ref.read(balanceVisibilityProvider.notifier).toggle(),
-                icon: Icon(visible ? PhRegular.eye : PhRegular.eyeSlash, color: muted),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          if (monthEntries != null)
-            Wrap(
-              spacing: 6,
-              crossAxisAlignment: WrapCrossAlignment.center,
+          if (monthEntries != null) ...[
+            const SizedBox(height: 12),
+            Row(
               children: [
-                Text(ref.tr(context, 'this_month'), style: theme.textTheme.bodyMedium?.copyWith(color: muted)),
-                AmountText(sum(true), tone: AmountTone.income, signed: true, hidden: !visible, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                Text(ref.tr(context, 'home_in'), style: theme.textTheme.bodyMedium?.copyWith(color: muted)),
-                Text('·', style: theme.textTheme.bodyMedium?.copyWith(color: muted)),
-                AmountText(sum(false), tone: AmountTone.expense, signed: true, hidden: !visible, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                Text(ref.tr(context, 'home_out'), style: theme.textTheme.bodyMedium?.copyWith(color: muted)),
+                Expanded(child: _MonthStat(label: ref.tr(context, 'income'), amount: sum(true), income: true, hidden: !visible)),
+                const SizedBox(width: 12),
+                Expanded(child: _MonthStat(label: ref.tr(context, 'expense'), amount: sum(false), income: false, hidden: !visible)),
               ],
             ),
-          const SizedBox(height: 16),
-          const Divider(),
+          ],
+          const SizedBox(height: 8),
         ],
+      ),
+    );
+  }
+}
+
+/// This month's income or expense: a tinted tile so the two read apart at a glance.
+class _MonthStat extends ConsumerWidget {
+  final String label;
+  final double amount;
+  final bool income;
+  final bool hidden;
+
+  const _MonthStat({required this.label, required this.amount, required this.income, required this.hidden});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final hue = income ? context.colors.income : context.colors.expense;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            IconTile(income ? PhRegular.arrowDownLeft : PhRegular.arrowUpRight, color: hue, size: 36),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$label · ${ref.tr(context, 'this_month')}',
+                    style: theme.textTheme.bodySmall?.copyWith(color: context.colors.muted),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  AmountText(
+                    amount,
+                    tone: income ? AmountTone.income : AmountTone.expense,
+                    hidden: hidden,
+                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

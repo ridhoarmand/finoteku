@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/features/category/theme/category_theme.dart';
+import 'package:finoteku/widgets/icon_tile.dart';
 import '../../../theme/app_theme.dart';
 import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -302,16 +304,7 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
 
     // Get icon from category model or use default
     final icon = CategoryIconHelper.iconFor(codePoint: category.iconCodePoint, name: category.name);
-    // Neutral tile like every list in the app (selection is shown by the row itself).
-    Widget tile(double size) => Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: context.colors.sunken,
-        borderRadius: BorderRadius.circular(AppTheme.rControl),
-      ),
-      child: Icon(icon, size: size * 0.55, color: theme.colorScheme.onSurface),
-    );
+    Widget tile(double size) => IconTile(icon, size: size, color: CategoryTheme.forCategory(context, category.parentId ?? category.id));
 
     // Different styling based on hierarchy level
     Widget leadingWidget;

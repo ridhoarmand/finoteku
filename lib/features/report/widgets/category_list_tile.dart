@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/features/category/theme/category_theme.dart';
+import 'package:finoteku/widgets/icon_tile.dart';
 import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/app_localizations.dart';
@@ -6,9 +8,8 @@ import '../models/report_models.dart';
 import '../../../theme/app_theme.dart';
 import '../../../widgets/amount_text.dart';
 
-/// One ranked category: name and amount, share as a bar in the single accent hue.
-/// One hue on purpose: bars on one baseline compare by length, and colour never
-/// has to follow a category across months (dataviz "ranked horizontal bars").
+/// One ranked category: name and amount, share as a bar. The bar and tile wear the
+/// category's own colour, which also keys its slice in the donut above the list.
 class CategoryListTile extends ConsumerWidget {
   final CategoryReportItem category;
   final VoidCallback? onTap;
@@ -29,6 +30,7 @@ class CategoryListTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final muted = context.colors.muted;
+    final hue = CategoryTheme.forCategory(context, category.parentId ?? category.id);
     final share = (relativeToMax ?? category.percentage / 100).clamp(0.0, 1.0);
 
     return InkWell(
@@ -37,15 +39,7 @@ class CategoryListTile extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: context.colors.sunken,
-                borderRadius: BorderRadius.circular(AppTheme.rControl),
-              ),
-              child: Icon(category.icon, size: 22, color: theme.colorScheme.onSurface),
-            ),
+            IconTile(category.icon, color: hue),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -66,7 +60,7 @@ class CategoryListTile extends ConsumerWidget {
                       value: share,
                       minHeight: 6,
                       backgroundColor: context.colors.sunken,
-                      color: theme.colorScheme.primary,
+                      color: hue,
                       semanticsLabel: category.name,
                       semanticsValue: '${category.percentage.toStringAsFixed(0)}%',
                     ),

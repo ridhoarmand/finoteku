@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/widgets/icon_tile.dart';
 import '../../../models/wallet.dart';
 import '../../../utils/wallet_icon_helper.dart';
 import '../../../widgets/amount_text.dart';
@@ -130,18 +131,9 @@ class TransferDetailScreen extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: context.colors.sunken,
-            borderRadius: BorderRadius.circular(AppTheme.rCard),
-          ),
-          child: Icon(
-            PhRegular.arrowsLeftRight,
-            size: 26,
-            color: theme.colorScheme.onSurface,
-          ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: IconTile(PhRegular.arrowsLeftRight, color: theme.colorScheme.primary, size: 48, radius: AppTheme.rCard),
         ),
         const SizedBox(height: 16),
         Text(

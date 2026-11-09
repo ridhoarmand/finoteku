@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/category_donut.dart';
 import '../../../widgets/amount_text.dart';
 import '../../../theme/app_theme.dart';
 import 'package:finoteku/theme/ph_icons.dart';
@@ -126,13 +127,28 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
         const IncomeExpenseToggle(),
         const SizedBox(height: 24),
         // The period total is the focal number; the ranked list below explains it.
-        Text(
-          ref.tr(context, isExpense ? 'report_total_expense' : 'report_total_income'),
-          style: theme.textTheme.labelLarge?.copyWith(color: muted),
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    ref.tr(context, isExpense ? 'report_total_expense' : 'report_total_income'),
+                    style: theme.textTheme.labelLarge?.copyWith(color: muted),
+                  ),
+                  AmountText(data.totalAmount, style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  Text(change(), style: theme.textTheme.bodyMedium?.copyWith(color: muted)),
+                ],
+              ),
+            ),
+            if (data.categories.isNotEmpty) ...[
+              const SizedBox(width: 16),
+              CategoryDonut(categories: data.categories),
+            ],
+          ],
         ),
-        AmountText(data.totalAmount, style: theme.textTheme.displaySmall),
-        const SizedBox(height: 4),
-        Text(change(), style: theme.textTheme.bodyMedium?.copyWith(color: muted)),
         const SizedBox(height: 20),
         if (data.categories.isEmpty)
           Padding(

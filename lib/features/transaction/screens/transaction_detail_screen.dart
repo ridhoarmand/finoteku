@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/features/category/theme/category_theme.dart';
+import 'package:finoteku/widgets/icon_tile.dart';
 import '../../../utils/wallet_icon_helper.dart';
 import '../../../widgets/amount_text.dart';
 import '../../../theme/app_theme.dart';
@@ -191,20 +193,13 @@ class _TransactionDetailScreenState
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
         // The amount is the focal point; what it was for sits right under it.
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: context.colors.sunken,
-            borderRadius: BorderRadius.circular(AppTheme.rCard),
-          ),
-          child: Icon(
-            CategoryIconHelper.iconFor(
-              codePoint: category?.iconCodePoint,
-              name: category?.name ?? '',
-            ),
-            size: 26,
-            color: theme.colorScheme.onSurface,
+        Align(
+          alignment: Alignment.centerLeft,
+          child: IconTile(
+            CategoryIconHelper.iconFor(codePoint: category?.iconCodePoint, name: category?.name ?? ''),
+            color: CategoryTheme.forCategory(context, category?.parentId ?? category?.id),
+            size: 48,
+            radius: AppTheme.rCard,
           ),
         ),
         const SizedBox(height: 16),

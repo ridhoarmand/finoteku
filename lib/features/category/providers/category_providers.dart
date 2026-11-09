@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
+import '../theme/category_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/category.dart';
 import '../services/category_service.dart';
@@ -35,7 +36,9 @@ final categoriesAllProvider = FutureProvider.family<List<Category>, String>((
 ) async {
   ref.watch(categoryRefreshProvider);
   final svc = ref.watch(categoryServiceProvider);
-  return svc.getCategories(userId, includeInactive: true);
+  final all = await svc.getCategories(userId, includeInactive: true);
+  CategoryTheme.assignSlots(all);
+  return all;
 });
 
 // Provider untuk categories by type dengan sorting alphabetical

@@ -107,8 +107,7 @@ flutter:
     - assets/icon_transparent.png
     - assets/icon_apps.png
     - assets/onboardings/
-    - assets/banks/
-    - assets/ewallets/
+    - assets/finlogos/
     - assets/wallets/
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg

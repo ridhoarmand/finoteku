@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/features/category/theme/category_theme.dart';
+import 'package:finoteku/widgets/icon_tile.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:finoteku/theme/ph_icons.dart';
 
@@ -143,17 +145,20 @@ class LedgerRow extends ConsumerWidget {
     final String subtitle;
     final IconData icon;
     final AmountTone tone;
+    final Color tint;
 
     if (item.isTransfer) {
       final from = walletMap[item.fromWalletId]?.name;
       final to = walletMap[item.toWalletId]?.name;
       icon = PhRegular.arrowsLeftRight;
+      tint = theme.colorScheme.primary;
       tone = AmountTone.transfer;
       title = (e.notes?.trim().isNotEmpty ?? false) ? e.notes!.trim() : ref.tr(context, 'transfer');
       subtitle = '${from ?? '?'} → ${to ?? '?'}';
     } else {
       final cat = categoryMap[e.categoryId];
       final income = e.signedAmount >= 0;
+      tint = CategoryTheme.forCategory(context, cat?.parentId ?? cat?.id);
       icon = CategoryIconHelper.iconFor(codePoint: cat?.iconCodePoint, name: cat?.name ?? '');
       tone = income ? AmountTone.income : AmountTone.expense;
       final catName = cat?.name ?? ref.tr(context, 'uncategorized');
@@ -176,15 +181,7 @@ class LedgerRow extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: context.colors.sunken,
-                borderRadius: BorderRadius.circular(AppTheme.rControl),
-              ),
-              child: Icon(icon, size: 22, color: theme.colorScheme.onSurface),
-            ),
+            IconTile(icon, color: tint),
             const SizedBox(width: 14),
             Expanded(
               child: Column(

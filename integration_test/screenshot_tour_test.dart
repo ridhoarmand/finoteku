@@ -93,6 +93,18 @@ void main() {
     if (await tapText('Kelola Dompet')) {
       await wait(2000);
       await shot('06_wallets');
+      // wallet logo picker (idn-finlogos)
+      final add = find.descendant(of: find.byType(AppBar), matching: find.byType(IconButton));
+      if (add.evaluate().isNotEmpty) {
+        await tester.tap(add.last);
+        await wait();
+        if (await tapText('Pilih Ikon')) {
+          await wait(2500);
+          await shot('06b_wallet_logos');
+          await back();
+        }
+        await back();
+      }
       await back();
     }
     if (await tapText('Kelola Kategori')) {

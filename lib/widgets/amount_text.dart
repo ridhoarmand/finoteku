@@ -60,7 +60,7 @@ class AmountText extends StatelessWidget {
               // a small "Rp" only reads well next to big numbers; in rows keep it legible
               fontSize: size * (size >= 24 ? 0.6 : 0.82),
               fontWeight: FontWeight.w600,
-              color: tone == AmountTone.neutral ? colors.muted : color,
+              color: tone == AmountTone.neutral ? color.withValues(alpha: 0.7) : color,
             ),
           ),
           TextSpan(text: number, style: base.copyWith(color: color)),
