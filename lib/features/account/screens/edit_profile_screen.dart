@@ -48,7 +48,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             content: Text(
               '${ref.tr(context, 'error_loading_user')}: ${e.toString()}',
             ),
-            backgroundColor: Colors.red,
           ),
         );
       }
@@ -73,7 +72,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(profileState.error!),
-            backgroundColor: Colors.red,
             action: SnackBarAction(
               label: ref.tr(context, 'dismiss'),
               onPressed: () {

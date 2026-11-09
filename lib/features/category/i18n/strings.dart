@@ -45,9 +45,9 @@ const Map<String, String> categoryStringsEn = {
   'no_parent_category': 'None (Main Category)',
   // Examples changed to education
   'example': 'Example:',
-  'example_education_main': '📚 Education (Main Category)',
-  'example_tuition_sub': '  └── 🏫 Tuition Fee (Sub-category)',
-  'example_books_sub': '  └── 📖 Books (Sub-category)',
+  'example_education_main': 'Education (Main Category)',
+  'example_tuition_sub': '  └── Tuition Fee (Sub-category)',
+  'example_books_sub': '  └── Books (Sub-category)',
 
   // Delete category dialog
   'delete_category_title': 'Delete Category',
@@ -103,9 +103,9 @@ const Map<String, String> categoryStringsId = {
   'no_parent_category': 'Tidak Ada (Kategori Utama)',
   // Examples changed to education
   'example': 'Contoh:',
-  'example_education_main': '📚 Pendidikan (Kategori Utama)',
-  'example_tuition_sub': '  └── 🏫 Bayar Sekolah (Sub-kategori)',
-  'example_books_sub': '  └── 📖 Beli Buku (Sub-kategori)',
+  'example_education_main': 'Pendidikan (Kategori Utama)',
+  'example_tuition_sub': '  └── Bayar Sekolah (Sub-kategori)',
+  'example_books_sub': '  └── Beli Buku (Sub-kategori)',
 
   // Delete category dialog
   'delete_category_title': 'Hapus Kategori',

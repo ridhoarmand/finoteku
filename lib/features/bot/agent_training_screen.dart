@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/app_theme.dart';
 import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -147,12 +148,12 @@ class _AgentTrainingScreenState extends ConsumerState<AgentTrainingScreen>
         ),
         const SizedBox(height: 8),
         if (instructions.isEmpty)
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(vertical: 32),
             child: Center(
               child: Text(
                 'Belum ada instruksi khusus. Tambahkan di atas!',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: context.colors.muted),
               ),
             ),
           )
@@ -160,7 +161,7 @@ class _AgentTrainingScreenState extends ConsumerState<AgentTrainingScreen>
           ...instructions.map((item) => Card(
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
-                  leading: const Icon(PhRegular.checkCircle, color: Colors.green),
+                  leading: Icon(PhRegular.checkCircle, color: context.colors.income),
                   title: Text(item.instructionText ?? ''),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -170,7 +171,7 @@ class _AgentTrainingScreenState extends ConsumerState<AgentTrainingScreen>
                         onChanged: (val) => _toggleActive(item.id, val),
                       ),
                       IconButton(
-                        icon: const Icon(PhRegular.trash, color: Colors.red),
+                        icon: Icon(PhRegular.trash, color: Theme.of(context).colorScheme.error),
                         onPressed: () => _deleteItem(item.id),
                       ),
                     ],
@@ -191,12 +192,12 @@ class _AgentTrainingScreenState extends ConsumerState<AgentTrainingScreen>
       children: [
         Card(
           elevation: 0,
-          color: Colors.blue.withValues(alpha: 0.1),
+          color: Theme.of(context).colorScheme.primaryContainer,
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                const Icon(PhRegular.lightbulb, color: Colors.blue),
+                Icon(PhRegular.lightbulb, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -215,12 +216,12 @@ class _AgentTrainingScreenState extends ConsumerState<AgentTrainingScreen>
         ),
         const SizedBox(height: 8),
         if (examples.isEmpty)
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(vertical: 32),
             child: Center(
               child: Text(
                 'Belum ada contoh chat. Tekan tombol "+" untuk menambah contoh!',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: context.colors.muted),
               ),
             ),
           )
@@ -236,7 +237,7 @@ class _AgentTrainingScreenState extends ConsumerState<AgentTrainingScreen>
                   children: [
                     Row(
                       children: [
-                        const Icon(PhRegular.chatCircle, size: 18, color: Colors.blue),
+                        Icon(PhRegular.chatCircle, size: 18, color: Theme.of(context).colorScheme.primary),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -251,7 +252,7 @@ class _AgentTrainingScreenState extends ConsumerState<AgentTrainingScreen>
                           onChanged: (val) => _toggleActive(item.id, val),
                         ),
                         IconButton(
-                          icon: const Icon(PhRegular.trash, color: Colors.red, size: 20),
+                          icon: Icon(PhRegular.trash, color: Theme.of(context).colorScheme.error, size: 20),
                           onPressed: () => _deleteItem(item.id),
                         ),
                       ],
@@ -357,9 +358,9 @@ class _AgentTrainingScreenState extends ConsumerState<AgentTrainingScreen>
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Tuliskan contoh pesan chat dan tentukan nilai field sistem yang diharapkan:',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                      style: TextStyle(fontSize: 12, color: context.colors.muted),
                     ),
                     const SizedBox(height: 12),
                     TextField(

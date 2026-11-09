@@ -155,7 +155,7 @@ class SupportSettingsWidget extends ConsumerWidget {
 
                 // Footer
                 Text(
-                  'Dibangun dengan ❤️ menggunakan Flutter & Supabase\n\n© 2025 Ridho Armansyah\nAll rights reserved.',
+                  'Dibuat dengan Flutter & Supabase\n\n© 2025 Ridho Armansyah\nAll rights reserved.',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -333,7 +333,7 @@ class SupportSettingsWidget extends ConsumerWidget {
   Future<void> _checkAppUpdate(BuildContext context, WidgetRef ref) async {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('🔎 Memeriksa rilis versi terbaru...'),
+        content: Text('Memeriksa versi terbaru…'),
         duration: Duration(seconds: 2),
       ),
     );
@@ -352,8 +352,7 @@ class SupportSettingsWidget extends ConsumerWidget {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('✅ Aplikasi Finoteku sudah menggunakan versi terbaru (v${updateInfo.currentVersion}).'),
-          backgroundColor: Colors.green,
+          content: Text('Finoteku sudah versi terbaru (v${updateInfo.currentVersion}).'),
           duration: const Duration(seconds: 3),
         ),
       );

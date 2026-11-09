@@ -572,7 +572,6 @@ class _AddEditTransactionScreenState
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(ref.tr(context, 'insufficient_balance_error')),
-                backgroundColor: Colors.red,
               ),
             );
           }
@@ -611,7 +610,6 @@ class _AddEditTransactionScreenState
                 content: Text(
                   ref.tr(context, 'insufficient_balance_for_transfer'),
                 ),
-                backgroundColor: Colors.red,
               ),
             );
           }
@@ -729,7 +727,6 @@ class _AddEditTransactionScreenState
             content: Text(
               '${ref.tr(context, 'error_saving_transaction')}: ${e.toString()}',
             ),
-            backgroundColor: Colors.red,
           ),
         );
       }

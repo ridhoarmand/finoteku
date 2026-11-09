@@ -179,7 +179,7 @@ class ManageWalletsScreen extends ConsumerWidget {
         } catch (e) {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+              SnackBar(content: Text('Error: $e')),
             );
           }
         }
@@ -265,7 +265,7 @@ class ManageWalletsScreen extends ConsumerWidget {
             child: Text(ref.tr(context, 'cancel')),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
             onPressed: () async {
               try {
                 await ref
@@ -285,7 +285,6 @@ class ManageWalletsScreen extends ConsumerWidget {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Error: $e'),
-                      backgroundColor: Colors.red,
                     ),
                   );
                 }

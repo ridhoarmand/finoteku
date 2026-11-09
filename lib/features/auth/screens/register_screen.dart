@@ -50,7 +50,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(ref.tr(context, 'registration_success')),
-            backgroundColor: Colors.green,
           ),
         );
         context.go('/login');
@@ -62,7 +61,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             content: Text(
               '${ref.tr(context, 'registration_failed')}: ${e.toString()}',
             ),
-            backgroundColor: Colors.red,
           ),
         );
       }

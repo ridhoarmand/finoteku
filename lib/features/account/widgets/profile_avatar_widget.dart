@@ -155,10 +155,10 @@ class ProfileAvatarWidget extends ConsumerWidget {
             if (profileState.imageFile != null ||
                 profileState.avatarUrl != null)
               ListTile(
-                leading: const Icon(PhRegular.trash, color: Colors.red),
+                leading: Icon(PhRegular.trash, color: Theme.of(context).colorScheme.error),
                 title: Text(
                   ref.trRead('photo_remove'),
-                  style: const TextStyle(color: Colors.red),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
                 onTap: () {
                   profileNotifier.removePhoto();
@@ -187,7 +187,7 @@ class ProfileAvatarWidget extends ConsumerWidget {
         final error = ref.read(editProfileProvider).error;
         if (error != null && context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(error), backgroundColor: Colors.red),
+            SnackBar(content: Text(error)),
           );
           profileNotifier.clearError();
         }
@@ -196,7 +196,6 @@ class ProfileAvatarWidget extends ConsumerWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(ref.trRead('photo_permission_required')),
-              backgroundColor: Colors.orange,
               duration: const Duration(seconds: 2),
             ),
           );

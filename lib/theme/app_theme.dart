@@ -284,6 +284,8 @@ class AppTheme {
           shape: rounded(rControl),
           side: hairline,
           selectedBackgroundColor: scheme.primaryContainer,
+          selectedForegroundColor: scheme.onPrimaryContainer,
+          foregroundColor: scheme.onSurface,
           textStyle: text.labelLarge,
         ),
       ),

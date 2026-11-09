@@ -551,7 +551,6 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                   ? ref.tr(context, 'category_updated_success')
                   : ref.tr(context, 'category_added_success'),
             ),
-            backgroundColor: Colors.green,
           ),
         );
 
@@ -567,7 +566,6 @@ class _AddEditCategoryScreenState extends ConsumerState<AddEditCategoryScreen> {
                   ? ref.tr(context, 'error_updating_category')
                   : ref.tr(context, 'error_creating_category'),
             ),
-            backgroundColor: Colors.red,
           ),
         );
       }

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/app_theme.dart';
 import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
@@ -62,7 +63,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       builder: (dialogContext) => AlertDialog(
         title: Row(
           children: [
-            Icon(PhRegular.bellRinging, color: Colors.orange),
+            Icon(PhRegular.bellRinging, color: Theme.of(context).colorScheme.primary),
             SizedBox(width: 8),
             Text(ref.tr(context, 'notif_permission_title')),
           ],
@@ -89,7 +90,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.blue[50],
+                  color: Theme.of(context).colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -128,7 +129,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       children: [
         Icon(
           granted ? PhFill.checkCircle : PhRegular.xCircle,
-          color: granted ? Colors.green : Colors.red,
+          color: granted ? context.colors.income : Theme.of(context).colorScheme.error,
           size: 20,
         ),
         const SizedBox(width: 12),
@@ -139,7 +140,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
               Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
               Text(
                 subtitle,
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                style: TextStyle(fontSize: 12, color: context.colors.muted),
               ),
             ],
           ),
@@ -168,15 +169,15 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: Colors.orange[100],
+              color: context.colors.sunken,
               child: Row(
                 children: [
-                  Icon(PhRegular.info, size: 18, color: Colors.orange[800]),
+                  Icon(PhRegular.info, size: 18, color: Theme.of(context).colorScheme.onSurface),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       ref.tr(context, 'notif_emulator_warning'),
-                      style: TextStyle(fontSize: 11, color: Colors.orange[900]),
+                      style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface),
                     ),
                   ),
                 ],

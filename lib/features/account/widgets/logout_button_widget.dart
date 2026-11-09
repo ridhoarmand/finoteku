@@ -65,7 +65,6 @@ class LogoutButtonWidget extends ConsumerWidget {
                           .tr(context, 'logout_failed')
                           .replaceFirst('{0}', e.toString()),
                     ),
-                    backgroundColor: Colors.red,
                   ),
                 );
               }
@@ -75,8 +74,8 @@ class LogoutButtonWidget extends ConsumerWidget {
         icon: const Icon(PhRegular.signOut),
         label: Text(ref.tr(context, 'logout')),
         style: FilledButton.styleFrom(
-          backgroundColor: Colors.red,
-          foregroundColor: Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.error,
+          foregroundColor: Theme.of(context).colorScheme.onError,
         ),
       ),
     );

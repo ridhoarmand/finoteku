@@ -17,12 +17,12 @@ class CategoryDeleteDialog extends ConsumerWidget {
     return AlertDialog(
       title: Row(
         children: [
-          const Icon(PhRegular.trash, color: Colors.red, size: 24),
+          Icon(PhRegular.trash, color: Theme.of(context).colorScheme.error, size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               ref.tr(context, 'delete_category_title'),
-              style: const TextStyle(color: Colors.red),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
         ],
@@ -50,8 +50,8 @@ class CategoryDeleteDialog extends ConsumerWidget {
         FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
           style: FilledButton.styleFrom(
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
+            backgroundColor: Theme.of(context).colorScheme.error,
+            foregroundColor: Theme.of(context).colorScheme.onError,
           ),
           child: Text(ref.tr(context, 'delete')),
         ),
@@ -109,7 +109,7 @@ class CategoryDeleteDialog extends ConsumerWidget {
               .tr(context, 'category_deleted_success')
               .replaceAll('{category}', category.name);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('✅ $msg'), backgroundColor: Colors.green),
+            SnackBar(content: Text(msg)),
           );
         }
       } catch (e) {
@@ -124,7 +124,7 @@ class CategoryDeleteDialog extends ConsumerWidget {
               .tr(context, 'category_delete_failed')
               .replaceAll('{error}', e.toString());
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('❌ $msg'), backgroundColor: Colors.red),
+            SnackBar(content: Text(msg)),
           );
         }
       }

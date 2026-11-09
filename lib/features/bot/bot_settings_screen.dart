@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/app_theme.dart';
 import 'package:finoteku/theme/ph_icons.dart';
 import '../../core/localization/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -123,7 +124,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                             ? '${ref.tr(context, 'bot_connected')}${botLink?.platformUsername != null ? ' (@${botLink!.platformUsername})' : ''}'
                             : ref.tr(context, 'bot_not_connected'),
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: isConnected ? Colors.green : Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: isConnected ? context.colors.income : Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -131,7 +132,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                 ),
                 Icon(
                   isConnected ? PhFill.checkCircle : PhRegular.circle,
-                  color: isConnected ? Colors.green : Theme.of(context).colorScheme.onSurfaceVariant,
+                  color: isConnected ? context.colors.income : Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ],
             ),
@@ -149,8 +150,8 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                 icon: const Icon(PhRegular.linkBreak),
                 label: Text(ref.tr(context, 'bot_disconnect')),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red,
-                  side: const BorderSide(color: Colors.red),
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                  side: BorderSide(color: Theme.of(context).colorScheme.error),
                 ),
               )
             else
@@ -202,7 +203,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                       Text(
                         ref.tr(context, 'bot_training_sub'),
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: Colors.grey,
+                          color: context.colors.muted,
                         ),
                       ),
                     ],
@@ -307,7 +308,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
             child: Text(ref.tr(context, 'bot_disconnect')),
           ),
         ],
@@ -381,7 +382,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
             child: Text(ref.tr(context, 'bot_disconnect')),
           ),
         ],
@@ -416,8 +417,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
-                    Icons
-                        .wechat, // Using wechat as a generic chat icon, or replace with an image
+                    PhRegular.whatsappLogo,
                     color: Color(0xFF25D366),
                     size: 24,
                   ),
@@ -438,7 +438,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                             ? '${ref.tr(context, 'bot_connected')}${botLink?.platformUserId != null ? ' (${botLink!.platformUserId})' : ''}'
                             : ref.tr(context, 'bot_not_connected'),
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: isConnected ? Colors.green : Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: isConnected ? context.colors.income : Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -446,7 +446,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                 ),
                 Icon(
                   isConnected ? PhFill.checkCircle : PhRegular.circle,
-                  color: isConnected ? Colors.green : Theme.of(context).colorScheme.onSurfaceVariant,
+                  color: isConnected ? context.colors.income : Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ],
             ),
@@ -464,8 +464,8 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                 icon: const Icon(PhRegular.linkBreak),
                 label: Text(ref.tr(context, 'bot_disconnect')),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red,
-                  side: const BorderSide(color: Colors.red),
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                  side: BorderSide(color: Theme.of(context).colorScheme.error),
                 ),
               )
             else
@@ -474,7 +474,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
                 icon: const Icon(PhRegular.link),
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF25D366),
-                  foregroundColor: Colors.white,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 ),
                 label: Text(ref.tr(context, 'bot_connect_whatsapp')),
               ),

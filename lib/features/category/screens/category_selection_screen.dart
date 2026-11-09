@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../theme/app_theme.dart';
 import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,7 +8,6 @@ import '../providers/category_providers.dart';
 import '../screens/add_edit_category_screen.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../utils/category_icon_helper.dart';
-import '../theme/category_theme.dart';
 
 class CategorySelectionScreen extends ConsumerStatefulWidget {
   final String userId;
@@ -301,12 +301,17 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
     final isSelected = widget.selectedCategory?.id == category.id;
 
     // Get icon from category model or use default
-    IconData icon = CategoryIconHelper.getIconFromCodePoint(
-      category.iconCodePoint,
+    final icon = CategoryIconHelper.iconFor(codePoint: category.iconCodePoint, name: category.name);
+    // Neutral tile like every list in the app (selection is shown by the row itself).
+    Widget tile(double size) => Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: context.colors.sunken,
+        borderRadius: BorderRadius.circular(AppTheme.rControl),
+      ),
+      child: Icon(icon, size: size * 0.55, color: theme.colorScheme.onSurface),
     );
-
-    // Use standardized color by type
-    final Color color = CategoryTheme.forType(context, widget.categoryType);
 
     // Different styling based on hierarchy level
     Widget leadingWidget;
@@ -322,14 +327,10 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
             child: Icon(
               PhRegular.arrowElbowDownRight,
               size: 16,
-              color: Colors.grey[400],
+              color: context.colors.muted,
             ),
           ),
-          CircleAvatar(
-            radius: 14,
-            backgroundColor: color.withValues(alpha: 0.15),
-            child: Icon(icon, color: color, size: 12),
-          ),
+          tile(32),
         ],
       );
       cardMargin = EdgeInsets.only(
@@ -342,22 +343,15 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
       leadingWidget = Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(PhRegular.warning, size: 18, color: Colors.orange),
+          Icon(PhRegular.warning, size: 18, color: theme.colorScheme.error),
           const SizedBox(width: 8),
-          CircleAvatar(
-            radius: 14,
-            backgroundColor: color.withValues(alpha: 0.15),
-            child: Icon(icon, color: color, size: 12),
-          ),
+          tile(32),
         ],
       );
       cardMargin = const EdgeInsets.only(bottom: 4);
     } else {
       // Parent category styling
-      leadingWidget = CircleAvatar(
-        backgroundColor: color.withValues(alpha: 0.15),
-        child: Icon(icon, color: color, size: 20),
-      );
+      leadingWidget = tile(40);
       cardMargin = const EdgeInsets.only(bottom: 2, top: 4);
     }
 
@@ -370,7 +364,7 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
         border: Border.all(
           color: isSelected
               ? theme.colorScheme.primary
-              : (isChild ? Colors.grey.shade200 : Colors.grey.shade200),
+              : (isChild ? context.colors.muted : context.colors.muted),
           width: isSelected ? 2 : (isChild ? 0.5 : 1),
         ),
         borderRadius: BorderRadius.circular(12),
@@ -411,21 +405,21 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
                 ? PhRegular.trendDown
                 : PhRegular.trendUp,
             size: 64,
-            color: Colors.grey[400],
+            color: context.colors.muted,
           ),
           const SizedBox(height: 16),
           Text(
             ref.tr(context, 'categories_empty_title'),
             style: Theme.of(
               context,
-            ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
+            ).textTheme.titleMedium?.copyWith(color: context.colors.muted),
           ),
           const SizedBox(height: 8),
           Text(
             ref.tr(context, 'categories_empty_sub'),
             style: Theme.of(
               context,
-            ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
+            ).textTheme.bodyMedium?.copyWith(color: context.colors.muted),
           ),
         ],
       ),
@@ -445,7 +439,7 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(PhRegular.warningCircle, size: 64, color: Colors.red),
+                Icon(PhRegular.warningCircle, size: 64, color: Theme.of(context).colorScheme.error),
                 const SizedBox(height: 16),
                 Text('Error: ${error.toString()}'),
                 const SizedBox(height: 16),

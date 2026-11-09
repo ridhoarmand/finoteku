@@ -40,15 +40,15 @@ class FAQService {
           question: 'Apa saja fitur utama Finoteku?',
           answer:
               'Finoteku memiliki fitur-fitur berikut:\n\n'
-              '• 📝 Pencatatan transaksi (pemasukan & pengeluaran)\n'
-              '• 📂 Manajemen kategori dan sub-kategori\n'
-              '• 💰 Manajemen multiple dompet/akun\n'
-              '• 🔄 Transfer antar dompet\n'
-              '• 📊 Laporan keuangan visual dengan grafik\n'
-              '• 🔔 Notifikasi pengingat\n'
-              '• 🌙 Mode gelap & terang\n'
-              '• 📱 Sinkronisasi cloud\n'
-              '• 🔒 Keamanan data dengan enkripsi',
+              '• Pencatatan transaksi (pemasukan & pengeluaran)\n'
+              '• Manajemen kategori dan sub-kategori\n'
+              '• Manajemen multiple dompet/akun\n'
+              '• Transfer antar dompet\n'
+              '• Laporan keuangan visual dengan grafik\n'
+              '• Notifikasi pengingat\n'
+              '• Mode gelap & terang\n'
+              '• Sinkronisasi cloud\n'
+              '• Keamanan data dengan enkripsi',
           category: FAQCategory.gettingStarted,
           keywords: ['fitur', 'fungsi', 'kemampuan'],
           priority: 9,
@@ -106,9 +106,9 @@ class FAQService {
               '5. Tap "Simpan"\n\n'
               'Untuk menghapus:\n'
               '1. Buka detail transaksi\n'
-              '2. Tap ikon "Hapus" (🗑️)\n'
+              '2. Tap ikon "Hapus" ()\n'
               '3. Konfirmasi penghapusan\n\n'
-              '⚠️ Hati-hati: Transaksi yang dihapus tidak dapat dikembalikan.',
+              'Hati-hati: Transaksi yang dihapus tidak dapat dikembalikan.',
           category: FAQCategory.transactions,
           keywords: ['edit', 'ubah', 'hapus', 'delete'],
           priority: 8,
@@ -118,12 +118,12 @@ class FAQService {
           question: 'Apa perbedaan antara pemasukan dan pengeluaran?',
           answer:
               'Perbedaan utama:\n\n'
-              '💰 **Pemasukan (Income):**\n'
+              '**Pemasukan (Income):**\n'
               '• Uang yang masuk ke dompet Anda\n'
               '• Menambah saldo dompet\n'
               '• Contoh: gaji, bonus, hadiah, penjualan\n'
               '• Ditampilkan dengan warna hijau\n\n'
-              '💸 **Pengeluaran (Expense):**\n'
+              '**Pengeluaran (Expense):**\n'
               '• Uang yang keluar dari dompet\n'
               '• Mengurangi saldo dompet\n'
               '• Contoh: belanja, makan, transport, tagihan\n'
@@ -182,10 +182,10 @@ class FAQService {
           answer:
               'Sub-kategori adalah kategori yang berada di bawah kategori utama:\n\n'
               '**Contoh struktur:**\n'
-              '📂 Makanan (kategori utama)\n'
-              '  ├── 🍽️ Makan di rumah\n'
-              '  ├── 🍕 Makan di luar\n'
-              '  └── ☕ Minuman\n\n'
+              'Makanan (kategori utama)\n'
+              '  ├── Makan di rumah\n'
+              '  ├── Makan di luar\n'
+              '  └── Minuman\n\n'
               '**Keuntungan:**\n'
               '• Organisasi yang lebih detail\n'
               '• Laporan lebih spesifik\n'
@@ -210,7 +210,7 @@ class FAQService {
               '• Kategori dengan transaksi: tidak bisa dihapus langsung\n'
               '• Solusi: sembunyikan kategori atau pindahkan transaksi ke kategori lain\n'
               '• Kategori kosong: bisa dihapus langsung\n\n'
-              '⚠️ Hati-hati saat mengubah kategori yang sudah memiliki banyak transaksi.',
+              'Hati-hati saat mengubah kategori yang sudah memiliki banyak transaksi.',
           category: FAQCategory.categories,
           keywords: ['ubah', 'edit', 'hapus', 'sembunyikan'],
           priority: 6,
@@ -220,17 +220,17 @@ class FAQService {
           question: 'Apa saja contoh kategori yang baik untuk pengeluaran?',
           answer:
               'Berikut contoh kategori pengeluaran yang umum digunakan:\n\n'
-              '🍽️ **Makanan & Minuman**\n'
+              '**Makanan & Minuman**\n'
               '  • Groceries, Makan di luar, Minuman\n\n'
-              '🚗 **Transportasi**\n'
+              '**Transportasi**\n'
               '  • Bensin, Parkir, Ojek online, Tol\n\n'
-              '🏠 **Rumah Tangga**\n'
+              '**Rumah Tangga**\n'
               '  • Listrik, Air, Internet, Kebersihan\n\n'
-              '👕 **Fashion & Kecantikan**\n'
+              '**Fashion & Kecantikan**\n'
               '  • Pakaian, Kosmetik, Salon\n\n'
-              '💊 **Kesehatan**\n'
+              '**Kesehatan**\n'
               '  • Obat, Dokter, Rumah sakit\n\n'
-              '🎬 **Hiburan**\n'
+              '**Hiburan**\n'
               '  • Bioskop, Game, Streaming\n\n'
               'Sesuaikan dengan gaya hidup dan kebutuhan pribadi Anda.',
           category: FAQCategory.categories,
@@ -267,15 +267,15 @@ class FAQService {
           question: 'Apa perbedaan jenis dompet (Bank, E-wallet, Tunai)?',
           answer:
               'Perbedaan jenis dompet:\n\n'
-              '🏦 **Bank**\n'
+              '**Bank**\n'
               '• Rekening bank konvensional\n'
               '• Contoh: BCA, Mandiri, BRI, BNI\n'
               '• Biasanya untuk transaksi besar\n\n'
-              '📱 **E-wallet**\n'
+              '**E-wallet**\n'
               '• Dompet digital\n'
               '• Contoh: GoPay, OVO, Dana, ShopeePay\n'
               '• Untuk transaksi online dan cashless\n\n'
-              '💵 **Tunai**\n'
+              '**Tunai**\n'
               '• Uang fisik\n'
               '• Dompet, kas kecil, tabungan rumah\n'
               '• Untuk transaksi sehari-hari\n\n'
@@ -297,7 +297,7 @@ class FAQService {
               '2. Tap dompet yang ingin diubah\n'
               '3. Edit saldo awal\n'
               '4. Simpan perubahan\n\n'
-              '⚠️ **Penting:** Perubahan saldo awal akan mempengaruhi semua laporan dan perhitungan. Gunakan dengan hati-hati.\n\n'
+              '**Penting:** Perubahan saldo awal akan mempengaruhi semua laporan dan perhitungan. Gunakan dengan hati-hati.\n\n'
               'Tips: Lakukan sinkronisasi berkala dengan saldo real untuk akurasi data.',
           category: FAQCategory.wallets,
           keywords: ['saldo', 'awal', 'balance', 'ubah'],
@@ -340,10 +340,9 @@ class FAQService {
               '3. Pilih periode (Mingguan/Bulanan/Tahunan)\n'
               '4. Gunakan panah untuk navigasi periode\n\n'
               '**Yang bisa Anda lihat:**\n'
-              '• 📊 Grafik pie untuk proporsi kategori\n'
-              '• 📈 Perbandingan dengan periode sebelumnya\n'
-              '• 📋 Detail per kategori\n'
-              '• 🔢 Total amount dan jumlah transaksi\n\n'
+              '• Total periode dan perbandingannya dengan periode sebelumnya\n'
+              '• Daftar kategori dari yang terbesar, dengan bar dan persentase\n'
+              '• Jumlah transaksi per kategori\n\n'
               'Tap kategori "Lainnya" untuk melihat detail kategori minor.',
           category: FAQCategory.reports,
           keywords: ['laporan', 'report', 'analisis', 'grafik'],
@@ -351,20 +350,15 @@ class FAQService {
         ),
         const FAQItem(
           id: 'rep_002',
-          question: 'Apa arti warna-warna di grafik laporan?',
+          question: 'Bagaimana membaca daftar kategori di laporan?',
           answer:
-              'Penjelasan warna di grafik laporan:\n\n'
-              '🔵 **Biru - Makanan**: Transaksi terkait konsumsi\n'
-              '🟠 **Orange - Transportasi**: Perjalanan dan kendaraan\n'
-              '🟡 **Kuning - Hiburan**: Rekreasi dan hobi\n'
-              '🟢 **Hijau - Kesehatan**: Medical dan wellness\n'
-              '🟣 **Ungu - Belanja**: Shopping dan retail\n'
-              '🔴 **Merah - Tagihan**: Utilities dan pembayaran rutin\n'
-              '⚫ **Abu-abu - Lainnya**: Kategori dengan jumlah kecil\n\n'
-              'Warna disesuaikan otomatis berdasarkan kategori yang paling banyak digunakan.\n\n'
-              'Tips: Semakin besar bagian warna, semakin besar pengeluaran di kategori tersebut.',
+              'Kategori diurutkan dari nominal terbesar.\n\n'
+              '• Panjang bar menunjukkan besarnya dibanding kategori terbesar\n'
+              '• Persentase menunjukkan bagian dari total periode\n'
+              '• Kategori kecil digabung ke "Lainnya"; tap untuk melihat isinya\n\n'
+              'Semua bar memakai satu warna supaya mudah dibandingkan dari panjangnya.',
           category: FAQCategory.reports,
-          keywords: ['warna', 'grafik', 'pie chart', 'kategori'],
+          keywords: ['warna', 'grafik', 'bar', 'kategori', 'urutan'],
           priority: 6,
         ),
         const FAQItem(
@@ -446,7 +440,7 @@ class FAQService {
               'Ya, Anda bisa mengedit atau membatalkan transfer:\n\n'
               '**Mengedit transfer:**\n'
               '1. Buka halaman transaksi\n'
-              '2. Cari transaksi transfer (ditandai ikon ↔️)\n'
+              '2. Cari transaksi transfer (ditandai ikon )\n'
               '3. Tap untuk membuka detail\n'
               '4. Pilih "Edit Transfer"\n'
               '5. Ubah informasi yang diperlukan\n'
@@ -455,7 +449,7 @@ class FAQService {
               '1. Buka detail transfer\n'
               '2. Tap "Batalkan Transfer"\n'
               '3. Konfirmasi pembatalan\n\n'
-              '⚠️ Hati-hati: Perubahan akan mempengaruhi saldo kedua dompet yang terlibat.',
+              'Hati-hati: Perubahan akan mempengaruhi saldo kedua dompet yang terlibat.',
           category: FAQCategory.transfers,
           keywords: ['edit', 'batal', 'ubah', 'cancel'],
           priority: 5,
@@ -525,9 +519,9 @@ class FAQService {
               '• Sesuaikan dengan gaya personal\n'
               '• Tambahkan emoji untuk visual menarik\n\n'
               '**Contoh pesan:**\n'
-              '• "Jangan lupa catat pengeluaran hari ini! 💰"\n'
-              '• "Review keuangan yuk! 📊"\n'
-              '• "Budget masih aman? Cek sekarang! ✅"',
+              '• "Jangan lupa catat pengeluaran hari ini! "\n'
+              '• "Review keuangan yuk! "\n'
+              '• "Budget masih aman? Cek sekarang! "',
           category: FAQCategory.notifications,
           keywords: ['pesan', 'custom', 'ubah', 'edit'],
           priority: 4,
@@ -598,7 +592,7 @@ class FAQService {
               '1. Logout dari akun saat ini\n'
               '2. Di halaman login, masukkan kredensial akun baru\n'
               '3. Login dengan akun yang diinginkan\n\n'
-              '⚠️ **Penting:**\n'
+              '**Penting:**\n'
               '• Data tidak akan hilang saat logout\n'
               '• Login kembali akan memulihkan semua data\n'
               '• Pastikan ingat password sebelum logout\n\n'
@@ -632,7 +626,7 @@ class FAQService {
               '• Jangan force close aplikasi saat sinkron\n'
               '• Update aplikasi secara berkala\n'
               '• Login konsisten dengan akun yang sama\n\n'
-              '⚠️ Jika masih bermasalah, hubungi support dengan detail:\n'
+              'Jika masih bermasalah, hubungi support dengan detail:\n'
               '• Versi aplikasi\n'
               '• Waktu kejadian\n'
               '• Langkah yang dilakukan',
@@ -686,7 +680,7 @@ class FAQService {
               '• Koreksi saldo awal jika perlu\n'
               '• Hapus dan input ulang transaksi bermasalah\n'
               '• Lakukan recalculation dengan logout-login\n\n'
-              '💡 Tips: Bandingkan dengan saldo real untuk memastikan akurasi.',
+              'Tips: Bandingkan dengan saldo real untuk memastikan akurasi.',
           category: FAQCategory.troubleshooting,
           keywords: ['saldo', 'salah', 'tidak sesuai', 'balance'],
           priority: 9,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/app_theme.dart';
 import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/app_localizations.dart';
@@ -12,11 +13,11 @@ class NotificationEmptyState extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(PhRegular.bellSlash, size: 64, color: Colors.grey),
+          Icon(PhRegular.bellSlash, size: 64, color: context.colors.muted),
           SizedBox(height: 16),
           Text(
             ref.tr(context, 'notif_empty_title'),
-            style: TextStyle(fontSize: 18, color: Colors.grey),
+            style: TextStyle(fontSize: 18, color: context.colors.muted),
           ),
           SizedBox(height: 8),
           Padding(
@@ -24,7 +25,7 @@ class NotificationEmptyState extends ConsumerWidget {
             child: Text(
               ref.tr(context, 'notif_empty_desc'),
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: context.colors.muted),
             ),
           ),
         ],

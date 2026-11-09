@@ -23,7 +23,7 @@ class DailyNotification {
     return DailyNotification(
       id: generateUuidV4(),
       title: 'Pengingat Harian',
-      body: 'Jangan lupa catat pengeluaran kamu ya! 💰',
+      body: 'Jangan lupa catat pengeluaran kamu ya! ',
       time: const TimeOfDay(hour: 19, minute: 0),
       isEnabled: true,
       createdAt: DateTime.now(),

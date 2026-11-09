@@ -218,6 +218,7 @@ abstract final class PhRegular {
   static const target = IconData(0xe47c, fontFamily: 'PhosphorRegular');
   static const taxi = IconData(0xe902, fontFamily: 'PhosphorRegular');
   static const telegramLogo = IconData(0xe5bc, fontFamily: 'PhosphorRegular');
+  static const whatsappLogo = IconData(0xe5d0, fontFamily: 'PhosphorRegular');
   static const television = IconData(0xe754, fontFamily: 'PhosphorRegular');
   static const tennisBall = IconData(0xe720, fontFamily: 'PhosphorRegular');
   static const textT = IconData(0xe48a, fontFamily: 'PhosphorRegular');

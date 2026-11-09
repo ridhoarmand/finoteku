@@ -72,7 +72,7 @@ class AppUpdateDialog extends ConsumerWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'v$currentVersion ➔ v${release.tagName}',
+                        'v$currentVersion → v${release.tagName}',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.primary,
                           fontWeight: FontWeight.w600,
@@ -151,7 +151,7 @@ class AppUpdateDialog extends ConsumerWidget {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text(
-                              '⚠️ Gagal mengunduh rilis APK. Silakan periksa koneksi internet.',
+                              'Gagal membuka unduhan. Periksa koneksi internet lalu coba lagi.',
                             ),
                           ),
                         );

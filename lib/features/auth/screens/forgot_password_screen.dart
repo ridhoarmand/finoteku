@@ -62,7 +62,6 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(ref.tr(context, 'reset_email_sent')),
-            backgroundColor: Colors.green,
           ),
         );
       }
@@ -73,7 +72,6 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             content: Text(
               '${ref.tr(context, 'failed_to_send_reset_email')}: ${e.toString()}',
             ),
-            backgroundColor: Colors.red,
           ),
         );
       }

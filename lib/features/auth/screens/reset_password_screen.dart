@@ -47,7 +47,6 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(ref.tr(context, 'password_reset_success')),
-            backgroundColor: Colors.green,
           ),
         );
 
@@ -76,7 +75,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(displayError), backgroundColor: Colors.red),
+          SnackBar(content: Text(displayError)),
         );
       }
     } finally {

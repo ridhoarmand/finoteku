@@ -73,14 +73,12 @@ class SaveProfileButton extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(ref.tr(context, 'profile_updated_successfully')),
-            backgroundColor: Colors.green,
           ),
         );
       } else if (error != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(ref.tr(context, error)),
-            backgroundColor: Colors.red,
           ),
         );
         profileNotifier.clearError();

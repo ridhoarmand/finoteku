@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/app_theme.dart';
 import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -138,7 +139,7 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
+                      border: Border.all(color: context.colors.muted),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: WalletIconHelper.buildIcon(_selectedIcon, size: 24),
@@ -311,7 +312,6 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${ref.tr(context, 'error_saving')}: $e'),
-            backgroundColor: Colors.red,
           ),
         );
       }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../theme/app_theme.dart';
 import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/category_providers.dart';
@@ -6,7 +7,6 @@ import '../../../core/localization/app_localizations.dart';
 import '../../../services/supabase_service.dart';
 import '../../../models/category.dart';
 import '../../../utils/category_icon_helper.dart';
-import '../../category/theme/category_theme.dart';
 import '../widgets/category_delete_dialog.dart';
 import 'add_edit_category_screen.dart';
 
@@ -199,7 +199,7 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(PhRegular.warningCircle, size: 64, color: Colors.red),
+                  Icon(PhRegular.warningCircle, size: 64, color: Theme.of(context).colorScheme.error),
                   const SizedBox(height: 16),
                   Text('Error: ${error.toString()}'),
                   const SizedBox(height: 16),
@@ -242,28 +242,28 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
                         ? PhRegular.trendDown
                         : PhRegular.trendUp,
                     size: 64,
-                    color: Colors.grey[400],
+                    color: context.colors.muted,
                   ),
                   const SizedBox(height: 16),
                   Text(
                     ref.tr(context, 'categories_empty_title'),
                     style: Theme.of(
                       context,
-                    ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
+                    ).textTheme.titleMedium?.copyWith(color: context.colors.muted),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     ref.tr(context, 'categories_empty_sub'),
                     style: Theme.of(
                       context,
-                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
+                    ).textTheme.bodyMedium?.copyWith(color: context.colors.muted),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     ref.tr(context, 'pull_down_to_refresh'),
                     style: Theme.of(
                       context,
-                    ).textTheme.bodySmall?.copyWith(color: Colors.grey[400]),
+                    ).textTheme.bodySmall?.copyWith(color: context.colors.muted),
                   ),
                 ],
               ),
@@ -346,13 +346,17 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
     bool isLastChild = false, // Add parameter to identify last child
   }) {
     // Get icon from category model or use default
-    IconData icon = category.iconCodePoint != null
-        ? CategoryIconHelper.getIconFromCodePoint(category.iconCodePoint)
-        : CategoryIconHelper.getIconForCategory(category.name);
-
-    // Use color from database if available, otherwise use default
-    // Standardized color by type (ignore stored color)
-    final Color color = CategoryTheme.forType(context, category.type);
+    final icon = CategoryIconHelper.iconFor(codePoint: category.iconCodePoint, name: category.name);
+    // Neutral tile like every list in the app; the tab already says income/expense.
+    Widget tile(double size) => Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: context.colors.sunken,
+        borderRadius: BorderRadius.circular(AppTheme.rControl),
+      ),
+      child: Icon(icon, size: size * 0.55, color: Theme.of(context).colorScheme.onSurface),
+    );
 
     // Different styling based on hierarchy level
     Widget leadingWidget;
@@ -368,14 +372,10 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
             child: Icon(
               PhRegular.arrowElbowDownRight,
               size: 16,
-              color: Colors.grey[400],
+              color: context.colors.muted,
             ),
           ),
-          CircleAvatar(
-            radius: 14,
-            backgroundColor: color.withValues(alpha: 0.15),
-            child: Icon(icon, color: color, size: 10),
-          ),
+          tile(32),
         ],
       );
       // Close spacing for children, but add extra bottom margin for last child to separate from next parent
@@ -389,22 +389,15 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
       leadingWidget = Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(PhRegular.warning, size: 18, color: Colors.orange),
+          Icon(PhRegular.warning, size: 18, color: Theme.of(context).colorScheme.error),
           const SizedBox(width: 8),
-          CircleAvatar(
-            radius: 14,
-            backgroundColor: color.withValues(alpha: 0.15),
-            child: Icon(icon, color: color, size: 12),
-          ),
+          tile(32),
         ],
       );
       cardMargin = const EdgeInsets.only(bottom: 4);
     } else {
       // Parent category styling
-      leadingWidget = CircleAvatar(
-        backgroundColor: color.withValues(alpha: 0.15),
-        child: Icon(icon, color: color, size: 20),
-      );
+      leadingWidget = tile(40);
       cardMargin = const EdgeInsets.only(
         top: 4,
       ); // Close to children, normal spacing above
@@ -440,7 +433,7 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
           ],
         ),
         trailing: PopupMenuButton<String>(
-          icon: Icon(PhRegular.dotsThreeVertical, size: 20, color: Colors.grey[600]),
+          icon: Icon(PhRegular.dotsThreeVertical, size: 20, color: context.colors.muted),
           onSelected: (value) {
             switch (value) {
               case 'edit':
@@ -468,11 +461,11 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(PhRegular.trash, size: 18, color: Colors.red),
+                  Icon(PhRegular.trash, size: 18, color: Theme.of(context).colorScheme.error),
                   SizedBox(width: 12),
                   Text(
                     ref.tr(context, 'delete'),
-                    style: const TextStyle(color: Colors.red),
+                    style: TextStyle(color: Theme.of(context).colorScheme.error),
                   ),
                 ],
               ),

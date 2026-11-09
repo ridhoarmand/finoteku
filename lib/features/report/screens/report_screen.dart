@@ -353,7 +353,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 12,
-                            color: Colors.grey,
+                            color: context.colors.muted,
                           ),
                         ),
                         Expanded(child: Divider(indent: 8)),

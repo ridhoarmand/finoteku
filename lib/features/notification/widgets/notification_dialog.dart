@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/app_theme.dart';
 import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/app_localizations.dart';
@@ -32,7 +33,7 @@ class _NotificationDialogState extends ConsumerState<NotificationDialog> {
     );
     _bodyController = TextEditingController(
       text:
-          widget.notification?.body ?? 'Jangan lupa catat pengeluaran kamu! 💰',
+          widget.notification?.body ?? 'Jangan lupa catat pengeluaran kamu! ',
     );
     _selectedTime =
         widget.notification?.time ?? const TimeOfDay(hour: 19, minute: 0);
@@ -106,19 +107,19 @@ class _NotificationDialogState extends ConsumerState<NotificationDialog> {
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey),
+          border: Border.all(color: context.colors.muted),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           children: [
-            const Icon(PhRegular.clock, color: Colors.blue),
+            Icon(PhRegular.clock, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   ref.tr(context, 'notif_time'),
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                  style: TextStyle(fontSize: 12, color: context.colors.muted),
                 ),
                 Text(
                   '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}',
@@ -130,7 +131,7 @@ class _NotificationDialogState extends ConsumerState<NotificationDialog> {
               ],
             ),
             const Spacer(),
-            const Icon(PhRegular.pencilSimple, size: 18, color: Colors.grey),
+            Icon(PhRegular.pencilSimple, size: 18, color: context.colors.muted),
           ],
         ),
       ),
@@ -167,7 +168,6 @@ class _NotificationDialogState extends ConsumerState<NotificationDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(ref.tr(context, 'notif_required_fields')),
-          backgroundColor: Colors.red,
         ),
       );
       return;

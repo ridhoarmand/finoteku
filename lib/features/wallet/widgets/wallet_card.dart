@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../../widgets/amount_text.dart';
+import '../../../theme/app_theme.dart';
 import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/wallet.dart';
-import '../../../utils/currency_formatter.dart';
 import '../../../utils/wallet_icon_helper.dart';
 import '../../../core/localization/app_localizations.dart';
 
@@ -32,7 +33,6 @@ class WalletCard extends ConsumerWidget {
           side: BorderSide(color: theme.colorScheme.outlineVariant),
         ),
         child: ListTile(
-          dense: true,
           leading: SizedBox(
             width: 40,
             height: 40,
@@ -41,53 +41,39 @@ class WalletCard extends ConsumerWidget {
           title: Text(
             wallet.name,
             style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
               color: !wallet.isHidden
                   ? null
                   : theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 2),
-              Text(
-                CurrencyFormatter.format(wallet.balance, wallet.currency),
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: wallet.balance >= 0
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.error,
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Wrap(
+              spacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                AmountText(
+                  wallet.balance,
+                  tone: wallet.balance < 0 ? AmountTone.expense : AmountTone.neutral,
+                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
-              ),
-              Text(
-                wallet.currency,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontSize: 11,
-                ),
-              ),
-              if (wallet.isHidden) ...[
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Icon(
-                      PhRegular.eyeSlash,
-                      size: 10,
-                      color: theme.colorScheme.outline,
-                    ),
-                    const SizedBox(width: 2),
-                    Text(
-                      ref.tr(context, 'wallet_hidden'),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.outline,
-                        fontSize: 10,
+                // currency only when it is not the default rupiah
+                if (wallet.currency != 'IDR')
+                  Text(wallet.currency, style: theme.textTheme.bodySmall?.copyWith(color: context.colors.muted)),
+                if (wallet.isHidden)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(PhRegular.eyeSlash, size: 14, color: context.colors.muted),
+                      const SizedBox(width: 4),
+                      Text(
+                        ref.tr(context, 'wallet_hidden'),
+                        style: theme.textTheme.bodySmall?.copyWith(color: context.colors.muted),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
               ],
-            ],
+            ),
           ),
           trailing: PopupMenuButton<String>(
             onSelected: onAction,
@@ -124,11 +110,11 @@ class WalletCard extends ConsumerWidget {
                 value: 'delete',
                 child: Row(
                   children: [
-                    const Icon(PhRegular.trash, color: Colors.red),
+                    Icon(PhRegular.trash, color: Theme.of(context).colorScheme.error),
                     const SizedBox(width: 8),
                     Text(
                       ref.tr(context, 'delete'),
-                      style: const TextStyle(color: Colors.red),
+                      style: TextStyle(color: Theme.of(context).colorScheme.error),
                     ),
                   ],
                 ),

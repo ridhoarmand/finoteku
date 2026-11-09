@@ -369,7 +369,6 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(ref.tr(context, 'delete_success')),
-            backgroundColor: Colors.green,
             duration: const Duration(seconds: 2),
           ),
         );

@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import '../../../utils/wallet_icon_helper.dart';
+import '../../../widgets/amount_text.dart';
+import '../../../theme/app_theme.dart';
 import 'package:finoteku/theme/ph_icons.dart';
-import '../../category/theme/category_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/transaction.dart';
 import '../providers/transaction_providers.dart';
 import '../../category/providers/category_providers.dart';
 import '../../wallet/providers/wallet_providers.dart';
 import '../../../services/supabase_service.dart';
-import '../../../utils/currency_formatter.dart';
 import '../../../utils/category_icon_helper.dart';
 import 'add_edit_transaction_screen.dart';
 import '../../../core/localization/app_localizations.dart';
@@ -19,10 +20,12 @@ class TransactionDetailScreen extends ConsumerStatefulWidget {
   const TransactionDetailScreen({super.key, required this.transactionId});
 
   @override
-  ConsumerState<TransactionDetailScreen> createState() => _TransactionDetailScreenState();
+  ConsumerState<TransactionDetailScreen> createState() =>
+      _TransactionDetailScreenState();
 }
 
-class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScreen> {
+class _TransactionDetailScreenState
+    extends ConsumerState<TransactionDetailScreen> {
   bool _hasChanges = false;
 
   @override
@@ -53,6 +56,17 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
           ),
         ),
         body: _buildTransactionBody(context, ref, user.id),
+        bottomNavigationBar: switch (ref
+            .watch(
+              transactionProvider((
+                transactionId: widget.transactionId,
+                userId: user.id,
+              )),
+            )
+            .value) {
+          final tx? => _actions(context, ref, tx, user.id),
+          _ => null,
+        },
       ),
     );
   }
@@ -63,7 +77,10 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
     String userId,
   ) {
     final txAsync = ref.watch(
-      transactionProvider((transactionId: widget.transactionId, userId: userId)),
+      transactionProvider((
+        transactionId: widget.transactionId,
+        userId: userId,
+      )),
     );
     return txAsync.when(
       data: (tx) {
@@ -77,7 +94,10 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
         context,
         ref,
         () => ref.invalidate(
-          transactionProvider((transactionId: widget.transactionId, userId: userId)),
+          transactionProvider((
+            transactionId: widget.transactionId,
+            userId: userId,
+          )),
         ),
       ),
     );
@@ -91,7 +111,7 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(PhRegular.warningCircle, size: 64, color: Colors.grey[400]),
+        Icon(PhRegular.warningCircle, size: 64, color: context.colors.muted),
         const SizedBox(height: 16),
         Text(
           ref
@@ -111,408 +131,181 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
     String userId,
   ) {
     final theme = Theme.of(context);
+    final muted = context.colors.muted;
+    final categories =
+        ref.watch(categoriesAllProvider(userId)).value ?? const <Category>[];
+    final wallets = ref.watch(walletsProvider(userId)).value ?? const [];
+    final category = categories
+        .where((c) => c.id == transaction.categoryId)
+        .firstOrNull;
+    final parent = category?.parentId == null
+        ? null
+        : categories.where((c) => c.id == category!.parentId).firstOrNull;
+    final wallet = wallets
+        .where((w) => w.id == transaction.walletId)
+        .firstOrNull;
+    final isIncome = category?.type == CategoryType.income;
+    final hasNotes = transaction.notes?.trim().isNotEmpty ?? false;
+    final catName = category == null
+        ? ref.tr(context, 'uncategorized')
+        : (parent != null
+              ? '${parent.name} › ${category.name}'
+              : category.name);
 
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Amount Card
-            Consumer(
-              builder: (context, ref, _) {
-                final categoryAsync = transaction.categoryId != null
-                    ? ref.watch(
-                        categoryProvider((
-                          categoryId: transaction.categoryId!,
-                          userId: userId,
-                        )),
-                      )
-                    : const AsyncValue.data(null);
-                return categoryAsync.when(
-                  data: (category) {
-                    final isIncome = category?.type == CategoryType.income;
-                    final color = isIncome
-                        ? CategoryTheme.income(context)
-                        : CategoryTheme.expense(context);
-                    final icon = category?.iconCodePoint != null
-                        ? CategoryIconHelper.getIconFromCodePoint(
-                            category!.iconCodePoint,
-                          )
-                        : (isIncome ? PhRegular.trendUp : PhRegular.trendDown);
-                    return Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20.0),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 30,
-                              backgroundColor: color.withValues(alpha: 0.2),
-                              child: Icon(icon, color: color, size: 32),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    isIncome
-                                        ? ref.tr(context, 'income')
-                                        : ref.tr(context, 'expense'),
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                  Text(
-                                    CurrencyFormatter.format(
-                                      transaction.amount.abs(),
-                                      'IDR',
-                                    ),
-                                    style: theme.textTheme.headlineSmall
-                                        ?.copyWith(
-                                          color: color,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                  loading: () => Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 30,
-                            backgroundColor: Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest
-                                .withValues(alpha: 0.3),
-                            child: Icon(
-                              PhRegular.squaresFour,
-                              color: Theme.of(context).colorScheme.primary,
-                              size: 28,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  height: 16,
-                                  width: 80,
-                                  color: Colors.black12,
-                                ),
-                                Container(
-                                  height: 20,
-                                  width: 120,
-                                  color: Colors.black12,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  error: (e, st) => Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 30,
-                            backgroundColor: Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest
-                                .withValues(alpha: 0.3),
-                            child: Icon(
-                              PhRegular.squaresFour,
-                              color: Theme.of(context).colorScheme.primary,
-                              size: 28,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  ref.tr(context, 'details_title'),
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                Text(
-                                  CurrencyFormatter.format(
-                                    transaction.amount.abs(),
-                                    'IDR',
-                                  ),
-                                  style: theme.textTheme.headlineSmall
-                                      ?.copyWith(fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-
-            const SizedBox(height: 16),
-
-            // Details Section
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      ref.tr(context, 'details_title'),
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Date
-                    _buildDetailRow(
-                      ref.tr(context, 'date_label'),
-                      _formatDate(context, ref, transaction.date),
-                      PhRegular.calendarBlank,
-                    ),
-
-                    const Divider(),
-
-                    // Category
-                    if (transaction.categoryId != null)
-                      ref
-                          .watch(
-                            categoryProvider((
-                              categoryId: transaction.categoryId!,
-                              userId: userId,
-                            )),
-                          )
-                          .when(
-                            data: (category) => Column(
-                              children: [
-                                if (category == null)
-                                  _buildDetailRow(
-                                    ref.tr(context, 'category_label'),
-                                    ref.tr(context, 'uncategorized'),
-                                    PhRegular.squaresFour,
-                                  )
-                                else if (category.parentId == null)
-                                  _buildDetailRow(
-                                    ref.tr(context, 'category_label'),
-                                    category.name,
-                                    _getCategoryIcon(category.iconCodePoint),
-                                  )
-                                else
-                                  ref
-                                      .watch(
-                                        categoryProvider((
-                                          categoryId: category.parentId!,
-                                          userId: userId,
-                                        )),
-                                      )
-                                      .when(
-                                        data: (parentCategory) => _buildDetailRow(
-                                          ref.tr(context, 'category_label'),
-                                          parentCategory != null
-                                              ? '${parentCategory.name} > ${category.name}'
-                                              : category.name,
-                                          _getCategoryIcon(
-                                            category.iconCodePoint,
-                                          ),
-                                        ),
-                                        loading: () => _buildDetailRow(
-                                          ref.tr(context, 'category_label'),
-                                          category.name,
-                                          _getCategoryIcon(
-                                            category.iconCodePoint,
-                                          ),
-                                        ),
-                                        error: (error, stack) =>
-                                            _buildDetailRow(
-                                              ref.tr(context, 'category_label'),
-                                              category.name,
-                                              _getCategoryIcon(
-                                                category.iconCodePoint,
-                                              ),
-                                            ),
-                                      ),
-                                const Divider(),
-                              ],
-                            ),
-                            loading: () => Column(
-                              children: [
-                                _buildDetailRow(
-                                  ref.tr(context, 'category_label'),
-                                  ref.tr(context, 'loading_ellipsis'),
-                                  PhRegular.squaresFour,
-                                ),
-                                const Divider(),
-                              ],
-                            ),
-                            error: (error, stack) => Column(
-                              children: [
-                                _buildDetailRow(
-                                  ref.tr(context, 'category_label'),
-                                  ref.tr(context, 'error_loading_category'),
-                                  PhRegular.squaresFour,
-                                ),
-                                const Divider(),
-                              ],
-                            ),
-                          )
-                    else
-                      Column(
-                        children: [
-                          _buildDetailRow(
-                            ref.tr(context, 'category_label'),
-                            ref.tr(context, 'no_category'),
-                            PhRegular.squaresFour,
-                          ),
-                          const Divider(),
-                        ],
-                      ),
-
-                    // Wallet
-                    ref
-                        .watch(
-                          walletProvider((
-                            walletId: transaction.walletId,
-                            userId: userId,
-                          )),
-                        )
-                        .when(
-                          data: (wallet) => Column(
-                            children: [
-                              _buildDetailRow(
-                                ref.tr(context, 'wallet_label'),
-                                wallet?.name ??
-                                    ref.tr(context, 'wallet_unknown'),
-                                _getWalletIcon(wallet?.icon),
-                              ),
-                              const Divider(),
-                            ],
-                          ),
-                          loading: () => Column(
-                            children: [
-                              _buildDetailRow(
-                                ref.tr(context, 'wallet_label'),
-                                ref.tr(context, 'loading_ellipsis'),
-                                PhRegular.wallet,
-                              ),
-                              const Divider(),
-                            ],
-                          ),
-                          error: (error, stack) => Column(
-                            children: [
-                              _buildDetailRow(
-                                ref.tr(context, 'wallet_label'),
-                                ref.tr(context, 'wallet_loading_error'),
-                                PhRegular.wallet,
-                              ),
-                              const Divider(),
-                            ],
-                          ),
-                        ),
-
-                    // Created Date
-                    _buildDetailRow(
-                      ref.tr(context, 'wallet_created_label'),
-                      _formatDateTime(context, ref, transaction.createdAt),
-                      PhRegular.clock,
-                    ),
-
-                    if (transaction.updatedAt != transaction.createdAt) ...[
-                      const Divider(),
-                      _buildDetailRow(
-                        ref.tr(context, 'wallet_updated_label'),
-                        _formatDateTime(context, ref, transaction.updatedAt),
-                        PhRegular.clockClockwise,
-                      ),
-                    ],
-
-                    const Divider(),
-
-                    // Notes (Moved to bottom)
-                    _buildDetailRow(
-                      ref.tr(context, 'notes'),
-                      transaction.notes ?? ref.tr(context, 'no_notes'),
-                      PhRegular.note,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Action Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () =>
-                        _editTransaction(context, ref, transaction),
-                    icon: const Icon(PhRegular.pencilSimple),
-                    label: Text(ref.tr(context, 'edit')),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: () =>
-                        _showDeleteDialog(context, ref, transaction, userId),
-                    icon: const Icon(PhRegular.trash),
-                    label: Text(ref.tr(context, 'delete')),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+    Widget row(
+      IconData icon,
+      String label,
+      String value, {
+      Widget? leading,
+    }) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: Colors.grey[600]),
-          const SizedBox(width: 12),
-          Text(
-            '$label:',
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              color: Colors.grey[700],
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: Center(
+              child: leading ?? Icon(icon, color: theme.colorScheme.onSurface),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 16),
           Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.w400),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: theme.textTheme.labelMedium?.copyWith(color: muted),
+                ),
+                const SizedBox(height: 2),
+                Text(value, style: theme.textTheme.titleSmall),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: [
+        // The amount is the focal point; what it was for sits right under it.
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: context.colors.sunken,
+            borderRadius: BorderRadius.circular(AppTheme.rCard),
+          ),
+          child: Icon(
+            CategoryIconHelper.iconFor(
+              codePoint: category?.iconCodePoint,
+              name: category?.name ?? '',
+            ),
+            size: 26,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          hasNotes ? transaction.notes!.trim() : catName,
+          style: theme.textTheme.titleLarge,
+        ),
+        const SizedBox(height: 4),
+        AmountText(
+          transaction.amount.abs(),
+          tone: isIncome ? AmountTone.income : AmountTone.expense,
+          signed: true,
+          style: theme.textTheme.displaySmall,
+        ),
+        const SizedBox(height: 24),
+        Card(
+          child: Column(
+            children: [
+              row(
+                PhRegular.calendarBlank,
+                ref.tr(context, 'date_label'),
+                _formatDate(context, ref, transaction.date),
+              ),
+              const Divider(indent: 56),
+              row(
+                PhRegular.squaresFour,
+                ref.tr(context, 'category_label'),
+                catName,
+                leading: Icon(
+                  CategoryIconHelper.iconFor(
+                    codePoint: category?.iconCodePoint,
+                    name: category?.name ?? '',
+                  ),
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const Divider(indent: 56),
+              row(
+                PhRegular.wallet,
+                ref.tr(context, 'wallet_label'),
+                wallet?.name ?? ref.tr(context, 'wallet_unknown'),
+                leading: wallet == null
+                    ? null
+                    : WalletIconHelper.buildIcon(wallet.icon, size: 24),
+              ),
+              if (hasNotes && category != null) ...[
+                const Divider(indent: 56),
+                row(
+                  PhRegular.note,
+                  ref.tr(context, 'notes'),
+                  transaction.notes!.trim(),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            [
+              '${ref.tr(context, 'wallet_created_label')}: ${_formatDateTime(context, ref, transaction.createdAt)}',
+              if (transaction.updatedAt != transaction.createdAt)
+                '${ref.tr(context, 'wallet_updated_label')}: ${_formatDateTime(context, ref, transaction.updatedAt)}',
+            ].join('\n'),
+            style: theme.textTheme.bodySmall?.copyWith(color: muted),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _actions(
+    BuildContext context,
+    WidgetRef ref,
+    Transaction transaction,
+    String userId,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    return SafeArea(
+      minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () => _editTransaction(context, ref, transaction),
+              icon: const Icon(PhRegular.pencilSimple),
+              label: Text(ref.tr(context, 'edit')),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: FilledButton.icon(
+              onPressed: () =>
+                  _showDeleteDialog(context, ref, transaction, userId),
+              icon: const Icon(PhRegular.trash),
+              label: Text(ref.tr(context, 'delete')),
+              style: FilledButton.styleFrom(
+                backgroundColor: scheme.errorContainer,
+                foregroundColor: scheme.onErrorContainer,
+              ),
             ),
           ),
         ],
@@ -566,10 +359,7 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
                 // Use the screen context, not dialog context
                 await _deleteTransaction(context, ref, transaction.id, userId);
               },
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
+              style: FilledButton.styleFrom(foregroundColor: Colors.white),
               child: Text(ref.tr(context, 'delete')),
             ),
           ],
@@ -598,7 +388,6 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(ref.tr(context, 'transaction_deleted_successfully')),
-            backgroundColor: Colors.green,
           ),
         );
         Navigator.of(context).pop(true); // Go back to previous screen
@@ -612,7 +401,6 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
                   .tr(context, 'error_deleting_transaction')
                   .replaceAll('{error}', '$e'),
             ),
-            backgroundColor: Colors.red,
           ),
         );
       }
@@ -661,30 +449,5 @@ class _TransactionDetailScreenState extends ConsumerState<TransactionDetailScree
     final hour = dateTime.hour.toString().padLeft(2, '0');
     final minute = dateTime.minute.toString().padLeft(2, '0');
     return '${dateTime.day} $monthName ${dateTime.year} $hour:$minute';
-  }
-
-  IconData _getCategoryIcon(int? iconCodePoint) {
-    return CategoryIconHelper.getIconFromCodePoint(iconCodePoint);
-  }
-
-  IconData _getWalletIcon(String? icon) {
-    switch (icon?.toLowerCase()) {
-      case 'bca':
-      case 'bni':
-      case 'bri':
-      case 'mandiri':
-      case 'btn':
-      case 'bsi':
-        return PhRegular.bank;
-      case 'dana':
-      case 'gopay':
-      case 'ovo':
-      case 'linkaja':
-      case 'doku':
-      case 'sopay':
-        return PhRegular.deviceMobile;
-      default:
-        return PhRegular.wallet;
-    }
   }
 }

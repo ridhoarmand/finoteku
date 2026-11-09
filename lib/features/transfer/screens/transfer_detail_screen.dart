@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../../models/wallet.dart';
+import '../../../utils/wallet_icon_helper.dart';
+import '../../../widgets/amount_text.dart';
+import '../../../theme/app_theme.dart';
 import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../services/supabase_service.dart';
-import '../../../utils/currency_formatter.dart';
-import '../../category/theme/category_theme.dart';
 import '../../wallet/providers/wallet_providers.dart';
 import '../../transaction/providers/transaction_providers.dart'; // Tambahkan untuk refreshTransactionProviders
 import '../models/transfer.dart';
@@ -43,6 +45,10 @@ class TransferDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(ref.tr(context, 'transfer_details_title'))),
+      bottomNavigationBar: switch (transferAsync.value) {
+        final t? => _actions(context, ref, t, user.id),
+        _ => null,
+      },
       body: transferAsync.when(
         data: (transfer) {
           if (transfer == null) {
@@ -69,7 +75,7 @@ class TransferDetailScreen extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(PhRegular.warningCircle, size: 64, color: Colors.grey[400]),
+          Icon(PhRegular.warningCircle, size: 64, color: context.colors.muted),
           const SizedBox(height: 16),
           Text(ref.tr(context, 'error_loading_transfers')),
           const SizedBox(height: 16),
@@ -86,179 +92,141 @@ class TransferDetailScreen extends ConsumerWidget {
     String userId,
   ) {
     final theme = Theme.of(context);
-    final walletsAsync = ref.watch(
-      walletsProvider(userId),
-    ); // Use all wallets for transfers
+    final muted = context.colors.muted;
+    final wallets = ref.watch(walletsProvider(userId)).value ?? const [];
+    final from = wallets
+        .where((w) => w.id == transfer.fromWalletId)
+        .firstOrNull;
+    final to = wallets.where((w) => w.id == transfer.toWalletId).firstOrNull;
+    final unknown = ref.tr(context, 'wallet_unknown');
+    final hasNotes = transfer.notes?.trim().isNotEmpty ?? false;
 
-    return walletsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, st) =>
-          Center(child: Text(ref.tr(context, 'wallet_loading_error'))),
-      data: (wallets) {
-        final walletMap = {for (final w in wallets) w.id: w};
+    Widget row(String label, String value, Widget leading) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          SizedBox(width: 24, height: 24, child: Center(child: leading)),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: theme.textTheme.labelMedium?.copyWith(color: muted),
+                ),
+                const SizedBox(height: 2),
+                Text(value, style: theme.textTheme.titleSmall),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    Widget walletIcon(Wallet? w) => w == null
+        ? Icon(PhRegular.wallet, color: theme.colorScheme.onSurface)
+        : WalletIconHelper.buildIcon(w.icon, size: 24);
 
-        return Padding(
-          padding: const EdgeInsets.all(16.0),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: context.colors.sunken,
+            borderRadius: BorderRadius.circular(AppTheme.rCard),
+          ),
+          child: Icon(
+            PhRegular.arrowsLeftRight,
+            size: 26,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          hasNotes ? transfer.notes!.trim() : ref.tr(context, 'transfer'),
+          style: theme.textTheme.titleLarge,
+        ),
+        const SizedBox(height: 4),
+        AmountText(
+          transfer.amount,
+          tone: AmountTone.transfer,
+          style: theme.textTheme.displaySmall,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '${from?.name ?? unknown} → ${to?.name ?? unknown}',
+          style: theme.textTheme.bodyMedium?.copyWith(color: muted),
+        ),
+        const SizedBox(height: 24),
+        Card(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Transfer Amount Card
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 30,
-                        backgroundColor: CategoryTheme.transfer(context).withValues(
-                          alpha: 0.15,
-                        ),
-                        child: Icon(
-                          PhRegular.arrowsLeftRight,
-                          color: CategoryTheme.transfer(context),
-                          size: 32,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              ref.tr(context, 'transfer'),
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            Text(
-                              CurrencyFormatter.format(transfer.amount, 'IDR'),
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                color: CategoryTheme.transfer(context),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+              row(
+                ref.tr(context, 'date_label'),
+                _formatDate(context, ref, transfer.date),
+                Icon(
+                  PhRegular.calendarBlank,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
-
-              const SizedBox(height: 16),
-
-              // Transfer Details Card
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        ref.tr(context, 'details_title'),
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      _buildDetailRow(
-                        ref.tr(context, 'date_label'),
-                        _formatDate(context, ref, transfer.date),
-                        PhRegular.calendarBlank,
-                      ),
-                      const Divider(),
-
-                      _buildDetailRow(
-                        ref.tr(context, 'from_wallet'),
-                        walletMap[transfer.fromWalletId]?.name ?? '-',
-                        PhRegular.arrowUpRight,
-                      ),
-                      const Divider(),
-
-                      _buildDetailRow(
-                        ref.tr(context, 'to_wallet'),
-                        walletMap[transfer.toWalletId]?.name ?? '-',
-                        PhRegular.arrowDownLeft,
-                      ),
-                      const Divider(),
-
-                      _buildDetailRow(
-                        ref.tr(context, 'amount'),
-                        CurrencyFormatter.format(transfer.amount, 'IDR'),
-                        PhRegular.arrowsLeftRight,
-                      ),
-
-                      if ((transfer.notes ?? '').trim().isNotEmpty) ...[
-                        const Divider(),
-                        _buildDetailRow(
-                          ref.tr(context, 'notes'),
-                          transfer.notes!,
-                          PhRegular.note,
-                        ),
-                      ],
-                    ],
-                  ),
+              const Divider(indent: 56),
+              row(
+                ref.tr(context, 'from_wallet'),
+                from?.name ?? unknown,
+                walletIcon(from),
+              ),
+              const Divider(indent: 56),
+              row(
+                ref.tr(context, 'to_wallet'),
+                to?.name ?? unknown,
+                walletIcon(to),
+              ),
+              if (hasNotes) ...[
+                const Divider(indent: 56),
+                row(
+                  ref.tr(context, 'notes'),
+                  transfer.notes!.trim(),
+                  Icon(PhRegular.note, color: theme.colorScheme.onSurface),
                 ),
-              ),
-
-              const Spacer(),
-
-              // Action Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _editTransfer(context, ref, transfer),
-                      icon: const Icon(PhRegular.pencilSimple),
-                      label: Text(ref.tr(context, 'edit')),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: () => _confirmDeleteTransfer(
-                        context,
-                        ref,
-                        transfer,
-                        userId,
-                      ),
-                      icon: const Icon(PhRegular.trash),
-                      label: Text(ref.tr(context, 'delete')),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              ],
             ],
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 
-  Widget _buildDetailRow(String label, String value, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+  Widget _actions(
+    BuildContext context,
+    WidgetRef ref,
+    Transfer transfer,
+    String userId,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    return SafeArea(
+      minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: Colors.grey[600]),
-          const SizedBox(width: 12),
-          Text(
-            '$label:',
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              color: Colors.grey[700],
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () => _editTransfer(context, ref, transfer),
+              icon: const Icon(PhRegular.pencilSimple),
+              label: Text(ref.tr(context, 'edit')),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.w400),
+            child: FilledButton.icon(
+              onPressed: () =>
+                  _confirmDeleteTransfer(context, ref, transfer, userId),
+              icon: const Icon(PhRegular.trash),
+              label: Text(ref.tr(context, 'delete')),
+              style: FilledButton.styleFrom(
+                backgroundColor: scheme.errorContainer,
+                foregroundColor: scheme.onErrorContainer,
+              ),
             ),
           ),
         ],
@@ -354,15 +322,14 @@ class TransferDetailScreen extends ConsumerWidget {
                             .tr(outerContext, 'error_deleting_transfer')
                             .replaceAll('{error}', '$e'),
                       ),
-                      backgroundColor: Colors.red,
                     ),
                   );
                 }
               }
             },
             style: FilledButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
             ),
             child: Text(ref.tr(dialogContext, 'delete')),
           ),

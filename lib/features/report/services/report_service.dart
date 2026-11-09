@@ -177,9 +177,7 @@ class ReportService {
           : (categoryAmount / totalAmount) * 100;
 
       // Get icon for category
-      final icon = category.iconCodePoint != null
-          ? CategoryIconHelper.getIconFromCodePoint(category.iconCodePoint)
-          : CategoryIconHelper.getIconForCategory(category.name);
+      final icon = CategoryIconHelper.iconFor(codePoint: category.iconCodePoint, name: category.name);
 
       categoryItems.add(
         CategoryReportItem(
@@ -234,11 +232,7 @@ class ReportService {
 
         // Add child amount to parent if parent doesn't exist in items
         if (!parentItems.containsKey(item.parentId)) {
-          final icon = parentCategory.iconCodePoint != null
-              ? CategoryIconHelper.getIconFromCodePoint(
-                  parentCategory.iconCodePoint,
-                )
-              : CategoryIconHelper.getIconForCategory(parentCategory.name);
+          final icon = CategoryIconHelper.iconFor(codePoint: parentCategory.iconCodePoint, name: parentCategory.name);
 
           parentItems[item.parentId!] = CategoryReportItem(
             id: parentCategory.id,

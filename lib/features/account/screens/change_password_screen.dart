@@ -54,7 +54,6 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
               content: Text(
                 ref.tr(context, 'error_current_password_incorrect'),
               ),
-              backgroundColor: Colors.red,
             ),
           );
         }
@@ -68,7 +67,6 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(ref.tr(context, 'password_changed_success')),
-            backgroundColor: Colors.green,
           ),
         );
 
@@ -80,7 +78,6 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_getErrorMessage(e.toString())),
-            backgroundColor: Colors.red,
           ),
         );
       }

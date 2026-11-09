@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/theme/app_theme.dart';
 import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/app_localizations.dart';
@@ -30,13 +31,13 @@ class NotificationListItem extends ConsumerWidget {
               : PhRegular.bellSlash,
           color: notification.isEnabled
               ? Theme.of(context).primaryColor
-              : Colors.grey,
+              : context.colors.muted,
         ),
         title: Text(
           notification.title,
           style: TextStyle(
             fontWeight: FontWeight.w500,
-            color: notification.isEnabled ? null : Colors.grey,
+            color: notification.isEnabled ? null : context.colors.muted,
           ),
         ),
         subtitle: Column(
@@ -45,7 +46,7 @@ class NotificationListItem extends ConsumerWidget {
             Text(
               notification.body,
               style: TextStyle(
-                color: notification.isEnabled ? null : Colors.grey,
+                color: notification.isEnabled ? null : context.colors.muted,
               ),
             ),
             const SizedBox(height: 4),
@@ -55,7 +56,7 @@ class NotificationListItem extends ConsumerWidget {
                 fontSize: 12,
                 color: notification.isEnabled
                     ? Theme.of(context).primaryColor
-                    : Colors.grey,
+                    : context.colors.muted,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -91,11 +92,11 @@ class NotificationListItem extends ConsumerWidget {
                   value: 'delete',
                   child: Row(
                     children: [
-                      Icon(PhRegular.trash, color: Colors.red),
+                      Icon(PhRegular.trash, color: Theme.of(context).colorScheme.error),
                       SizedBox(width: 8),
                       Text(
                         ref.tr(context, 'delete'),
-                        style: TextStyle(color: Colors.red),
+                        style: TextStyle(color: Theme.of(context).colorScheme.error),
                       ),
                     ],
                   ),
