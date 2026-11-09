@@ -39,7 +39,7 @@ Never:
 
 **Signing.** One keystore for CI and local builds: `~/.finoteku-keys/finoteku-release.jks` (alias `finoteku`), passwords in `~/.finoteku-keys/key.properties`, copied to `android/key.properties` (gitignored) for local builds. Certificate SHA-256 `20eac7cd856fbadae61e22bd44064b7fadcc69d55356967e720851df059e29bf` (also in the workflow). Losing the keystore means no update can ever replace installed apps.
 
-**GitHub secrets** (repo finoteku): `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (Storage upload + `app_versions`), `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
+**GitHub secrets** (repo finoteku): `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (compiled into the app as `SUPABASE_ANON_KEY`), `SUPABASE_SECRET_KEY` (`sb_secret_...`, Storage upload + `app_versions`; the publishable key cannot write there). The legacy `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` are used as fallbacks, `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
 
 **Verify a release APK** yourself: `unzip -p <apk> lib/arm64-v8a/libapp.so | grep -c "<SUPABASE_URL>"` (must be > 0) and `apksigner verify --print-certs <apk>` (SHA-256 must match above).
 
