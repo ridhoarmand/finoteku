@@ -4,11 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/app_update_model.dart';
-import 'supabase_service.dart';
 
 /// Result state for In-App Update check
 class AppUpdateInfo {
@@ -23,11 +21,9 @@ class AppUpdateInfo {
   });
 }
 
-/// Service for checking and managing Supabase & GitHub Releases In-App Update
+/// In-app update from GitHub Releases.
 class AppUpdateService {
-  final SupabaseClient _supabase;
-
-  AppUpdateService(this._supabase);
+  const AppUpdateService();
 
   static const _lastCheckKey = 'app_update_last_check';
 
@@ -43,7 +39,7 @@ class AppUpdateService {
     return checkForUpdate();
   }
 
-  /// Check for latest version via Supabase `app_versions` table
+  /// Check GitHub Releases for a newer version.
   Future<AppUpdateInfo> checkForUpdate() async {
     String currentVersionStr = '0.0.0';
     int currentBuild = 0;
@@ -53,35 +49,7 @@ class AppUpdateService {
       currentBuild = int.tryParse(packageInfo.buildNumber) ?? 0;
     } catch (_) {}
 
-    // 1. Try fetching latest release from Supabase `app_versions` table
-    try {
-      final response = await _supabase
-          .from('app_versions')
-          .select()
-          .order('created_at', ascending: false)
-          .limit(1)
-          .maybeSingle();
-
-      if (response != null) {
-        final release = AppRelease.fromSupabaseJson(response);
-        final isNewer = isNewerRelease(
-          release.tagName,
-          release.buildNumber,
-          currentVersionStr,
-          currentBuild,
-        );
-
-        return AppUpdateInfo(
-          isUpdateAvailable: isNewer,
-          currentVersion: currentVersionStr,
-          latestRelease: isNewer ? release : null,
-        );
-      }
-    } catch (e) {
-      debugPrint('[AppUpdateService] Supabase version check fallback: $e');
-    }
-
-    // 2. Fallback: GitHub Releases Public API
+    // Latest release from the public GitHub Releases API (CI publishes it from a v* tag).
     try {
       final response = await http
           .get(
@@ -109,7 +77,7 @@ class AppUpdateService {
         );
       }
     } catch (e) {
-      debugPrint('[AppUpdateService] GitHub fallback error: $e');
+      debugPrint('[AppUpdateService] GitHub check failed: $e');
     }
 
     return AppUpdateInfo(
@@ -134,10 +102,7 @@ class AppUpdateService {
 }
 
 /// Provider for AppUpdateService
-final appUpdateServiceProvider = Provider<AppUpdateService>((ref) {
-  final supabase = ref.watch(supabaseProvider);
-  return AppUpdateService(supabase);
-});
+final appUpdateServiceProvider = Provider<AppUpdateService>((ref) => const AppUpdateService());
 
 /// True when [latest] (+ optional build) is newer than the installed version.
 /// Names compare part by part ("0.10.0" > "0.9.9"); with equal names the build

@@ -276,7 +276,7 @@ class _BotSettingsScreenState extends ConsumerState<BotSettingsScreen> {
     }
 
     // Bot username - replace with your actual bot username
-    const botUsername = 'FinotekuBot';
+    const botUsername = Environment.telegramBotUsername;
 
     final token = await ref
         .read(botLinkServiceProvider)

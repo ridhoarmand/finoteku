@@ -69,3 +69,9 @@ logs/
 Thumbs.db
 *.class
 *.pyc
+
+# Kept local, not published
+CLAUDE.md
+DESIGN.md
+installer.iss
+integration_test/

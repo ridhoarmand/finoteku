@@ -22,11 +22,9 @@ class Environment {
     defaultValue: String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: 'your-anon-key-here'),
   );
 
-  // WhatsApp Configuration
-  static const String waBotNumber = String.fromEnvironment(
-    'WA_BOT_NUMBER',
-    defaultValue: '6285156897928',
-  );
+  // Bots: defaults are the official Finoteku bots; self-hosters set their own in .env
+  static const String waBotNumber = String.fromEnvironment('WA_BOT_NUMBER', defaultValue: '6285156897928');
+  static const String telegramBotUsername = String.fromEnvironment('TELEGRAM_BOT_USERNAME', defaultValue: 'FinotekuBot');
 
   /// Validate that required environment variables are set
   static bool validateConfig() {
