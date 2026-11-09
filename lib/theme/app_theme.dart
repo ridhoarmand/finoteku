@@ -9,6 +9,7 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color muted; // secondary text
   final Color hairline; // 1px separators and card outlines
   final Color sunken; // inputs, chips, grouped-list background
+  final Color warning; // budget near its limit (AA on surface in both themes)
 
   const AppColors({
     required this.income,
@@ -16,6 +17,7 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.muted,
     required this.hairline,
     required this.sunken,
+    required this.warning,
   });
 
   static const light = AppColors(
@@ -24,6 +26,7 @@ class AppColors extends ThemeExtension<AppColors> {
     muted: Color(0xFF64605A),
     hairline: Color(0xFFE4E1DA),
     sunken: Color(0xFFEFEDE8),
+    warning: Color(0xFF9A5B00),
   );
 
   static const dark = AppColors(
@@ -32,16 +35,18 @@ class AppColors extends ThemeExtension<AppColors> {
     muted: Color(0xFFA9A49A),
     hairline: Color(0xFF2E2C28),
     sunken: Color(0xFF242320),
+    warning: Color(0xFFF2B24C),
   );
 
   @override
-  AppColors copyWith({Color? income, Color? expense, Color? muted, Color? hairline, Color? sunken}) =>
+  AppColors copyWith({Color? income, Color? expense, Color? muted, Color? hairline, Color? sunken, Color? warning}) =>
       AppColors(
         income: income ?? this.income,
         expense: expense ?? this.expense,
         muted: muted ?? this.muted,
         hairline: hairline ?? this.hairline,
         sunken: sunken ?? this.sunken,
+        warning: warning ?? this.warning,
       );
 
   @override
@@ -53,6 +58,7 @@ class AppColors extends ThemeExtension<AppColors> {
       muted: Color.lerp(muted, other.muted, t)!,
       hairline: Color.lerp(hairline, other.hairline, t)!,
       sunken: Color.lerp(sunken, other.sunken, t)!,
+      warning: Color.lerp(warning, other.warning, t)!,
     );
   }
 }

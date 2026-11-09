@@ -166,3 +166,15 @@ void toggleDetailCategories(WidgetRef ref) {
 void changePeriodType(WidgetRef ref, ReportPeriod newPeriod) {
   ref.read(reportStateProvider.notifier).updatePeriod(newPeriod);
 }
+
+enum ReportTab { report, budget }
+
+/// Laporan | Anggaran switch. A provider (not widget state) so Beranda's budget card can open the Anggaran side.
+class ReportTabNotifier extends Notifier<ReportTab> {
+  @override
+  ReportTab build() => ReportTab.report;
+
+  void show(ReportTab tab) => state = tab;
+}
+
+final reportTabProvider = NotifierProvider<ReportTabNotifier, ReportTab>(ReportTabNotifier.new);

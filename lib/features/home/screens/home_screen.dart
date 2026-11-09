@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finoteku/features/budget/widgets/budget_summary_card.dart';
 import 'package:finoteku/widgets/icon_tile.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -110,11 +111,6 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       body: SafeArea(bottom: false, child: RefreshIndicator(onRefresh: refresh, child: body)),
-      floatingActionButton: FloatingActionButton(
-        tooltip: ref.tr(context, 'record_transaction'),
-        onPressed: addTransaction,
-        child: const Icon(PhBold.plus),
-      ),
     );
   }
 }
@@ -248,6 +244,10 @@ class _HomeHeader extends ConsumerWidget {
                 Expanded(child: _MonthStat(label: ref.tr(context, 'expense'), amount: sum(false), income: false, hidden: !visible)),
               ],
             ),
+          ],
+          if (user != null) ...[
+            const SizedBox(height: 12),
+            BudgetSummaryCard(userId: user!.id),
           ],
           const SizedBox(height: 8),
         ],

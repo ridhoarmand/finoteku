@@ -14,6 +14,7 @@ import '../../features/onboarding/i18n/strings.dart' as onboarding_i18n;
 import '../i18n/strings.dart' as core_i18n;
 import '../../features/bot/i18n/strings.dart' as bot_i18n;
 import '../../features/notification/i18n/strings.dart' as notification_i18n;
+import '../../features/budget/i18n/strings.dart' as budget_i18n;
 
 typedef StrMap = Map<String, String>;
 
@@ -32,6 +33,7 @@ final Map<String, StrMap> _strings = {
     ...onboarding_i18n.onboardingStringsEn,
     ...bot_i18n.botStringsEn,
     ...notification_i18n.notificationStringsEn,
+    ...budget_i18n.budgetStringsEn,
   },
   'id': {
     // Merge all feature strings (ID)
@@ -47,6 +49,7 @@ final Map<String, StrMap> _strings = {
     ...onboarding_i18n.onboardingStringsId,
     ...bot_i18n.botStringsId,
     ...notification_i18n.notificationStringsId,
+    ...budget_i18n.budgetStringsId,
   },
 };
 

@@ -87,6 +87,10 @@ void main() {
     await tapText('Laporan');
     await wait(3000);
     await shot('04_report');
+    if (await tapText('Anggaran')) {
+      await wait(2500);
+      await shot('04b_budget');
+    }
     await tapText('Akun');
     await wait(2000);
     await shot('05_account');

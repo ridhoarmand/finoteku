@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../budget/providers/budget_providers.dart';
+import '../../budget/widgets/budget_view.dart';
 import '../widgets/category_donut.dart';
 import '../../../widgets/amount_text.dart';
 import '../../../theme/app_theme.dart';
@@ -44,23 +46,41 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     }
 
     final reportDataAsync = ref.watch(reportDataProvider(currentUserId));
+    final tab = ref.watch(reportTabProvider);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
             // Invalidate report data provider to reload data
             ref.invalidate(reportDataProvider(currentUserId));
+            ref.read(budgetRefreshProvider.notifier).bump();
           },
           child: Column(
             children: [
               // Header
               const ReportHeader(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<ReportTab>(
+                    showSelectedIcon: false,
+                    segments: [
+                      ButtonSegment(value: ReportTab.report, icon: const Icon(PhRegular.chartPieSlice), label: Text(ref.tr(context, 'budget_tab_report'))),
+                      ButtonSegment(value: ReportTab.budget, icon: const Icon(PhRegular.piggyBank), label: Text(ref.tr(context, 'budget_tab_budget'))),
+                    ],
+                    selected: {tab},
+                    onSelectionChanged: (s) => ref.read(reportTabProvider.notifier).show(s.first),
+                  ),
+                ),
+              ),
 
               // Content
               Expanded(
-                child: reportDataAsync.when(
+                child: tab == ReportTab.budget
+                    ? BudgetView(userId: currentUserId, month: reportState.selectedMonth)
+                    : reportDataAsync.when(
                   data: (data) => _buildContent(data, reportState),
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),

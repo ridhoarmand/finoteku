@@ -14,7 +14,6 @@ import '../providers/transaction_filter.dart';
 import '../providers/transaction_providers.dart';
 import '../widgets/ledger_list.dart';
 import '../widgets/transaction_filter_bar.dart';
-import 'add_edit_transaction_screen.dart';
 
 /// Transaksi: filter chips (period · type · category · wallet), a one-line summary
 /// of what the filters return, then the day-grouped list.
@@ -112,13 +111,6 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
           TransactionFilterBar(categories: categories, wallets: wallets),
           Expanded(child: RefreshIndicator(onRefresh: refresh, child: body)),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        tooltip: ref.tr(context, 'add_transaction'),
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const AddEditTransactionScreen()),
-        ),
-        child: const Icon(PhBold.plus),
       ),
     );
   }

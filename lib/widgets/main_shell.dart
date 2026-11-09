@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:finoteku/theme/ph_icons.dart';
 import '../core/localization/app_localizations.dart';
+import '../theme/app_theme.dart';
 import '../features/settings/widgets/app_update_dialog.dart';
 
 class MainShell extends ConsumerWidget {
@@ -57,9 +58,17 @@ class MainShell extends ConsumerWidget {
         false;
   }
 
+  static const _items = [
+    (PhRegular.house, PhFill.house, 'nav_home', '/home'),
+    (PhRegular.receipt, PhFill.receipt, 'nav_transaction', '/transaction'),
+    (PhRegular.chartPieSlice, PhFill.chartPieSlice, 'nav_reports', '/reports'),
+    (PhRegular.user, PhFill.user, 'nav_account', '/account'),
+  ];
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final index = _getCurrentIndex(context);
 
     return AutoUpdateCheck(
       child: PopScope(
@@ -74,44 +83,107 @@ class MainShell extends ConsumerWidget {
         },
         child: Scaffold(
           body: child,
-          // NavigationBar styled by AppTheme; Phosphor Regular → Fill marks the active tab by shape.
-          bottomNavigationBar: DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                  color: theme.dividerTheme.color ?? theme.dividerColor,
-                ),
-              ),
+          // The add button sits in a notch of the bar with a ring of page colour
+          // around it: it reads as its own control, not a fifth tab.
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+          floatingActionButton: SizedBox.square(
+            dimension: 60,
+            child: FloatingActionButton(
+              tooltip: ref.tr(context, 'add_transaction'),
+              shape: CircleBorder(side: BorderSide(color: theme.scaffoldBackgroundColor, width: 4)),
+              elevation: 4,
+              onPressed: () => context.push('/transaction/add'),
+              child: const Icon(PhBold.plus, size: 26),
             ),
-            child: NavigationBar(
-              selectedIndex: _getCurrentIndex(context),
-              onDestinationSelected: (index) => context.go(
-                const ['/home', '/transaction', '/reports', '/account'][index],
-              ),
-              destinations: [
-                NavigationDestination(
-                  icon: const Icon(PhRegular.house),
-                  selectedIcon: const Icon(PhFill.house),
-                  label: ref.tr(context, 'nav_home'),
-                ),
-                NavigationDestination(
-                  icon: const Icon(PhRegular.receipt),
-                  selectedIcon: const Icon(PhFill.receipt),
-                  label: ref.tr(context, 'nav_transaction'),
-                ),
-                NavigationDestination(
-                  icon: const Icon(PhRegular.chartPieSlice),
-                  selectedIcon: const Icon(PhFill.chartPieSlice),
-                  label: ref.tr(context, 'nav_reports'),
-                ),
-                NavigationDestination(
-                  icon: const Icon(PhRegular.user),
-                  selectedIcon: const Icon(PhFill.user),
-                  label: ref.tr(context, 'nav_account'),
-                ),
+          ),
+          bottomNavigationBar: BottomAppBar(
+            shape: const CircularNotchedRectangle(),
+            notchMargin: 5,
+            height: 68,
+            padding: EdgeInsets.zero,
+            color: theme.colorScheme.surface,
+            surfaceTintColor: Colors.transparent,
+            elevation: 0,
+            child: Row(
+              children: [
+                for (final (i, item) in _items.indexed) ...[
+                  if (i == 2) const SizedBox(width: 76), // room for the add button
+                  Expanded(
+                    child: _NavItem(
+                      icon: item.$1,
+                      selectedIcon: item.$2,
+                      label: ref.tr(context, item.$3),
+                      selected: index == i,
+                      onTap: () => context.go(item.$4),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One tab: icon in a pill when active (Regular → Fill), label below. ≥48dp tall.
+class _NavItem extends StatelessWidget {
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _NavItem({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final muted = context.colors.muted;
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: InkResponse(
+        onTap: onTap,
+        radius: 36,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: 52,
+              height: 30,
+              decoration: BoxDecoration(
+                color: selected ? scheme.primaryContainer : Colors.transparent,
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Icon(
+                selected ? selectedIcon : icon,
+                size: 22,
+                color: selected ? scheme.onPrimaryContainer : muted,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: selected ? scheme.onSurface : muted,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
     );
