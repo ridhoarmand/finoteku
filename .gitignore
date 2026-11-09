@@ -1,78 +1,71 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
+# Secrets: never commit
+.env
+.env.*
+!.env.example
+android/key.properties
+*.jks
+*.keystore
+dump-*.sql
 
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
-.antigravitycli/
-
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Documentation
-docs/
-
-supabase/.temp/
-installer_output/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# Flutter / Dart
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
 /build/
-
-# Symbolication related
+**/doc/api/
+**/ios/Flutter/.last_build_id
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
+migrate_working_dir/
+installer_output/
 
-# Android Studio will place build artifacts here
+# Android Studio build artifacts
 /android/app/debug
 /android/app/profile
 /android/app/release
 
-# Environment variables
-.env
-.env.local
-.env.production
-.env.staging
-
-# Supabase local development
+# Supabase CLI / Deno
+supabase/.temp/
+supabase/.branches/
+supabase/config.toml
 .supabase/
+.deno/
+deno.lock
+node_modules/
+coverage/
 
-# Database files
+# Local docs and scratch
+docs/
+
+# Databases and logs
 *.db
 *.sqlite
 *.sqlite3
-
-# Logs
 *.log
 logs/
 
-# IDE
-.vscode/
+# IDE and agents
 .idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.antigravitycli/
+.claude/
+*.swp
+*.swo
+*~
+.history
+.atom/
+.build/
+.buildlog/
+.svn/
+.swiftpm/
 
 # OS
 .DS_Store
 Thumbs.db
+*.class
+*.pyc

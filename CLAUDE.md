@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Finoteku is a personal finance app (Flutter + Supabase) for Android, Linux, Windows and Web. Comments, commit messages and many identifiers are in Indonesian.
+Finoteku is a personal finance app (Flutter + Supabase) for Android, Linux, Windows and Web, plus a Telegram/WhatsApp bot (Supabase edge functions) that records transactions from chat. Both live in this repo. Comments, commit messages and many identifiers are in Indonesian.
 
 ## Commands
 
@@ -15,7 +15,8 @@ flutter test                                  # single file: flutter test test/m
 ```
 
 - UI review: `integration_test/screenshot_tour_test.dart` logs in with a test account and saves PNGs of the main screens (light/dark); the exact command is in its header. Run it with a throwaway `XDG_DATA_HOME`, because it writes app prefs and a session.
-- The bot agent (sibling repo) has its own tests: `bun test supabase/functions/finoteku-agent`.
+- Bot tests: `bun test supabase/functions/finoteku-agent` (parser corpus + agent scenarios on a fake Supabase). No Deno on this machine; `nlu/` is pure TypeScript so bun runs it. For a strict type check, use any installed `tsc` with stub declarations for the `https://` imports.
+- SQL tests: `psql -v ON_ERROR_STOP=1 -f supabase/tests/<file>.sql` against a dev/local DB (never production); each script rolls back.
 
 - Supabase credentials are **compile-time** values (`String.fromEnvironment` in `lib/utils/environment.dart`). Every `flutter run`/`build` needs `--dart-define-from-file=.env`, or the app starts with placeholder credentials. `.vscode/launch.json` already passes it.
 - `release.sh` (local builds only, see Release) bumps the build number in `pubspec.yaml` (`x.y.z+N` → `+N+1`) and restores the original version if the build fails. Android builds are obfuscated with split debug info in `build/debug-info/`. `--install` runs `install_linux.sh` on the Linux bundle.
@@ -39,20 +40,40 @@ Never:
 
 **Signing.** One keystore for CI and local builds: `~/.finoteku-keys/finoteku-release.jks` (alias `finoteku`), passwords in `~/.finoteku-keys/key.properties`, copied to `android/key.properties` (gitignored) for local builds. Certificate SHA-256 `20eac7cd856fbadae61e22bd44064b7fadcc69d55356967e720851df059e29bf` (also in the workflow). Losing the keystore means no update can ever replace installed apps.
 
-**GitHub secrets** (repo finoteku): `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (compiled into the app as `SUPABASE_ANON_KEY`), `SUPABASE_SECRET_KEY` (`sb_secret_...`, Storage upload + `app_versions`; the publishable key cannot write there). The legacy `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` are used as fallbacks, `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
+**GitHub secrets** (repo finoteku; `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_ID` are for the backend deploy): `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (compiled into the app as `SUPABASE_ANON_KEY`), `SUPABASE_SECRET_KEY` (`sb_secret_...`, Storage upload + `app_versions`; the publishable key cannot write there). The legacy `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` are used as fallbacks, `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
 
 **Verify a release APK** yourself: `unzip -p <apk> lib/arm64-v8a/libapp.so | grep -c "<SUPABASE_URL>"` (must be > 0) and `apksigner verify --print-certs <apk>` (SHA-256 must match above).
 
 **Local builds** (`./release.sh --android`) need JDK 17/21: this machine's Android Studio JBR is JDK 25, which Gradle 8.14 does not run on. Use CI for releases.
 
-## Backend lives in another repo
+## Backend (`supabase/`)
 
-The database schema, RLS policies, RPCs, triggers and edge functions live in the sibling repo **finoteku-agent** (`../../JavaScript/finoteku-agent`, `supabase/schema.sql`), together with the Telegram/WhatsApp bots that also write transactions. This repo's `supabase/` folder holds only CLI state. Check `schema.sql` and `supabase/migrations/` there before you change any query. SQL changes go in a new migration file; `supabase/tests/balance_triggers.sql` checks the balance triggers.
-
+- `supabase/schema.sql`: dump of the live schema (tables, RLS, RPCs, triggers). Changes go in **new** files in `supabase/migrations/` (timestamped, idempotent), never by editing the dump. Check both before you change any query.
+- `supabase/tests/`: psql scripts (balance triggers, budgets), rolled back.
+- `supabase/functions/finoteku-agent`: the bot agent. Rules first, LLM only as fallback: `router.ts` (intent) → `nlu/` (amount, date, wallet, category from the user's history, `agent_training` examples and synonyms) → `llm/resolve.ts` (9Router, only for unsure fields, ≤6 candidates) → `flow/transaction.ts` (pending confirmation in `pending_bot_transactions.payload`, edits, save). `users.parser_mode = 'regex'` means no LLM at all.
+- `supabase/functions/telegram-bot`, `whatsapp-bot`: webhooks that call the agent with the service key. The bots write transactions too, so DB rules (triggers, RPCs) must hold for both clients.
+- `deno.json` (repo root) is editor/lint config for the functions; they import by full URL.
 - **Wallet balances are maintained by DB triggers** on `transactions` and `transfers` (`update_wallet_balance`, `handle_transfer_amount_only`). The app must not adjust `wallets.balance` itself when it creates, edits or deletes a transaction.
 - RPCs that take `p_user_id` must check it against `auth.uid()` (`assert_acting_user`), and bot-only RPCs are granted to `service_role` only: the anon key ships in the app.
 - Transfers go through RPCs (`create_wallet_transfer`, `update_wallet_transfer`, `delete_wallet_transfer`). Other features use RPCs too: bot linking (`get_bot_link`, `link_by_user_id`, `unlink_platform`) and account deletion (`delete_user_account_complete`, `get_user_data_summary`).
 - Categories: `prevent_category_delete` and `prevent_category_type_change` triggers reject some operations, so the app gets those as errors.
+- `finoteku-agent` trusts `input.userId`, so it only accepts the service key; never deploy it without that check.
+
+### Deploy the backend: the only correct order
+
+Pushing to `master` with changes under `supabase/functions/**` **deploys all three functions immediately** (`.github/workflows/deploy.yml`, needs repo secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_ID`). So everything the new code needs must exist first:
+
+1. **SQL first.** Run every new file in `supabase/migrations/`, in name order, in the Supabase SQL editor (or `supabase db push`). Code (app or bot) that calls a new table/column/RPC breaks if this is skipped.
+2. **Function secrets** (Supabase → Edge Functions → Secrets), before code that reads them: `TELEGRAM_WEBHOOK_SECRET` (telegram-bot answers 401 without it), `GOWA_WEBHOOK_SECRET` (whatsapp-bot rejects unsigned webhooks), `AI_API_KEY` (+ optional `AI_BASE_URL`, `AI_MODEL`; without it the bot runs without LLM), `TELEGRAM_BOT_TOKEN`, `GOWA_*`. Never hard-code a key in source.
+3. **Telegram webhook** after changing its secret: `setWebhook` with `"secret_token": "<TELEGRAM_WEBHOOK_SECRET>"`.
+4. **Push `master`** and watch: `gh run watch <id> --exit-status`. A change that only touches the workflow does not trigger it; run `gh workflow run deploy.yml --ref master`.
+5. **Check from outside** (no credentials): each must answer 401.
+   ```bash
+   for f in finoteku-agent telegram-bot whatsapp-bot; do
+     curl -s -o /dev/null -w "$f %{http_code}\n" -X POST "$SUPABASE_URL/functions/v1/$f" -d '{}'
+   done
+   ```
+6. When the app needs the backend change (e.g. a new RPC), do 1-5 **before** tagging an app release.
 
 ## Architecture
 

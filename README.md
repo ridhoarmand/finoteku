@@ -1,153 +1,99 @@
-# Finoteku - Personal Finance Management App
+# Finoteku
 
-<img width="500" height="500" alt="icon" src="https://github.com/user-attachments/assets/b93bf38a-b4ff-4ab9-8178-58f080446742" />
+<img width="160" height="160" alt="Finoteku" src="https://github.com/user-attachments/assets/b93bf38a-b4ff-4ab9-8178-58f080446742" />
 
-**Finoteku** adalah aplikasi manajemen keuangan pribadi yang dirancang dengan focus pada kesederhanaan dan kemudahan penggunaan. Aplikasi ini dibangun menggunakan Flutter dengan backend Supabase untuk memberikan pengalaman yang modern dan reliable.
+Aplikasi keuangan pribadi untuk Android, Linux, Windows dan Web, ditambah bot Telegram/WhatsApp
+untuk mencatat transaksi lewat chat. Aplikasi (Flutter) dan backend (Supabase: database, RPC,
+edge function bot) ada di repo ini.
 
-*Developed by Ridho Armansyah*
+## Fitur
 
-## ✨ Features
+- **Dompet**: banyak dompet (tunai, bank, e-wallet) dengan logo bank/e-wallet Indonesia, saldo
+  dijaga oleh trigger database.
+- **Transaksi dan transfer**: pemasukan, pengeluaran, transfer antar dompet (dengan biaya), filter
+  periode/jenis/kategori/dompet.
+- **Kategori bertingkat**: kategori dan subkategori, masing-masing dengan warna sendiri.
+- **Laporan**: total per periode (minggu/bulan/tahun), perbandingan dengan periode lalu, donut per
+  kategori, filter per dompet.
+- **Anggaran**: batas bulanan per kategori pengeluaran dan batas total, peringatan di 80% dan 100%.
+- **Bot Telegram/WhatsApp**: `kopi 15k`, `gaji 5jt mandiri`, `makan 20k, parkir 5k kemarin`, foto
+  struk dan voice note. Dibaca dengan aturan dan riwayat user; LLM hanya dipakai untuk bagian yang
+  ragu, dan bisa dimatikan (mode RegEx).
+- **Update di dalam aplikasi** (Android), tema terang/gelap, Bahasa Indonesia dan Inggris.
 
-- 💰 **Multi-Wallet Management** - Kelola berbagai jenis dompet (cash, bank, e-wallet, credit card)
-- 📊 **Transaction Management** - Catat income dan expense dengan mudah
-- 🏷️ **Smart Categorization** - Sistem kategori hierarkis untuk pengorganisasian yang lebih baik
-- 🔄 **Transfer Between Wallets** - Transfer antar wallet dengan fee calculation
-- 🤖 **AI-Powered Bot Integration** - Telegram bot untuk mencatat transaksi (lihat [finoteku-agent](https://github.com/ridhoarmand/finoteku-agent))
-- 📱 **Cross-Platform** - Support untuk Android, Linux, Windows, dan Web
-- 🎨 **Modern UI** - Material Design 3 dengan light/dark theme
-- 🌍 **Multi-Language** - Support Bahasa Indonesia dan English
+## Teknologi
 
-## 🚀 Tech Stack
+- Flutter 3, Riverpod 3, GoRouter
+- Supabase: PostgreSQL dengan RLS, Auth, Storage
+- Edge function Deno (bot), LLM lewat API OpenAI-compatible (opsional)
 
-- **Framework**: Flutter dengan Dart 3.8.0+
-- **State Management**: Riverpod 2.x
-- **Routing**: GoRouter
-- **UI/UX**: Material Design 3 + Flex Color Scheme
-- **Backend**: Supabase (PostgreSQL + Auth + Storage)
-- **Database**: PostgreSQL dengan RLS (Row Level Security)
-- **Authentication**: Supabase Auth (Email & Social Login)
-- **Localization**: Custom i18n implementation
-- **AI Bot**: Deno-based dengan Telegram bot (separate repo)
-
-## 📋 Quick Start
-
-### Prerequisites
-- Flutter SDK 3.8.0+
-- Dart SDK 3.0+
-- Android Studio / VS Code
-- Git
-
-### Installation
+## Menjalankan aplikasi
 
 ```bash
-# 1. Clone repository
-git clone https://github.com/ridhoarmand/finoteku.git
-cd finoteku
-
-# 2. Install Flutter dependencies
 flutter pub get
-
-# 3. Setup environment variables
-# Copy .env.example to .env dan isi dengan credentials Supabase Anda
-cp .env.example .env
-
-# 4. Run the app (menggunakan compile-time environment variables)
+cp .env.example .env        # isi SUPABASE_URL dan SUPABASE_PUBLISHABLE_KEY
 flutter run --dart-define-from-file=.env
 ```
 
-### Supabase Setup
+Kredensial dibaca saat kompilasi, jadi setiap `flutter run`/`build` butuh
+`--dart-define-from-file=.env`.
 
-**⚠️ Supabase database setup instructions telah dipindahkan ke [finoteku-agent](https://github.com/ridhoarmand/finoteku-agent) repository.**
+Tes: `flutter test` (aplikasi) dan `bun test supabase/functions/finoteku-agent` (parser dan
+skenario bot).
 
-Untuk setup Supabase:
+## Menyiapkan Supabase
 
-1. Follow detailed setup instructions di: **[finoteku-agent/README.md](https://github.com/ridhoarmand/finoteku-agent#-supabase-setup)**
-2. Database schema, migrations, dan konfigurasi ada di project agent
-3. Setelah setup Supabase, configure app dengan credentials:
+1. Buat project di [supabase.com](https://supabase.com).
+2. Di SQL Editor, jalankan `supabase/schema.sql`, lalu semua file `supabase/migrations/*.sql`
+   berurutan sesuai nama.
+3. Bot (opsional):
+   ```bash
+   supabase link --project-ref <PROJECT_REF>
+   supabase secrets set TELEGRAM_BOT_TOKEN=<token BotFather> TELEGRAM_WEBHOOK_SECRET=$(openssl rand -hex 32)
+   supabase secrets set AI_API_KEY=<key>          # opsional; tanpa ini bot jalan tanpa LLM
+   supabase functions deploy finoteku-agent --no-verify-jwt
+   supabase functions deploy telegram-bot --no-verify-jwt
+   supabase functions deploy whatsapp-bot --no-verify-jwt   # butuh GOWA_WEBHOOK_SECRET
+   curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook" -H "Content-Type: application/json" \
+     -d '{"url":"https://<PROJECT_REF>.supabase.co/functions/v1/telegram-bot","secret_token":"<TELEGRAM_WEBHOOK_SECRET>"}'
+   ```
+   `SUPABASE_URL` dan `SUPABASE_SERVICE_ROLE_KEY` sudah tersedia otomatis di edge function.
 
-```env
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key
+| Secret edge function | Fungsi |
+| --- | --- |
+| `TELEGRAM_BOT_TOKEN` | Token bot dari BotFather |
+| `TELEGRAM_WEBHOOK_SECRET` | Harus sama dengan `secret_token` di setWebhook; request lain ditolak |
+| `GOWA_WEBHOOK_SECRET` | Secret HMAC webhook GOWA (WhatsApp) |
+| `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL` | LLM OpenAI-compatible, opsional |
+
+## Struktur
+
+```
+lib/                     aplikasi Flutter (lib/features/<fitur>/{screens,widgets,providers,services,models,i18n})
+assets/                  ikon, logo bank/e-wallet (assets/finlogos), gambar onboarding
+integration_test/        screenshot tour untuk review UI
+supabase/schema.sql      dump schema (tabel, RLS, RPC, trigger)
+supabase/migrations/     perubahan schema setelah dump, jalankan berurutan
+supabase/tests/          tes SQL (psql, di-rollback)
+supabase/functions/      bot: finoteku-agent, telegram-bot, whatsapp-bot
+.github/workflows/       release.yml (APK dari tag v*), deploy.yml (edge function dari master)
 ```
 
-### Bot Integration (Recommended)
+## Rilis dan deploy
 
-Untuk fitur lengkap dengan Telegram bot AI-powered:
+- **Aplikasi Android**: naikkan `version` di `pubspec.yaml`, push, lalu push tag `vX.Y.Z`. GitHub
+  Actions membangun APK bertanda tangan, membuat GitHub Release, dan mengisi tabel `app_versions`
+  untuk update di dalam aplikasi.
+- **Bot**: push ke `master` yang mengubah `supabase/functions/**` langsung men-deploy ketiga
+  function. Jalankan migration SQL dulu.
 
-**Repository**: [finoteku-agent](https://github.com/ridhoarmand/finoteku-agent)
+Urutan lengkap dan aturannya ada di [CLAUDE.md](CLAUDE.md).
 
-```bash
-# Clone agent repository
-git clone https://github.com/ridhoarmand/finoteku-agent.git
-cd finoteku-agent
+## Lisensi
 
-# Follow setup instructions
-```
+Kode: MIT, lihat [LICENSE](LICENSE).
 
-## 🏗️ Project Structure
-
-```
-finoteku/
-├── supabase/                      # Database schema & configuration
-│   ├── setup.sql                  # Complete database setup
-│   └── resetdb.sql                # Database reset script
-├── lib/                           # Flutter source code
-│   ├── core/                      # Core utilities
-│   │   ├── errors/                # Error handling
-│   │   ├── i18n/                  # Internationalization
-│   │   ├── localization/          # Localization setup
-│   │   └── logging/               # Logging configuration
-│   ├── features/                  # Feature modules (Clean Architecture)
-│   │   ├── auth/                  # Authentication
-│   │   ├── wallet/                # Wallet management
-│   │   ├── category/              # Category management
-│   │   ├── transaction/           # Transaction management
-│   │   ├── transfer/              # Transfer between wallets
-│   │   ├── home/                  # Home dashboard
-│   │   ├── account/               # User account
-│   │   └── report/                # Financial reports
-│   ├── models/                    # Data models
-│   ├── routes/                    # App routing (GoRouter)
-│   ├── services/                  # External services
-│   ├── theme/                     # Theme configuration
-│   ├── utils/                     # Utility functions
-│   └── widgets/                   # Reusable UI components
-├── assets/                        # Static assets
-│   ├── banks/                     # Bank icons
-│   ├── ewallets/                  # E-wallet icons
-│   ├── wallets/                   # Wallet type icons
-│   └── onboardings/               # Onboarding images
-└── android/linux/windows/web/     # Platform-specific code
-```
-
-## 🔗 Related Projects
-
-- **[Finoteku Agent](https://github.com/ridhoarmand/finoteku-agent)** - AI-powered Telegram bot untuk mencatat transaksi dengan natural language processing
-
-## 🤝 Contributing
-
-1. Fork the project
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-### Development Guidelines
-
-- Follow Flutter best practices dan clean architecture
-- Gunakan Riverpod untuk state management
-- Tulis kode yang readable dan maintainable
-- Test fitur sebelum create PR
-- Update documentation jika perlu
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 📞 Support
-
-Untuk pertanyaan atau dukungan, silakan buka issue di GitHub repository ini.
-
----
-
-*Built with ❤️ by Ridho Armansyah using Flutter and Supabase*
+Logo bank dan e-wallet di `assets/finlogos` berasal dari
+[idn-finlogos](https://github.com/hafidznoor/idn-finlogos) dengan lisensi
+[CC BY-NC 4.0](assets/finlogos/LICENSE-ASSETS): hanya untuk penggunaan non-komersial, dengan atribusi.
+Merek dagang milik pemiliknya masing-masing.
