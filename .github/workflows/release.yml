@@ -128,7 +128,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # In-app update (repo is private, so the app reads app_versions + Storage, not GitHub).
-      # The universal APK installs on every phone and replaces the previous version.
+      # The arm64 APK goes to Storage (see APK_NAME); it installs over the previous version.
       - name: Publish to Supabase (in-app update)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -138,7 +138,9 @@ jobs:
           TAG=${{ steps.tag_name.outputs.TAG }}
           PUB=$(grep -m1 '^version:' pubspec.yaml | sed 's/version:[[:space:]]*//; s/\r//')
           NAME=${PUB%+*}; BUILD=${PUB#*+}
-          APK_NAME="finoteku-${TAG}-universal.apk"
+          # shortcut: arm64 APK only; the universal one (~69 MB) exceeds Supabase's 50 MB upload limit (free plan).
+          # 32-bit phones get no in-app update; serve per-ABI files if they matter.
+          APK_NAME="finoteku-${TAG}-arm64-v8a.apk"
           # new sb_secret_ keys are not JWTs: send them as apikey only; legacy service_role JWT needs both
           if [[ "$SUPABASE_KEY" == sb_* ]]; then AUTH=(-H "apikey: ${SUPABASE_KEY}")
           else AUTH=(-H "Authorization: Bearer ${SUPABASE_KEY}" -H "apikey: ${SUPABASE_KEY}"); fi

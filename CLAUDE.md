@@ -30,7 +30,7 @@ A release is a **tag push**; GitHub Actions (`.github/workflows/release.yml`) bu
 2. Commit and push to `master`.
 3. `git tag -a v0.5.4 -m "Finoteku v0.5.4" && git push origin v0.5.4`. The tag must equal the pubspec name (`v` + `0.5.4`).
 4. Watch the run: `gh run watch <id> --exit-status`. It fails, instead of shipping, when the tag ≠ pubspec, a version/build is not higher than the previous tag, a secret is missing, an APK is not signed with the release certificate, or the Supabase URL is not compiled in.
-5. The run publishes the GitHub Release (per-ABI + universal APKs), uploads the universal APK to Supabase Storage `app_releases`, and upserts `app_versions` (version, build_number, apk_url). Apps check that table once a day (`AutoUpdateCheck`) and from Akun; the download installs **over** the current app because the signature and versionCode line up.
+5. The run publishes the GitHub Release (per-ABI + universal APKs), uploads the **arm64** APK to Supabase Storage `app_releases` (the universal one is over the 50 MB upload limit), and upserts `app_versions` (version, build_number, apk_url). Apps check that table once a day (`AutoUpdateCheck`) and from Akun; the download installs **over** the current app because the signature and versionCode line up.
 
 Never:
 - build a release without `--dart-define-from-file=.env` (the APK then ships placeholder Supabase credentials and every login fails);
