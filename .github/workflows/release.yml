@@ -1,18 +1,27 @@
 name: Automated Android Release
 
-# Release = a tag vX.Y.Z whose X.Y.Z equals `version:` in pubspec.yaml: pushed by hand,
-# or created and passed in by auto-release.yml on every app push to master.
+# Release on demand, never on a plain push:
+# - Actions → "Automated Android Release" → Run workflow (or `gh workflow run release.yml -f bump=patch`):
+#   bumps `version:` in pubspec.yaml (name and build number), commits it to master, tags vX.Y.Z.
+#   bump=none releases the current version (tags it if needed).
+# - Or push a tag vX.Y.Z whose X.Y.Z equals `version:` in pubspec.yaml.
 # Every check below fails the job instead of shipping a broken or unsigned APK.
 # Steps and secrets are documented in CLAUDE.md ("Release").
 on:
   push:
     tags:
       - 'v*'
-  workflow_call:
+  workflow_dispatch:
     inputs:
-      tag:
-        type: string
-        required: true
+      bump:
+        description: 'Version part to raise (the build number always goes up)'
+        type: choice
+        options: [patch, minor, major, none]
+        default: patch
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -31,8 +40,39 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'master' || github.ref }}
           fetch-depth: 0
+
+      # The bump commit and tag go out with GITHUB_TOKEN, which starts no other workflow.
+      - name: Bump version and tag (manual run)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          set -euo pipefail
+          PUB=$(grep -m1 '^version:' pubspec.yaml | sed 's/version:[[:space:]]*//; s/\r//')
+          NAME=${PUB%+*}; BUILD=${PUB#*+}
+          IFS=. read -r MAJOR MINOR PATCH <<< "$NAME"
+          case "$BUMP" in
+            major) NAME="$((MAJOR + 1)).0.0" ;;
+            minor) NAME="$MAJOR.$((MINOR + 1)).0" ;;
+            patch) NAME="$MAJOR.$MINOR.$((PATCH + 1))" ;;
+          esac
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ "$BUMP" != none ]; then
+            sed -i "s/^version:.*/version: $NAME+$((BUILD + 1))/" pubspec.yaml
+            git commit -am "chore: rilis v$NAME"
+            git push origin HEAD:master
+          fi
+          if git rev-parse -q --verify "refs/tags/v$NAME" >/dev/null; then
+            [ "$(git rev-list -n1 "v$NAME")" = "$(git rev-parse HEAD)" ] \
+              || { echo "::error::Tag v$NAME already exists on another commit"; exit 1; }
+          else
+            git tag -a "v$NAME" -m "Finoteku v$NAME"
+            git push origin "v$NAME"
+          fi
+          echo "RELEASE_TAG=v$NAME" >> "$GITHUB_ENV"
 
       - name: Check version, tag and secrets
         env:
@@ -48,7 +88,7 @@ jobs:
                    ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
             [ -n "${!s}" ] || { echo "::error::Secret $s is missing"; exit 1; }
           done
-          TAG=${{ inputs.tag || github.ref_name }}
+          TAG=${RELEASE_TAG:-${{ github.ref_name }}}
           PUB=$(grep -m1 '^version:' pubspec.yaml | sed 's/version:[[:space:]]*//; s/\r//')
           NAME=${PUB%+*}; BUILD=${PUB#*+}
           [ "v$NAME" = "$TAG" ] || { echo "::error::Tag $TAG does not match pubspec version $NAME"; exit 1; }
@@ -71,6 +111,8 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          # same Flutter as development: a newer stable pins test packages pubspec.lock cannot meet
+          flutter-version: '3.47.9'
           channel: 'stable'
           cache: true
 
@@ -114,7 +156,7 @@ jobs:
       - name: Prepare APK Asset Names
         id: tag_name
         run: |
-          TAG=${{ inputs.tag || github.ref_name }}
+          TAG=${RELEASE_TAG:-${{ github.ref_name }}}
           echo "TAG=${TAG}" >> $GITHUB_OUTPUT
           cd build/app/outputs/flutter-apk
           cp app-arm64-v8a-release.apk finoteku-${TAG}-arm64-v8a.apk
