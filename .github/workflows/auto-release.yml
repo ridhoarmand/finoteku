@@ -1,0 +1,61 @@
+name: Auto Release
+
+# Every push to master that changes the app: bump the patch version and the build
+# number in pubspec.yaml, commit, tag vX.Y.Z, then run release.yml for that tag.
+# Put "[skip release]" in the commit message to push without releasing.
+# The bump commit and tag are pushed with GITHUB_TOKEN, which starts no new workflow,
+# so this does not loop and the tag push does not release twice.
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'lib/**'
+      - 'assets/**'
+      - 'android/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: auto-release
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    if: ${{ !contains(github.event.head_commit.message, '[skip release]') }}
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.bump.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Bump version, commit and tag
+        id: bump
+        run: |
+          set -euo pipefail
+          PUB=$(grep -m1 '^version:' pubspec.yaml | sed 's/version:[[:space:]]*//; s/\r//')
+          NAME=${PUB%+*}; BUILD=${PUB#*+}
+          IFS=. read -r MAJOR MINOR PATCH <<< "$NAME"
+          NEW_NAME="$MAJOR.$MINOR.$((PATCH + 1))"
+          NEW="$NEW_NAME+$((BUILD + 1))"
+          sed -i "s/^version:.*/version: $NEW/" pubspec.yaml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore: rilis v$NEW_NAME [skip release]"
+          git tag -a "v$NEW_NAME" -m "Finoteku v$NEW_NAME"
+          git push origin HEAD:master "v$NEW_NAME"
+          echo "tag=v$NEW_NAME" >> "$GITHUB_OUTPUT"
+          echo "Bumped $PUB -> $NEW"
+
+  release:
+    needs: bump
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.bump.outputs.tag }}
+    secrets: inherit

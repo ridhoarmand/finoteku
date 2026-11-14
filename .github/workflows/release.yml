@@ -1,12 +1,18 @@
 name: Automated Android Release
 
-# Release = push a tag vX.Y.Z whose X.Y.Z equals `version:` in pubspec.yaml.
+# Release = a tag vX.Y.Z whose X.Y.Z equals `version:` in pubspec.yaml: pushed by hand,
+# or created and passed in by auto-release.yml on every app push to master.
 # Every check below fails the job instead of shipping a broken or unsigned APK.
 # Steps and secrets are documented in CLAUDE.md ("Release").
 on:
   push:
     tags:
       - 'v*'
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
 
 permissions:
   contents: write
@@ -25,6 +31,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.tag || github.ref }}
           fetch-depth: 0
 
       - name: Check version, tag and secrets
@@ -41,7 +48,7 @@ jobs:
                    ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
             [ -n "${!s}" ] || { echo "::error::Secret $s is missing"; exit 1; }
           done
-          TAG=${GITHUB_REF#refs/tags/}
+          TAG=${{ inputs.tag || github.ref_name }}
           PUB=$(grep -m1 '^version:' pubspec.yaml | sed 's/version:[[:space:]]*//; s/\r//')
           NAME=${PUB%+*}; BUILD=${PUB#*+}
           [ "v$NAME" = "$TAG" ] || { echo "::error::Tag $TAG does not match pubspec version $NAME"; exit 1; }
@@ -107,7 +114,7 @@ jobs:
       - name: Prepare APK Asset Names
         id: tag_name
         run: |
-          TAG=${GITHUB_REF#refs/tags/}
+          TAG=${{ inputs.tag || github.ref_name }}
           echo "TAG=${TAG}" >> $GITHUB_OUTPUT
           cd build/app/outputs/flutter-apk
           cp app-arm64-v8a-release.apk finoteku-${TAG}-arm64-v8a.apk
