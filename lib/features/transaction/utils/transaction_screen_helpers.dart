@@ -32,6 +32,11 @@ class TransactionScreenHelpers {
   static bool isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
+  /// A save may not push a wallet below zero. One that is already below zero
+  /// (e.g. from the bot) can still be edited, as long as it gets no worse.
+  static bool overdraws(double current, double projected) =>
+      projected < -0.01 && projected < current - 0.01;
+
   /// Format date with localization support
   static String formatDate(DateTime date, String Function(String) tr) {
     final now = DateTime.now();

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:finoteku/theme/ph_icons.dart';
 
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/state/balance_visibility_provider.dart';
 import '../../../models/category.dart';
 import '../../../models/ledger_entry.dart';
 import '../../../models/wallet.dart';
@@ -24,22 +25,42 @@ class LedgerItem {
   bool get isTransfer => entry.transferId != null;
 }
 
-/// Transfers come as two ledger rows (out + in): keep one, remember both wallets.
+/// Transfers come as two ledger rows (out + in): keep one. Each row names the other
+/// wallet itself, so both are known even when the list is filtered to one wallet.
 List<LedgerItem> ledgerItems(List<LedgerEntry> entries) {
-  final sides = <String, Map<String, String>>{};
-  for (final e in entries) {
-    if (e.transferId == null) continue;
-    sides.putIfAbsent(e.transferId!, () => {})[e.kind] = e.walletId;
-  }
   final seen = <String>{};
-  final out = <LedgerItem>[];
+  return [
+    for (final e in entries)
+      if (e.transferId == null)
+        LedgerItem(e)
+      else if (seen.add(e.transferId!))
+        LedgerItem(
+          e,
+          fromWalletId: e.kind == 'transfer_out' ? e.walletId : e.counterpartWalletId,
+          toWalletId: e.kind == 'transfer_in' ? e.walletId : e.counterpartWalletId,
+        ),
+  ];
+}
+
+/// Balance at the end of each day, walking back from the balance now.
+/// Scope: [walletId], or every visible wallet (same total as Beranda). [entries] must
+/// hold every entry from the oldest day shown up to now, before any category/type/search
+/// filter, so filtering the list never changes these numbers.
+/// shortcut: a wallet's opening balance or a manual balance edit is not a ledger entry,
+/// so days before it show today's offset; add those as entries if it ever matters.
+Map<DateTime, double> dayBalances(List<LedgerEntry> entries, List<Wallet> wallets, String? walletId) {
+  final scope = walletId != null ? {walletId} : {for (final w in wallets) if (!w.isHidden) w.id};
+  final net = <DateTime, double>{};
   for (final e in entries) {
-    if (e.transferId == null) {
-      out.add(LedgerItem(e));
-    } else if (seen.add(e.transferId!)) {
-      final s = sides[e.transferId!]!;
-      out.add(LedgerItem(e, fromWalletId: s['transfer_out'], toWalletId: s['transfer_in']));
-    }
+    if (!scope.contains(e.walletId)) continue;
+    final d = DateTime(e.date.year, e.date.month, e.date.day);
+    net[d] = (net[d] ?? 0) + e.signedAmount;
+  }
+  var running = wallets.where((w) => scope.contains(w.id)).fold<double>(0, (s, w) => s + w.balance);
+  final out = <DateTime, double>{};
+  for (final d in net.keys.toList()..sort((a, b) => b.compareTo(a))) {
+    out[d] = running;
+    running -= net[d]!;
   }
   return out;
 }
@@ -53,6 +74,7 @@ class LedgerList extends ConsumerWidget {
   final ScrollController? controller;
   final EdgeInsets padding;
   final Widget? header;
+  final Map<DateTime, double>? balances; // end-of-day balance, see [dayBalances]
 
   const LedgerList({
     super.key,
@@ -62,6 +84,7 @@ class LedgerList extends ConsumerWidget {
     this.controller,
     this.padding = const EdgeInsets.fromLTRB(16, 0, 16, 96), // room for the FAB
     this.header,
+    this.balances,
   });
 
   @override
@@ -74,6 +97,7 @@ class LedgerList extends ConsumerWidget {
       days.putIfAbsent(DateTime(d.year, d.month, d.day), () => []).add(item);
     }
     final keys = days.keys.toList()..sort((a, b) => b.compareTo(a));
+    final visible = ref.watch(balanceVisibilityProvider);
 
     return ListView.builder(
       controller: controller,
@@ -98,9 +122,32 @@ class LedgerList extends ConsumerWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        TransactionScreenHelpers.formatDate(day, (k) => ref.tr(context, k)),
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(color: context.colors.muted),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            TransactionScreenHelpers.formatDate(day, (k) => ref.tr(context, k)),
+                            style: Theme.of(context).textTheme.labelLarge?.copyWith(color: context.colors.muted),
+                          ),
+                          if (balances?[day] case final b?)
+                            Row(
+                              children: [
+                                Text(
+                                  '${ref.tr(context, 'day_balance')} ',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.colors.muted),
+                                ),
+                                Flexible(
+                                  child: AmountText(
+                                    b,
+                                    hidden: !visible,
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: b < 0 ? Theme.of(context).colorScheme.error : context.colors.muted,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
                       ),
                     ),
                     if (net != 0)

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:finoteku/theme/ph_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -47,6 +48,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       );
 
       if (mounted) {
+        // offer to save the new account in the password manager
+        TextInput.finishAutofillContext();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(ref.tr(context, 'registration_success')),
@@ -91,6 +94,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           padding: const EdgeInsets.all(24.0),
           child: Form(
             key: _formKey,
+            child: AutofillGroup(
+            onDisposeAction: AutofillContextAction.cancel, // saved only after sign-up succeeds
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -115,6 +120,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 // Full Name Field
                 TextFormField(
                   controller: _nameController,
+                  autofillHints: const [AutofillHints.name],
                   decoration: InputDecoration(
                     labelText: ref.tr(context, 'full_name_label'),
                     prefixIcon: const Icon(PhRegular.user),
@@ -132,6 +138,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.email, AutofillHints.newUsername],
                   decoration: InputDecoration(
                     labelText: ref.tr(context, 'email_label'),
                     prefixIcon: const Icon(PhRegular.envelopeSimple),
@@ -154,6 +161,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
+                  autofillHints: const [AutofillHints.newPassword],
                   decoration: InputDecoration(
                     labelText: ref.tr(context, 'password_label'),
                     prefixIcon: const Icon(PhRegular.lock),
@@ -187,6 +195,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: _obscureConfirmPassword,
+                  autofillHints: const [AutofillHints.newPassword],
                   decoration: InputDecoration(
                     labelText: ref.tr(context, 'confirm_password_label'),
                     prefixIcon: const Icon(PhRegular.lock),
@@ -241,6 +250,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ],
                 ),
               ],
+            ),
             ),
           ),
         ),

@@ -526,48 +526,19 @@ class _AddEditTransactionScreenState
       // Amount always stored as positive; category.type determines sign in analytics & wallet triggers
       final finalAmount = amount.abs();
 
-      // Validasi saldo untuk expense dan transfer
-      if (!_isTransfer &&
-          _selectedCategory != null &&
-          _selectedCategory!.type == CategoryType.expense) {
-        // Cek apakah saldo wallet cukup untuk pengeluaran
-        double effectiveBalance = _selectedWallet!.balance;
-
-        if (widget.initialTransaction != null &&
-            widget.initialTransaction!.walletId == _selectedWallet!.id) {
-          final categories =
-              ref.read(categoriesAllProvider(user.id)).value ?? [];
-          bool isOldTransactionExpense = false;
-
-          // Try to determine based on category
-          if (widget.initialTransaction!.categoryId == _selectedCategory!.id) {
-            isOldTransactionExpense =
-                _selectedCategory!.type == CategoryType.expense;
-          } else {
-            try {
-              final oldCat = categories.firstWhere(
-                (c) => c.id == widget.initialTransaction!.categoryId,
-              );
-              isOldTransactionExpense = oldCat.type == CategoryType.expense;
-            } catch (_) {
-              // Fallback: Check sign. If negative, likely expense.
-              isOldTransactionExpense = widget.initialTransaction!.amount < 0;
-            }
-          }
-
-          if (isOldTransactionExpense) {
-            // Refund Expense: Add back the absolute amount
-            effectiveBalance += widget.initialTransaction!.amount.abs();
-          } else {
-            // Refund Income: Remove the absolute amount
-            effectiveBalance -= widget.initialTransaction!.amount.abs();
-          }
+      // Saldo dompet setelah disimpan: efek lama dibatalkan dulu, lalu efek baru.
+      final wallet = _selectedWallet!;
+      if (!_isTransfer && _selectedCategory != null) {
+        double effect(bool expense, double amount) => expense ? -amount : amount;
+        var projected = wallet.balance +
+            effect(_selectedCategory!.type == CategoryType.expense, finalAmount);
+        final old = widget.initialTransaction;
+        if (old != null && old.walletId == wallet.id) {
+          final categories = ref.read(categoriesAllProvider(user.id)).value ?? [];
+          final oldCat = categories.where((c) => c.id == old.categoryId).firstOrNull;
+          projected -= effect(oldCat?.type != CategoryType.income, old.amount.abs());
         }
-
-        final newBalance = effectiveBalance - finalAmount;
-
-        // Toleransi floating point error
-        if (newBalance < -0.01) {
+        if (TransactionScreenHelpers.overdraws(wallet.balance, projected)) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -599,11 +570,15 @@ class _AddEditTransactionScreenState
           );
           return;
         }
-        // Validasi saldo wallet sumber untuk transfer
-        final currentBalance = _selectedWallet!.balance;
-        final newBalance = currentBalance - finalAmount;
+        // Saldo dompet sumber setelah disimpan (transfer lama dibatalkan dulu)
+        var projected = wallet.balance - finalAmount;
+        final old = widget.initialTransfer;
+        if (old != null) {
+          if (old.fromWalletId == wallet.id) projected += old.amount;
+          if (old.toWalletId == wallet.id) projected -= old.amount;
+        }
 
-        if (newBalance < 0) {
+        if (TransactionScreenHelpers.overdraws(wallet.balance, projected)) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(

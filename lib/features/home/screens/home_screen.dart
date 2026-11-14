@@ -24,6 +24,14 @@ import '../../wallet/providers/wallet_providers.dart';
 import '../../wallet/widgets/wallet_picker_sheet.dart';
 import '../providers/home_providers.dart';
 
+/// Greeting by local hour: pagi 04-10, siang 11-14, sore 15-17, malam otherwise.
+String greetingKey(int hour) => switch (hour) {
+  >= 4 && < 11 => 'greeting_morning',
+  >= 11 && < 15 => 'greeting_afternoon',
+  >= 15 && < 18 => 'greeting_evening',
+  _ => 'greeting_night',
+};
+
 /// Beranda: the balance is the focal point, the month in one line, then the
 /// latest activity grouped by day (DESIGN.md "Layout").
 class HomeScreen extends ConsumerWidget {
@@ -46,7 +54,7 @@ class HomeScreen extends ConsumerWidget {
 
     final selectedWalletId = ref.watch(selectedHomeWalletProvider);
     final walletsAsync = ref.watch(walletsProvider(userId));
-    final ledgerArgs = (userId: userId, walletId: selectedWalletId, startDate: rangeStart, endDate: today);
+    final ledgerArgs = (userId: userId, walletId: selectedWalletId, startDate: rangeStart, endDate: null);
     final ledgerAsync = ref.watch(ledgerEntriesProvider(ledgerArgs));
     final categoriesAsync = ref.watch(categoriesAllProvider(userId));
 
@@ -91,6 +99,7 @@ class HomeScreen extends ConsumerWidget {
               entries: entries,
               categories: categoriesAsync.value!,
               wallets: wallets,
+              balances: walletsAsync.hasValue ? dayBalances(ledgerAsync.value!, wallets, selectedWalletId) : null,
               header: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -136,6 +145,8 @@ class _HomeHeader extends ConsumerWidget {
     final muted = context.colors.muted;
     final visible = ref.watch(balanceVisibilityProvider);
     final locale = Localizations.localeOf(context).toLanguageTag();
+    final fullName = (user?.userMetadata?['full_name'] as String?)?.trim() ?? '';
+    final firstName = fullName.split(RegExp(r'\s+')).first;
     final selected = wallets.where((w) => w.id == selectedWalletId).firstOrNull;
     // hidden wallets are not part of "all wallets" (same as the wallet screen)
     final balance = selected?.balance ?? wallets.where((w) => !w.isHidden).fold<double>(0, (s, w) => s + w.balance);
@@ -155,9 +166,20 @@ class _HomeHeader extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  DateFormat('EEEE, d MMMM', locale).format(DateTime.now()),
-                  style: theme.textTheme.labelLarge?.copyWith(color: muted),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      [ref.tr(context, greetingKey(DateTime.now().hour)), if (firstName.isNotEmpty) firstName].join(', '),
+                      style: theme.textTheme.titleLarge,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      DateFormat('EEEE, d MMMM', locale).format(DateTime.now()),
+                      style: theme.textTheme.labelLarge?.copyWith(color: muted),
+                    ),
+                  ],
                 ),
               ),
               Semantics(

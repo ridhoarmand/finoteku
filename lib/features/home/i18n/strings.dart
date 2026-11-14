@@ -3,10 +3,10 @@
 
 const Map<String, String> homeStringsEn = {
   // Greetings
-  'greeting_morning': 'Good Morning',
-  'greeting_afternoon': 'Good Afternoon',
-  'greeting_evening': 'Good Evening',
-  'greeting_night': 'Good Night',
+  'greeting_morning': 'Good morning',
+  'greeting_afternoon': 'Good afternoon',
+  'greeting_evening': 'Good afternoon', // "sore": English has no separate word
+  'greeting_night': 'Good evening',
 
   // User
   'user_fallback': 'User',
@@ -43,10 +43,10 @@ const Map<String, String> homeStringsEn = {
 
 const Map<String, String> homeStringsId = {
   // Greetings
-  'greeting_morning': 'Selamat Pagi',
-  'greeting_afternoon': 'Selamat Siang',
-  'greeting_evening': 'Selamat Sore',
-  'greeting_night': 'Selamat Malam',
+  'greeting_morning': 'Selamat pagi',
+  'greeting_afternoon': 'Selamat siang',
+  'greeting_evening': 'Selamat sore',
+  'greeting_night': 'Selamat malam',
 
   // User
   'user_fallback': 'Pengguna',

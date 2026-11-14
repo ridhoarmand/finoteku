@@ -7,6 +7,26 @@ import '../core/localization/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../features/settings/widgets/app_update_dialog.dart';
 
+/// Watches the shell's own navigator. Detail pages, account sub-pages and sheets opened
+/// from a tab land there, on top of the tab: then the add button and the tab bar step
+/// aside so they never cover that page's own buttons.
+class ShellRouteObserver extends NavigatorObserver {
+  final covered = ValueNotifier(false);
+
+  void _sync() => WidgetsBinding.instance.addPostFrameCallback((_) => covered.value = navigator?.canPop() ?? false);
+
+  @override
+  void didPush(Route route, Route? previousRoute) => _sync();
+  @override
+  void didPop(Route route, Route? previousRoute) => _sync();
+  @override
+  void didRemove(Route route, Route? previousRoute) => _sync();
+  @override
+  void didReplace({Route? newRoute, Route? oldRoute}) => _sync();
+}
+
+final shellRouteObserver = ShellRouteObserver();
+
 class MainShell extends ConsumerWidget {
   final Widget child;
 
@@ -81,12 +101,14 @@ class MainShell extends ConsumerWidget {
             SystemNavigator.pop();
           }
         },
-        child: Scaffold(
+        child: ValueListenableBuilder<bool>(
+          valueListenable: shellRouteObserver.covered,
+          builder: (context, covered, _) => Scaffold(
           body: child,
           // The add button sits in a notch of the bar with a ring of page colour
           // around it: it reads as its own control, not a fifth tab.
           floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-          floatingActionButton: SizedBox.square(
+          floatingActionButton: covered ? null : SizedBox.square(
             dimension: 60,
             child: FloatingActionButton(
               tooltip: ref.tr(context, 'add_transaction'),
@@ -96,7 +118,7 @@ class MainShell extends ConsumerWidget {
               child: const Icon(PhBold.plus, size: 26),
             ),
           ),
-          bottomNavigationBar: BottomAppBar(
+          bottomNavigationBar: covered ? null : BottomAppBar(
             shape: const CircularNotchedRectangle(),
             notchMargin: 5,
             height: 68,
@@ -121,6 +143,7 @@ class MainShell extends ConsumerWidget {
               ],
             ),
           ),
+        ),
         ),
       ),
     );

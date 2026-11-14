@@ -49,7 +49,8 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     final theme = Theme.of(context);
     final f = ref.watch(transactionFilterProvider);
     final range = f.range(DateTime.now());
-    final args = (userId: user.id, walletId: f.walletId, startDate: range.start, endDate: range.end);
+    // no end date: the day balances walk back from today, so they need every later entry too
+    final args = (userId: user.id, walletId: f.walletId, startDate: range.start, endDate: null);
     final ledgerAsync = ref.watch(ledgerEntriesProvider(args));
     final categoriesAsync = ref.watch(categoriesAllProvider(user.id));
     final walletsAsync = ref.watch(walletsProvider(user.id));
@@ -67,7 +68,8 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     } else if (!ledgerAsync.hasValue || !categoriesAsync.hasValue) {
       body = const Center(child: CircularProgressIndicator());
     } else {
-      final all = ledgerAsync.value!;
+      final end = range.end;
+      final all = end == null ? ledgerAsync.value! : ledgerAsync.value!.where((e) => !e.date.isAfter(end)).toList();
       final shown = applyTxFilter(all, f, categories, wallets);
       body = shown.isEmpty
           ? _Empty(filtered: all.isNotEmpty || f.activeCount > 0 || f.query.isNotEmpty)
@@ -77,6 +79,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
               wallets: wallets,
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
               header: _Summary(entries: shown),
+              balances: walletsAsync.hasValue ? dayBalances(ledgerAsync.value!, wallets, f.walletId) : null,
             );
     }
 

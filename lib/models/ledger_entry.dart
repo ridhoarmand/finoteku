@@ -9,6 +9,7 @@ class LedgerEntry {
   final String? notes;
   final String kind; // 'transaction' | 'transfer_in' | 'transfer_out'
   final String? transferId;
+  final String? counterpartWalletId; // transfers: the wallet on the other side
 
   const LedgerEntry({
     required this.entryId,
@@ -21,6 +22,7 @@ class LedgerEntry {
     this.notes,
     required this.kind,
     this.transferId,
+    this.counterpartWalletId,
   });
 
   factory LedgerEntry.fromJson(Map<String, dynamic> json) {
@@ -35,6 +37,7 @@ class LedgerEntry {
       notes: json['notes'] as String?,
       kind: json['kind'] as String,
       transferId: json['transfer_id'] as String?,
+      counterpartWalletId: json['counterpart_wallet_id'] as String?,
     );
   }
 }

@@ -193,8 +193,8 @@ class ManageWalletsScreen extends ConsumerWidget {
   void _showAddWalletDialog(BuildContext context, WidgetRef ref) {
     final user = ref.read(currentUserProvider).value;
     if (user == null) return;
-    showDialog(
-      context: context,
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      fullscreenDialog: true,
       builder: (_) => WalletFormDialog(
         title: ref.tr(context, 'wallet_add'),
         onSave: (request) async {
@@ -208,7 +208,7 @@ class ManageWalletsScreen extends ConsumerWidget {
           }
         },
       ),
-    );
+    ));
   }
 
   void _showEditWalletDialog(
@@ -217,8 +217,8 @@ class ManageWalletsScreen extends ConsumerWidget {
     Wallet wallet,
     String userId,
   ) {
-    showDialog(
-      context: context,
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      fullscreenDialog: true,
       builder: (_) => WalletFormDialog(
         title: ref.tr(context, 'wallet_edit'),
         initialData: UpdateWalletRequest(
@@ -243,7 +243,7 @@ class ManageWalletsScreen extends ConsumerWidget {
           }
         },
       ),
-    );
+    ));
   }
 
   void _confirmDelete(

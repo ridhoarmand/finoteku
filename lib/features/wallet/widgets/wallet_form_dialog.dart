@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:finoteku/theme/app_theme.dart';
 import 'package:finoteku/theme/ph_icons.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/wallet.dart';
 import '../../../utils/wallet_icon_helper.dart';
 import '../../../utils/currency_formatter.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../transaction/widgets/amount_section.dart';
 
 class WalletFormDialog extends ConsumerStatefulWidget {
   final String title;
@@ -29,6 +29,8 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _balanceController = TextEditingController();
+  final _balanceFocus = FocusNode();
+  String? _autoName; // name last filled in from a logo
   String _selectedCurrency = 'IDR';
   String? _selectedIcon;
   bool _isHidden = false;
@@ -65,209 +67,146 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
   void dispose() {
     _nameController.dispose();
     _balanceController.dispose();
+    _balanceFocus.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.title),
-      content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: ref.tr(context, 'wallet_name_label'),
-                  border: const OutlineInputBorder(),
+    final theme = Theme.of(context);
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.title)),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          children: [
+            // Logo first: picking one also names the wallet
+            Center(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(AppTheme.rBlock),
+                onTap: _pickIcon,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: WalletIconHelper.buildIcon(_selectedIcon, size: 64, color: context.colors.muted),
                 ),
-                validator: (value) => (value == null || value.trim().isEmpty)
-                    ? ref.tr(context, 'wallet_name_required')
-                    : null,
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _balanceController,
-                decoration: InputDecoration(
-                  labelText: ref.tr(context, 'wallet_balance_label'),
-                  border: const OutlineInputBorder(),
-                  prefixText: 'Rp ',
-                  hintText: '0',
-                ),
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[\d\.]')),
-                  _ThousandSeparatorFormatter(),
-                ],
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return ref.tr(context, 'wallet_balance_required');
-                  }
-                  final parsed = CurrencyFormatter.parse(value);
-                  if (parsed == null) {
-                    return ref.tr(context, 'wallet_number_invalid');
-                  }
-                  return null;
-                },
+            ),
+            Center(
+              child: TextButton.icon(
+                onPressed: _pickIcon,
+                icon: const Icon(PhRegular.pencilSimple, size: 16),
+                label: Text(ref.tr(context, 'wallet_select_icon')),
               ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: _selectedCurrency,
-                decoration: InputDecoration(
-                  labelText: ref.tr(context, 'wallet_currency_label'),
-                  border: const OutlineInputBorder(),
-                ),
-                items: _currencies
-                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                    .toList(),
-                onChanged: (value) =>
-                    setState(() => _selectedCurrency = value ?? 'IDR'),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      ref.tr(context, 'wallet_selected_icon'),
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ),
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: context.colors.muted),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: WalletIconHelper.buildIcon(_selectedIcon, size: 24),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _showIconSelectionDialog,
-                    child: Text(ref.tr(context, 'wallet_select_icon')),
-                  ),
-                ],
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _nameController,
+              textCapitalization: TextCapitalization.words,
+              decoration: InputDecoration(labelText: ref.tr(context, 'wallet_name_label')),
+              validator: (value) => (value == null || value.trim().isEmpty)
+                  ? ref.tr(context, 'wallet_name_required')
+                  : null,
+            ),
+            const SizedBox(height: 24),
+            AmountSection(
+              controller: _balanceController,
+              focusNode: _balanceFocus,
+              onSubmitted: _unfocus,
+              onTapOutside: _unfocus,
+              labelKey: 'wallet_balance_label',
+              prefix: _selectedCurrency == 'IDR' ? 'Rp' : _selectedCurrency,
+              allowZero: true,
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              initialValue: _selectedCurrency,
+              decoration: InputDecoration(labelText: ref.tr(context, 'wallet_currency_label')),
+              items: _currencies
+                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                  .toList(),
+              onChanged: (value) =>
+                  setState(() => _selectedCurrency = value ?? 'IDR'),
+            ),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-          child: Text(ref.tr(context, 'cancel')),
-        ),
-        FilledButton(
+      // Save stays reachable above the keyboard, same as the transaction form
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: FilledButton(
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(50),
+            textStyle: theme.textTheme.titleMedium,
+          ),
           onPressed: _isLoading ? null : _handleSave,
           child: _isLoading
               ? const SizedBox(
-                  width: 16,
-                  height: 16,
+                  width: 20,
+                  height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : Text(ref.tr(context, 'save')),
         ),
-      ],
+      ),
     );
   }
 
-  void _showIconSelectionDialog() {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final maxDialogHeight = screenHeight * 0.7;
-    showDialog(
+  void _unfocus() => FocusManager.instance.primaryFocus?.unfocus();
+
+  /// Logo sheet (search + bank / e-wallet chips). '' = back to the default icon.
+  Future<void> _pickIcon() async {
+    _unfocus();
+    final picked = await showModalBottomSheet<String>(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          constraints: BoxConstraints(
-            maxHeight: maxDialogHeight,
-            maxWidth: 500,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
-                  ),
-                ),
-                child: Row(
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheet) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(sheet).height * 0.85),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 8 + MediaQuery.viewInsetsOf(sheet).bottom),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
                   children: [
-                    Icon(
-                      PhRegular.wallet,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         ref.tr(context, 'wallet_select_icon_title'),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(sheet).textTheme.titleLarge,
                       ),
                     ),
-                  ],
-                ),
-              ),
-              Flexible(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: WalletIconHelper.buildIconSelectionGrid(
-                    selectedIcon: _selectedIcon,
-                    onIconSelected: (iconPath) {
-                      setState(() => _selectedIcon = iconPath);
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: const BorderRadius.vertical(
-                    bottom: Radius.circular(16),
-                  ),
-                  border: Border(
-                    top: BorderSide(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.outline.withValues(alpha: 0.2),
-                    ),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
                     TextButton(
-                      onPressed: () {
-                        setState(() => _selectedIcon = null);
-                        Navigator.of(context).pop();
-                      },
+                      onPressed: () => Navigator.pop(sheet, ''),
                       child: Text(ref.tr(context, 'wallet_use_default')),
                     ),
-                    const SizedBox(width: 12),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(ref.tr(context, 'cancel')),
-                    ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Flexible(
+                  child: WalletIconHelper.buildIconSelectionGrid(
+                    selectedIcon: _selectedIcon,
+                    onIconSelected: (path) => Navigator.pop(sheet, path),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _selectedIcon = picked.isEmpty ? null : picked;
+      // the name follows the logo until the user types one of their own
+      final name = _nameController.text.trim();
+      final logoName = picked == WalletIconHelper.cashIcon ? 'Tunai' : WalletIconHelper.logoFor(picked)?.name;
+      if (logoName != null && (name.isEmpty || name == _autoName)) {
+        _nameController.text = _autoName = logoName;
+      }
+    });
   }
 
   Future<void> _handleSave() async {
@@ -318,88 +257,5 @@ class _WalletFormDialogState extends ConsumerState<WalletFormDialog> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-}
-
-/// TextInputFormatter for adding thousand separators as user types
-/// Preserves cursor position for better editing experience
-class _ThousandSeparatorFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    if (newValue.text.isEmpty) {
-      return newValue;
-    }
-
-    // Get cursor position from new value (where user wants cursor to be)
-    final newCursorPos = newValue.selection.baseOffset;
-
-    // Remove existing separators
-    final cleanNew = newValue.text.replaceAll('.', '');
-
-    // Parse to number
-    final number = int.tryParse(cleanNew);
-    if (number == null && cleanNew.isNotEmpty) {
-      return oldValue;
-    }
-
-    if (number == null) {
-      return const TextEditingValue(
-        text: '',
-        selection: TextSelection.collapsed(offset: 0),
-      );
-    }
-
-    // Format with thousand separators
-    final formatted = _formatWithThousandSeparator(number);
-
-    // Calculate how many separators were before cursor in new (unformatted) value
-    final separatorsBeforeCursorInNew = newValue.text
-        .substring(0, newCursorPos.clamp(0, newValue.text.length))
-        .replaceAll(RegExp(r'[^.]'), '')
-        .length;
-
-    // Calculate digits before cursor (excluding separators)
-    final digitsBeforeCursor = newCursorPos - separatorsBeforeCursorInNew;
-
-    // Now count how many characters (including new separators) to reach that many digits
-    int finalCursorPos = 0;
-    int digitsSeen = 0;
-    for (
-      int i = 0;
-      i < formatted.length && digitsSeen < digitsBeforeCursor;
-      i++
-    ) {
-      finalCursorPos++;
-      if (formatted[i] != '.') {
-        digitsSeen++;
-      }
-    }
-
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(
-        offset: finalCursorPos.clamp(0, formatted.length),
-      ),
-    );
-  }
-
-  String _formatWithThousandSeparator(int number) {
-    final text = number.toString();
-    final buffer = StringBuffer();
-    int count = 0;
-
-    for (int i = text.length - 1; i >= 0; i--) {
-      buffer.write(text[i]);
-      count++;
-      if (count == 3 && i > 0) {
-        buffer.write('.');
-        count = 0;
-      }
-    }
-
-    return buffer.toString().split('').reversed.join();
   }
 }

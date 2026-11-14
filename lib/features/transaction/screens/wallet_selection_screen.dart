@@ -6,6 +6,7 @@ import '../../../models/wallet.dart';
 import '../../wallet/providers/wallet_providers.dart';
 import '../../wallet/widgets/wallet_form_dialog.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../theme/app_theme.dart';
 import '../../../utils/currency_formatter.dart';
 import '../../../utils/wallet_icon_helper.dart';
 
@@ -105,13 +106,22 @@ class _WalletSelectionScreenState extends ConsumerState<WalletSelectionScreen> {
           return _buildEmptyState(ref.tr(context, 'no_wallets_yet'));
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          itemCount: walletsToShow.length,
-          itemBuilder: (context, index) {
-            final wallet = walletsToShow[index];
-            return _buildWalletTile(wallet);
-          },
+        // One card, one-line rows split by dividers (like the ledger list)
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96), // room for the FAB
+          children: [
+            Card(
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  for (var i = 0; i < walletsToShow.length; i++) ...[
+                    if (i > 0) const Divider(indent: 62),
+                    _buildWalletTile(walletsToShow[i]),
+                  ],
+                ],
+              ),
+            ),
+          ],
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -121,89 +131,37 @@ class _WalletSelectionScreenState extends ConsumerState<WalletSelectionScreen> {
 
   Widget _buildWalletTile(Wallet wallet) {
     final isSelected = widget.selectedWallet?.id == wallet.id;
-    final isHidden = wallet.isHidden;
     final theme = Theme.of(context);
+    final muted = context.colors.muted;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 4),
-      elevation: isSelected ? 2 : 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: isSelected
-            ? BorderSide(color: theme.colorScheme.primary, width: 1.5)
-            : BorderSide.none,
-      ),
-      child: ListTile(
-        dense: true, // Membuat ListTile lebih compact
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 2, // Lebih kecil lagi
-        ),
-        leading: SizedBox(
-          width: 32, // Lebih kecil lagi
-          height: 32, // Lebih kecil lagi
-          child: WalletIconHelper.buildIcon(
-            wallet.icon,
-            size: 32, // Icon lebih kecil lagi
-          ),
-        ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                wallet.name,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (isHidden)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                margin: const EdgeInsets.only(left: 8),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      PhRegular.eyeSlash,
-                      size: 12,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      ref.tr(context, 'wallet_hidden'),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontSize: 10,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            if (isSelected)
-              Icon(
-                PhFill.checkCircle,
-                color: theme.colorScheme.primary,
-                size: 20,
-              ),
+    return ListTile(
+      selected: isSelected,
+      selectedTileColor: theme.colorScheme.primaryContainer,
+      selectedColor: theme.colorScheme.onPrimaryContainer,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+      leading: WalletIconHelper.buildIcon(wallet.icon, size: 32),
+      title: Text(wallet.name, style: theme.textTheme.titleSmall, overflow: TextOverflow.ellipsis),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (wallet.isHidden) ...[
+            Icon(PhRegular.eyeSlash, size: 16, color: muted, semanticLabel: ref.tr(context, 'wallet_hidden')),
+            const SizedBox(width: 8),
           ],
-        ),
-        subtitle: Text(
-          CurrencyFormatter.format(wallet.balance, wallet.currency),
-          style: theme.textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: wallet.balance >= 0
-                ? theme.colorScheme.primary
-                : theme.colorScheme.error,
+          Text(
+            CurrencyFormatter.format(wallet.balance, wallet.currency),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontFeatures: tabularFigures,
+              color: wallet.balance < 0 ? theme.colorScheme.error : muted,
+            ),
           ),
-        ),
-        onTap: () => _selectWallet(wallet),
+          if (isSelected) ...[
+            const SizedBox(width: 8),
+            Icon(PhFill.checkCircle, color: theme.colorScheme.primary, size: 20),
+          ],
+        ],
       ),
+      onTap: () => _selectWallet(wallet),
     );
   }
 
@@ -297,8 +255,8 @@ class _WalletSelectionScreenState extends ConsumerState<WalletSelectionScreen> {
   }
 
   void _showAddWalletDialog() {
-    showDialog(
-      context: context,
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      fullscreenDialog: true,
       builder: (_) => WalletFormDialog(
         title: ref.tr(context, 'wallet_add'),
         onSave: (request) async {
@@ -328,6 +286,6 @@ class _WalletSelectionScreenState extends ConsumerState<WalletSelectionScreen> {
           }
         },
       ),
-    );
+    ));
   }
 }

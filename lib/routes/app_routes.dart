@@ -200,6 +200,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       // Shell route untuk main app dengan bottom navigation
       ShellRoute(
+        observers: [shellRouteObserver],
         builder: (context, state, child) {
           return MainShell(child: child);
         },

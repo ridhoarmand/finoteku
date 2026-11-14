@@ -229,162 +229,76 @@ class _CategoryListTabState extends ConsumerState<CategoryListTab> {
       return _buildEmptyState(context, ref);
     }
 
-    // Categories sudah diurutkan secara alphabetical dari provider
-    // Separate parent and child categories
-    final parentCategories = categories
-        .where((cat) => cat.parentId == null)
-        .toList();
-    final childCategories = categories
-        .where((cat) => cat.parentId != null)
-        .toList();
-
-    // Create hierarchical structure
-    final hierarchicalItems = <Widget>[];
-
-    for (int i = 0; i < parentCategories.length; i++) {
-      final parent = parentCategories[i];
-
-      // Add parent category
-      hierarchicalItems.add(
-        _buildCategoryItem(context, ref, parent, isParent: true),
-      );
-
-      // Add children of this parent
-      final children = childCategories
-          .where((child) => child.parentId == parent.id)
-          .toList();
-      for (int j = 0; j < children.length; j++) {
-        final child = children[j];
-        final isLastChild = j == children.length - 1;
-        hierarchicalItems.add(
-          _buildCategoryItem(
-            context,
-            ref,
-            child,
-            isChild: true,
-            isLastChild: isLastChild,
-          ),
-        );
-      }
-    }
-
-    // Add orphaned child categories
-    final parentIds = parentCategories.map((p) => p.id).toSet();
-    final orphanedChildren = childCategories
-        .where((child) => !parentIds.contains(child.parentId))
-        .toList();
-    for (final orphan in orphanedChildren) {
-      hierarchicalItems.add(
-        _buildCategoryItem(context, ref, orphan, isOrphan: true),
-      );
-    }
+    // Categories sudah diurutkan secara alphabetical dari provider.
+    // One card per parent with its children, rows split by dividers (like the ledger list).
+    final parents = categories.where((c) => c.parentId == null).toList();
+    final children = categories.where((c) => c.parentId != null).toList();
+    final parentIds = parents.map((p) => p.id).toSet();
+    final groups = [
+      for (final p in parents) [p, ...children.where((c) => c.parentId == p.id)],
+      // children whose parent is missing (hidden or deleted)
+      if (children.any((c) => !parentIds.contains(c.parentId)))
+        children.where((c) => !parentIds.contains(c.parentId)).toList(),
+    ];
 
     return RefreshIndicator(
       onRefresh: () async {
         refreshCategoryProviders(ref);
       },
       child: ListView(
-        padding: const EdgeInsets.all(12),
-        children: hierarchicalItems,
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96), // room for the FAB
+        children: [
+          for (final group in groups)
+            Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  for (var i = 0; i < group.length; i++) ...[
+                    if (i > 0) Divider(indent: group[i].parentId == null ? 64 : 88),
+                    _buildCategoryItem(context, group[i], isChild: group[i].parentId != null),
+                  ],
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
 
-  Widget _buildCategoryItem(
-    BuildContext context,
-    WidgetRef ref,
-    Category category, {
-    bool isParent = false,
-    bool isChild = false,
-    bool isOrphan = false,
-    bool isLastChild = false,
-  }) {
+  Widget _buildCategoryItem(BuildContext context, Category category, {required bool isChild}) {
     final theme = Theme.of(context);
     final isSelected = widget.selectedCategory?.id == category.id;
+    final tile = IconTile(
+      CategoryIconHelper.iconFor(codePoint: category.iconCodePoint, name: category.name),
+      size: isChild ? 28 : 36,
+      color: CategoryTheme.forCategory(context, category.parentId ?? category.id),
+    );
 
-    // Get icon from category model or use default
-    final icon = CategoryIconHelper.iconFor(codePoint: category.iconCodePoint, name: category.name);
-    Widget tile(double size) => IconTile(icon, size: size, color: CategoryTheme.forCategory(context, category.parentId ?? category.id));
-
-    // Different styling based on hierarchy level
-    Widget leadingWidget;
-    EdgeInsets cardMargin;
-
-    if (isChild) {
-      // Child category styling
-      leadingWidget = Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: 20,
-            child: Icon(
-              PhRegular.arrowElbowDownRight,
-              size: 16,
-              color: context.colors.muted,
-            ),
-          ),
-          tile(32),
-        ],
-      );
-      cardMargin = EdgeInsets.only(
-        bottom: isLastChild ? 8 : 2,
-        left: 20,
-        top: 2,
-      );
-    } else if (isOrphan) {
-      // Orphaned child styling
-      leadingWidget = Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(PhRegular.warning, size: 18, color: theme.colorScheme.error),
-          const SizedBox(width: 8),
-          tile(32),
-        ],
-      );
-      cardMargin = const EdgeInsets.only(bottom: 4);
-    } else {
-      // Parent category styling
-      leadingWidget = tile(40);
-      cardMargin = const EdgeInsets.only(bottom: 2, top: 4);
-    }
-
-    return Container(
-      margin: cardMargin,
-      decoration: BoxDecoration(
-        color: isSelected
-            ? theme.colorScheme.primaryContainer
-            : (isChild ? theme.colorScheme.surface : theme.colorScheme.surface),
-        border: Border.all(
-          color: isSelected
-              ? theme.colorScheme.primary
-              : (isChild ? context.colors.muted : context.colors.muted),
-          width: isSelected ? 2 : (isChild ? 0.5 : 1),
+    return ListTile(
+      dense: isChild,
+      selected: isSelected,
+      selectedTileColor: theme.colorScheme.primaryContainer,
+      selectedColor: theme.colorScheme.onPrimaryContainer,
+      contentPadding: EdgeInsets.only(left: isChild ? 24 : 14, right: 14),
+      leading: isChild
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(PhRegular.arrowElbowDownRight, size: 16, color: context.colors.muted),
+                const SizedBox(width: 6),
+                tile,
+              ],
+            )
+          : tile,
+      title: Text(
+        category.name,
+        style: (isChild ? theme.textTheme.bodyMedium : theme.textTheme.titleSmall)?.copyWith(
+          color: isSelected ? theme.colorScheme.onPrimaryContainer : null,
         ),
-        borderRadius: BorderRadius.circular(12),
       ),
-      child: ListTile(
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: isChild ? 12 : 16,
-          vertical: isChild ? 2 : 6,
-        ),
-        leading: leadingWidget,
-        title: Text(
-          category.name,
-          style: TextStyle(
-            fontWeight: isParent ? FontWeight.w600 : FontWeight.w500,
-            fontSize: isChild ? 14 : 15,
-            color: isSelected ? theme.colorScheme.onPrimaryContainer : null,
-          ),
-        ),
-        trailing: isSelected
-            ? Icon(
-                PhFill.checkCircle,
-                color: theme.colorScheme.primary,
-                size: 20,
-              )
-            : null,
-        onTap: () => widget.onCategorySelected(category),
-      ),
+      trailing: isSelected ? Icon(PhFill.checkCircle, color: theme.colorScheme.primary, size: 20) : null,
+      onTap: () => widget.onCategorySelected(category),
     );
   }
 

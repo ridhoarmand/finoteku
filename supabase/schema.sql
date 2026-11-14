@@ -912,7 +912,8 @@ CREATE OR REPLACE VIEW "public"."ledger_entries" WITH ("security_invoker"='on') 
     "t"."date",
     "t"."notes",
     'transaction'::"text" AS "kind",
-    NULL::"uuid" AS "transfer_id"
+    NULL::"uuid" AS "transfer_id",
+    NULL::"uuid" AS "counterpart_wallet_id"
    FROM (("public"."transactions" "t"
      JOIN "public"."categories" "c" ON (("c"."id" = "t"."category_id")))
      LEFT JOIN "public"."wallets" "w" ON (("w"."id" = "t"."wallet_id")))
@@ -930,7 +931,8 @@ UNION ALL
     "tr"."date",
     "tr"."notes",
     'transfer_out'::"text" AS "kind",
-    "tr"."id" AS "transfer_id"
+    "tr"."id" AS "transfer_id",
+    "tr"."to_wallet_id" AS "counterpart_wallet_id"
    FROM ("public"."transfers" "tr"
      LEFT JOIN "public"."wallets" "fw" ON (("fw"."id" = "tr"."from_wallet_id")))
 UNION ALL
@@ -947,7 +949,8 @@ UNION ALL
     "tr"."date",
     "tr"."notes",
     'transfer_in'::"text" AS "kind",
-    "tr"."id" AS "transfer_id"
+    "tr"."id" AS "transfer_id",
+    "tr"."from_wallet_id" AS "counterpart_wallet_id"
    FROM ("public"."transfers" "tr"
      LEFT JOIN "public"."wallets" "tw" ON (("tw"."id" = "tr"."to_wallet_id")));
 

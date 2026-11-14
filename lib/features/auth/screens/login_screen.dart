@@ -104,13 +104,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       debugPrint('✅ Sign in successful: ${response.session?.user.email}');
 
       if (mounted) {
+        // Offer to save the login (Android/iOS/web) before the redirect disposes this form
+        TextInput.finishAutofillContext();
+
         // Force refresh auth providers to trigger router redirect
         ref.invalidate(currentAuthProvider);
         ref.invalidate(currentUserProvider);
         debugPrint('🔄 Auth providers invalidated');
-
-        // Save credentials to password manager after successful login
-        TextInput.finishAutofillContext();
 
         debugPrint('🚀 Navigating to home...');
 
@@ -196,6 +196,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 child: IntrinsicHeight(
                   child: AutofillGroup(
+                    // only a successful login is saved (finishAutofillContext above)
+                    onDisposeAction: AutofillContextAction.cancel,
                     child: Form(
                       key: _formKey,
                       child: Column(
@@ -241,7 +243,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               border: const OutlineInputBorder(),
                             ),
                             keyboardType: TextInputType.emailAddress,
-                            autofillHints: const [AutofillHints.email],
+                            autofillHints: const [AutofillHints.email, AutofillHints.username],
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return ref.tr(context, 'email_required');
