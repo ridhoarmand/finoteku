@@ -6,6 +6,11 @@ import 'package:finoteku/theme/ph_icons.dart';
 import '../core/localization/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../features/settings/widgets/app_update_dialog.dart';
+import '../core/state/balance_visibility_provider.dart';
+import '../features/home/providers/home_providers.dart';
+import '../routes/app_routes.dart';
+import '../services/home_widget_service.dart';
+import '../services/supabase_service.dart';
 
 /// Watches the shell's own navigator. Detail pages, account sub-pages and sheets opened
 /// from a tab land there, on top of the tab: then the add button and the tab bar step
@@ -89,6 +94,7 @@ class MainShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final index = _getCurrentIndex(context);
+    _syncHomeWidget(context, ref);
 
     return AutoUpdateCheck(
       child: PopScope(
@@ -149,6 +155,32 @@ class MainShell extends ConsumerWidget {
     );
   }
 }
+
+/// Keeps the Android home-screen widget in step with the data, and opens the add
+/// form when its "+ Catat" button launched the app. The shell only exists while
+/// signed in, with the router ready, so both are safe here.
+void _syncHomeWidget(BuildContext context, WidgetRef ref) {
+  final userId = SupabaseService.currentUser?.id;
+  if (userId != null) {
+    void push() {
+      final snapshot = ref.read(widgetSnapshotProvider(userId)).value;
+      if (snapshot == null || !context.mounted) return;
+      HomeWidgetService.push(
+        snapshot,
+        hidden: !ref.read(balanceVisibilityProvider),
+        labels: {for (final k in _widgetLabels) k: ref.tr(context, k)},
+      );
+    }
+
+    ref.listen(widgetSnapshotProvider(userId), (_, _) => push());
+    ref.listen(balanceVisibilityProvider, (_, _) => push());
+  }
+  HomeWidgetService.listenForAdd(() => rootNavigatorKey.currentContext?.push('/transaction/add'));
+}
+
+const _widgetLabels = [
+  'w_balance', 'w_today', 'w_last', 'w_last_today', 'w_last_yesterday', 'w_last_days', 'w_last_never', 'w_add',
+];
 
 /// One tab: icon in a pill when active (Regular → Fill), label below. ≥48dp tall.
 class _NavItem extends StatelessWidget {

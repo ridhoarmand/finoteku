@@ -44,6 +44,11 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
+            <!-- Home-screen widget "+ Catat": home_widget passes the URI to Flutter -->
+            <intent-filter>
+                <action android:name="es.antonborri.home_widget.action.LAUNCH" />
+            </intent-filter>
+
             <!-- Deep link for Supabase email confirmation / magic link -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
@@ -53,6 +58,16 @@
             </intent-filter>
         </activity>
         
+        <!-- Home-screen widget (FinotekuWidget.kt) -->
+        <receiver android:name=".FinotekuWidget" android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/finoteku_widget_info" />
+        </receiver>
+
         <!-- Receiver untuk boot completed dan alarm -->
         <!-- Explicitly adding receivers back because auto-merge might be failing -->
         <receiver android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" 

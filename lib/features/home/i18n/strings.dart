@@ -2,6 +2,15 @@
 // Keep this file free of imports to avoid circular dependencies.
 
 const Map<String, String> homeStringsEn = {
+  // Android home-screen widget
+  'w_balance': 'Balance',
+  'w_today': 'Spent today',
+  'w_last': 'Last recorded',
+  'w_last_today': 'today',
+  'w_last_yesterday': 'yesterday',
+  'w_last_days': '{n} days ago',
+  'w_last_never': 'nothing yet',
+  'w_add': 'Record',
   // Greetings
   'greeting_morning': 'Good morning',
   'greeting_afternoon': 'Good afternoon',
@@ -42,6 +51,15 @@ const Map<String, String> homeStringsEn = {
 };
 
 const Map<String, String> homeStringsId = {
+  // Widget layar utama Android
+  'w_balance': 'Saldo',
+  'w_today': 'Keluar hari ini',
+  'w_last': 'Terakhir dicatat',
+  'w_last_today': 'hari ini',
+  'w_last_yesterday': 'kemarin',
+  'w_last_days': '{n} hari lalu',
+  'w_last_never': 'belum ada',
+  'w_add': 'Catat',
   // Greetings
   'greeting_morning': 'Selamat pagi',
   'greeting_afternoon': 'Selamat siang',

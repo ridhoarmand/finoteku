@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../services/home_widget_service.dart';
 import '../../../services/supabase_service.dart';
 import '../models/user_data_summary.dart';
 
@@ -33,6 +34,7 @@ class DeleteAccountService {
 
       // Sign out user after successful deletion
       await _supabase.auth.signOut();
+      await HomeWidgetService.clear();
 
       if (kDebugMode) {
         print('✅ Account deletion completed successfully');

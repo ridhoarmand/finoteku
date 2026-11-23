@@ -1,3 +1,4 @@
+import '../../../services/home_widget_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
@@ -69,6 +70,7 @@ class AuthService {
   Future<void> signOut() async {
     try {
       await _supabase.auth.signOut();
+      await HomeWidgetService.clear(); // no old numbers on the home screen
     } on AuthException catch (e) {
       throw AuthException(e.message);
     } catch (e) {
