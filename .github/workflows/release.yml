@@ -111,8 +111,8 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          # 3.50+ needs Gradle 9.3 / AGP 9 (android/ is on Gradle 8.14, AGP 8.11): migrate those first
-          flutter-version: '3.47.9'
+          # same Flutter as development (~/Tools/flutter); android/ is on Gradle 9.5 + AGP 9.3 for it
+          flutter-version: '3.50.1'
           channel: 'stable'
           cache: true
 

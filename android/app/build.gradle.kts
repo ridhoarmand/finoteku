@@ -37,11 +37,6 @@ android {
     isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlinOptions {
-    // Match Kotlin JVM target with Java 17
-    jvmTarget = JavaVersion.VERSION_17.toString()
-    }
-
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "id.ridhoarmand.finoteku"
@@ -77,6 +72,13 @@ android {
             )
             signingConfig = signingConfigs.findByName("release")
         }
+    }
+}
+
+// Kotlin JVM target matches Java 17 (kotlinOptions inside android {} is gone in Kotlin 2.4)
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
 
