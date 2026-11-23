@@ -43,8 +43,9 @@ jobs:
           ref: ${{ github.event_name == 'workflow_dispatch' && 'master' || github.ref }}
           fetch-depth: 0
 
-      # The bump commit and tag go out with GITHUB_TOKEN, which starts no other workflow.
-      - name: Bump version and tag (manual run)
+      # Only the working copy changes here. The version is committed and tagged after the
+      # APKs are built and checked (step "Commit version and tag"), so a failed run uses no number.
+      - name: Set release version (manual run)
         if: github.event_name == 'workflow_dispatch'
         env:
           BUMP: ${{ inputs.bump }}
@@ -58,21 +59,13 @@ jobs:
             minor) NAME="$MAJOR.$((MINOR + 1)).0" ;;
             patch) NAME="$MAJOR.$MINOR.$((PATCH + 1))" ;;
           esac
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if [ "$BUMP" != none ]; then
-            sed -i "s/^version:.*/version: $NAME+$((BUILD + 1))/" pubspec.yaml
-            git commit -am "chore: rilis v$NAME"
-            git push origin HEAD:master
-          fi
-          if git rev-parse -q --verify "refs/tags/v$NAME" >/dev/null; then
-            [ "$(git rev-list -n1 "v$NAME")" = "$(git rev-parse HEAD)" ] \
-              || { echo "::error::Tag v$NAME already exists on another commit"; exit 1; }
-          else
-            git tag -a "v$NAME" -m "Finoteku v$NAME"
-            git push origin "v$NAME"
+          [ "$BUMP" = none ] || sed -i "s/^version:.*/version: $NAME+$((BUILD + 1))/" pubspec.yaml
+          if git rev-parse -q --verify "refs/tags/v$NAME" >/dev/null \
+             && { [ "$BUMP" != none ] || [ "$(git rev-list -n1 "v$NAME")" != "$(git rev-parse HEAD)" ]; }; then
+            echo "::error::Tag v$NAME already exists"; exit 1
           fi
           echo "RELEASE_TAG=v$NAME" >> "$GITHUB_ENV"
+          echo "Will release $NAME"
 
       - name: Check version, tag and secrets
         env:
@@ -164,6 +157,24 @@ jobs:
           cp app-armeabi-v7a-release.apk finoteku-${TAG}-armeabi-v7a.apk
           cp app-x86_64-release.apk finoteku-${TAG}-x86_64.apk
           cp app-release.apk finoteku-${TAG}-universal.apk
+
+      # Reached only when the build and every check passed. The push to master fails, and
+      # nothing is released, if master moved during the build: just run the release again.
+      # GITHUB_TOKEN pushes start no other workflow.
+      - name: Commit version and tag (manual run)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet -- pubspec.yaml; then
+            git commit -m "chore: rilis $RELEASE_TAG" -- pubspec.yaml
+            git push origin HEAD:master
+          fi
+          if ! git rev-parse -q --verify "refs/tags/$RELEASE_TAG" >/dev/null; then
+            git tag -a "$RELEASE_TAG" -m "Finoteku $RELEASE_TAG"
+            git push origin "$RELEASE_TAG"
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
