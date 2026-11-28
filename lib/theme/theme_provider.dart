@@ -10,26 +10,22 @@ final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
 class ThemeModeNotifier extends Notifier<ThemeMode> {
   static const String _prefsKey = 'theme_mode';
 
-  @override
-  ThemeMode build() {
-    // Load saved theme preference asynchronously
-    _loadThemePreference();
-    return ThemeMode.light;
+  /// Saved choice, read by [preload] in main() before runApp: the first frame already
+  /// has the right theme instead of flashing light and then switching.
+  static int? _saved;
+
+  static Future<void> preload() async {
+    try {
+      _saved = (await SharedPreferences.getInstance()).getInt(_prefsKey);
+    } catch (_) {
+      // unreadable preferences: keep the default (light)
+    }
   }
 
-  Future<void> _loadThemePreference() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedThemeModeIndex = prefs.getInt(_prefsKey);
-      if (savedThemeModeIndex != null &&
-          savedThemeModeIndex >= 0 &&
-          savedThemeModeIndex < ThemeMode.values.length) {
-        state = ThemeMode.values[savedThemeModeIndex];
-      }
-    } catch (e) {
-      // If error loading preferences, keep default (light)
-      state = ThemeMode.light;
-    }
+  @override
+  ThemeMode build() {
+    final i = _saved;
+    return i != null && i >= 0 && i < ThemeMode.values.length ? ThemeMode.values[i] : ThemeMode.light;
   }
 
   Future<void> _saveThemePreference(ThemeMode mode) async {

@@ -18,6 +18,10 @@ on:
         type: choice
         options: [patch, minor, major, none]
         default: patch
+      notes:
+        description: 'Catatan rilis untuk pengguna, poin dipisah ";" (kosong = otomatis dari commit feat/fix)'
+        type: string
+        required: false
 
 concurrency:
   group: release
@@ -176,12 +180,30 @@ jobs:
             git push origin "$RELEASE_TAG"
           fi
 
+      # The body is what the update dialog on the phone shows, as plain text: a short list of
+      # what changed for the user, not a link to a diff. Given notes win; otherwise the
+      # feat/fix commit subjects since the previous release.
+      - name: Write release notes
+        env:
+          NOTES: ${{ inputs.notes }}
+          TAG: ${{ steps.tag_name.outputs.TAG }}
+        run: |
+          set -euo pipefail
+          if [ -n "${NOTES:-}" ]; then
+            printf '%s\n' "$NOTES" | tr ';' '\n' \
+              | sed -E '/^[[:space:]]*$/d; s/^[[:space:]]*([-*•][[:space:]]*)?/- /' > release_notes.md
+          else
+            PREV=$(git tag --list 'v*' --sort=-v:refname | grep -vx "$TAG" | head -1 || true)
+            ./.github/release_notes.sh "${PREV:+$PREV..}HEAD" > release_notes.md
+          fi
+          cat release_notes.md
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag_name.outputs.TAG }}
           name: Finoteku ${{ steps.tag_name.outputs.TAG }}
-          generate_release_notes: true
+          body_path: release_notes.md
           files: |
             build/app/outputs/flutter-apk/finoteku-*.apk
         env:

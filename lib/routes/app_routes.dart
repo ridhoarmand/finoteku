@@ -37,18 +37,21 @@ import '../core/localization/app_localizations.dart';
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
-  // Keep router instance alive to prevent recreations
-  ref.keepAlive();
-
-  // Watch providers for router rebuilds
-  ref.watch(currentAuthProvider);
-  ref.watch(hasLanguagePreferenceProvider);
-  ref.watch(onboardingProvider);
-  final authState = ref.watch(authStateProvider);
+  // One router for the app's lifetime. Watching these providers used to rebuild it on
+  // every auth event (initial session, token refresh): the app restarted at the splash,
+  // and open dialogs (the update prompt) vanished. Now a change only re-runs redirect.
+  final refresh = ValueNotifier(0);
+  void onChange(Object? _, Object? _) => refresh.value++;
+  ref.listen(currentAuthProvider, onChange);
+  ref.listen(hasLanguagePreferenceProvider, onChange);
+  ref.listen(onboardingProvider, onChange);
+  ref.listen(authStateProvider, onChange);
+  ref.onDispose(refresh.dispose);
 
   return GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: '/',
+    refreshListenable: refresh,
     debugLogDiagnostics: false, // Keep false for production
     redirect: (context, state) {
       final location = state.matchedLocation;
@@ -56,7 +59,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Check for password recovery event specifically (Priority High)
       // This must be checked before other logic to ensure the reset screen opens
-      final authEvent = authState.asData?.value.event;
+      final authEvent = ref.read(authStateProvider).asData?.value.event;
       if (authEvent == AuthChangeEvent.passwordRecovery) {
         debugPrint(
           '🔑 Password recovery event detected, redirecting to reset password',

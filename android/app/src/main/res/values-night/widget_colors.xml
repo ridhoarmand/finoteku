@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Launch screen behind the first Flutter frame: the app background (DESIGN.md), not white -->
+    <color name="launch_background">#131211</color>
     <color name="widget_surface">#1B1A18</color>
     <color name="widget_hairline">#2E2C28</color>
     <color name="widget_text">#F2F0EB</color>

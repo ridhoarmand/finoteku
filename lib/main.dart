@@ -11,6 +11,7 @@ import 'theme/theme_provider.dart';
 import 'services/supabase_service.dart';
 import 'services/connectivity_service.dart';
 import 'utils/environment.dart';
+import 'widgets/app_splash.dart';
 
 import 'features/notification/services/notification_service.dart';
 
@@ -19,6 +20,7 @@ void main() async {
 
   // Configure desktop window (no-op on web/mobile)
   await configureDesktopWindow();
+  await ThemeModeNotifier.preload();
 
   runApp(ProviderScope(child: MyApp()));
 }
@@ -117,47 +119,17 @@ class _MyAppState extends ConsumerState<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    final themeMode = ref.watch(themeModeProvider);
     if (!_isInitialized) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
-        themeMode: ThemeMode.system,
-        // Builder: Theme.of must be read below MaterialApp to get the app theme.
-        // Same look as SplashScreen so the hand-over is seamless.
-        home: Builder(
-          builder: (context) {
-            final theme = Theme.of(context);
-            return Scaffold(
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset(
-                      'assets/icon_transparent.png',
-                      width: 100,
-                      height: 100,
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Finoteku',
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    const CircularProgressIndicator(),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
+        themeMode: themeMode,
+        home: const AppSplash(),
       );
     }
 
-    final themeMode = ref.watch(themeModeProvider);
     final router = ref.watch(routerProvider);
     final localeState = ref.watch(appLocaleProvider);
 
